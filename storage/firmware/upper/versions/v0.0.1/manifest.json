@@ -1,0 +1,37 @@
+{
+  "project": "F4CP",
+  "kind": "Upper",
+  "version": "v0.0.1",
+  "device": "STM32H750VBT6",
+  "hardware": "F4CP-H750-Upper",
+  "channel": "beta",
+  "date": "2026-05-29",
+  "min_client": "0.4.0",
+  "files": {
+    "bin": {
+      "name": "F4CP-Upper-v0.0.1.bin",
+      "download_url": "/api/v1/firmware/upper/versions/v0.0.1/download?type=bin",
+      "sha256": "df003c64c356036e07d23ccb0415a50407d549b0099653064a3c126e6f068d91",
+      "size": 397724
+    },
+    "hex": {
+      "name": "F4CP-Upper-v0.0.1.hex",
+      "download_url": "/api/v1/firmware/upper/versions/v0.0.1/download?type=hex",
+      "sha256": "7b2c4222207d6bd746744e644364573943d26ba53e94d1fb5597c65846fbfbac",
+      "size": 1118770
+    }
+  },
+  "burn": {
+    "method": "pyocd",
+    "target": "stm32h750vbtx",
+    "reset_after_download": true
+  },
+  "changelog_url": "/api/v1/firmware/upper/versions/v0.0.1/changelog",
+  "notes": [
+    "本地发布 v0.0.1",
+    "发布说明：测试框架问题",
+    "适用设备：UPPER上位机",
+    "更新内容：完善框架问题，完善LVGL",
+    "发布日期：2026-05-29"
+  ]
+}

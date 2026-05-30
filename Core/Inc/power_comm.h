@@ -12,7 +12,8 @@ extern "C" {
 
 void PowerComm_Init(UART_HandleTypeDef *uart);
 bool PowerComm_Tick(ui_power_snapshot_t *snapshot);
-void PowerComm_WriteSettings(int32_t vset_mv, int32_t iset_ma, bool output_enabled);
+bool PowerComm_WriteSettings(const ui_power_snapshot_t *snapshot);
+bool PowerComm_WritePowerState(bool output_enabled);
 
 #ifdef __cplusplus
 }

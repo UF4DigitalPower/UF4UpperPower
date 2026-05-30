@@ -112,8 +112,12 @@ void LCD_Fill(uint16_t sx, uint16_t sy, uint16_t ex, uint16_t ey, uint32_t color
 void LCD_Color_Fill(uint16_t sx, uint16_t sy, uint16_t ex, uint16_t ey, uint16_t *color);		  //填充指定颜色
 
 void LCD_SetDisplayDir(uint8_t dir);
+uint32_t LCD_GetFrontBufferAddress(void);
 uint32_t LCD_GetDrawBufferAddress(void);
+void LCD_SetDrawBufferAddress(uint32_t addr);
+void LCD_SetFrameBuffers(uint32_t front_addr, uint32_t draw_addr);
 void LCD_CopyRectFromFrontToDraw(uint16_t x, uint16_t y, uint16_t w, uint16_t h);
 void LCD_Present(void);
 void LCD_PresentBuffer(uint32_t buffer_addr);
+int32_t LTDC_GetCurrentVisibleLine(void);
 #endif /* STM32H743_BSP_LCD_H */

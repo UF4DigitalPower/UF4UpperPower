@@ -4,6 +4,7 @@
  */
 
 /*Copy this file as "lv_port_disp.c" and set this value to "1" to enable content*/
+#include "bsp_lcd.h"
 #if 1
 
 /*********************
@@ -13,7 +14,6 @@
 #include <stdbool.h>
 #include <string.h>
 
-#include "lcd.h"
 #include "ltdc.h"
 /*********************
  *      DEFINES
@@ -72,7 +72,7 @@ void lv_port_disp_init(void)
     lv_disp_drv_init(&disp_drv);                    /*Basic initialization*/
 
 
-    /*Set the resolution of the display*/
+    /*Set the resolution of the display — portrait 480x640 */
     disp_drv.hor_res = MY_DISP_HOR_RES;
     disp_drv.ver_res = MY_DISP_VER_RES;
 
@@ -92,7 +92,10 @@ void lv_port_disp_init(void)
 /*初始化您的显示器和所需的外围设备.*/
 static void disp_init(void)
 {
-    HAL_LTDC_SetAddress(&hltdc, (uint32_t) ltdc_lcd_framebuf, 0);
+    /* Ensure LTDC reads from the front framebuffer */
+    HAL_LTDC_SetAddress(&hltdc, (uint32_t) LCD_FRAMEBUFFER_ADDR, 0);
+    /* Make LCD_Color_Fill write to the same (visible) buffer, not the back buffer */
+    LCD_SetDrawBufferAddress(LCD_FRAMEBUFFER_ADDR);
     LCD_Clear(BLACK);
 }
 

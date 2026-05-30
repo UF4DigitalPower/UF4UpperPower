@@ -15,12 +15,22 @@
 #define F4CP_TYPE_OUTPUT_VOLTAGE      12U
 #define F4CP_TYPE_OUTPUT_CURRENT      13U
 #define F4CP_TYPE_CORE_TEMPERATURE    14U
+#define F4CP_TYPE_BOARD_TEMPERATURE   15U
 #define F4CP_TYPE_SET_VOLTAGE_LIMIT   17U
 #define F4CP_TYPE_SET_CURRENT_LIMIT   18U
 #define F4CP_TYPE_CC_CV_MODE          20U
 #define F4CP_TYPE_POWER_STATE         21U
 #define F4CP_TYPE_FAULT_STATE         22U
+#define F4CP_TYPE_STATE_FLAGS         23U
+#define F4CP_TYPE_STATE_TOPOLOGY      24U
+#define F4CP_TYPE_OTP_VALUE           29U
+#define F4CP_TYPE_OTP_SET_VALUE       30U
+#define F4CP_TYPE_OVP_VALUE           31U
+#define F4CP_TYPE_OVP_SET_VALUE       32U
+#define F4CP_TYPE_OCP_VALUE           33U
+#define F4CP_TYPE_OCP_SET_VALUE       34U
 #define F4CP_TYPE_FAN_SPEED           38U
+#define F4CP_TYPE_FAN_SET_VALUE       39U
 
 #define F4CP_MAX_PAYLOAD 256U
 #define F4CP_MAX_FRAME   (4U + 2U + F4CP_MAX_PAYLOAD + 2U)
@@ -194,16 +204,26 @@ static void f4cp_parse_tlvs(const uint8_t *payload, uint16_t payload_len, ui_pow
 				case F4CP_TYPE_OUTPUT_VOLTAGE: snapshot->vout_mv = v; break;
 				case F4CP_TYPE_OUTPUT_CURRENT: snapshot->iout_ma = v; break;
 				case F4CP_TYPE_CORE_TEMPERATURE: snapshot->temp_dC = v / 100; break;
+				case F4CP_TYPE_BOARD_TEMPERATURE: snapshot->board_temp_dC = v / 100; break;
 				case F4CP_TYPE_SET_VOLTAGE_LIMIT: snapshot->vset_mv = v; break;
 				case F4CP_TYPE_SET_CURRENT_LIMIT: snapshot->iset_ma = v; break;
+				case F4CP_TYPE_OTP_VALUE: snapshot->otp_value_dC = v / 100; break;
+				case F4CP_TYPE_OTP_SET_VALUE: snapshot->otp_set_dC = v / 100; break;
+				case F4CP_TYPE_OVP_VALUE: snapshot->ovp_value_mv = v; break;
+				case F4CP_TYPE_OVP_SET_VALUE: snapshot->ovp_set_mv = v; break;
+				case F4CP_TYPE_OCP_VALUE: snapshot->ocp_value_ma = v; break;
+				case F4CP_TYPE_OCP_SET_VALUE: snapshot->ocp_set_ma = v; break;
 				case F4CP_TYPE_FAULT_STATE: snapshot->fault_code = (uint16_t) v; break;
 				case F4CP_TYPE_FAN_SPEED: snapshot->fan_permille = (uint16_t) v; break;
+				case F4CP_TYPE_FAN_SET_VALUE: snapshot->fan_set_permille = (uint16_t) v; break;
 				default: break;
 			}
 		} else if (len == 1U) {
 			switch (type) {
 				case F4CP_TYPE_CC_CV_MODE: snapshot->cc_mode = (value[0] == 0U); break;
 				case F4CP_TYPE_POWER_STATE: snapshot->output_enabled = (value[0] != 0U); break;
+				case F4CP_TYPE_STATE_FLAGS: snapshot->state_flags = value[0]; break;
+				case F4CP_TYPE_STATE_TOPOLOGY: snapshot->state_topology = value[0]; break;
 				default: break;
 			}
 		}
@@ -253,26 +273,66 @@ bool PowerComm_Tick(ui_power_snapshot_t *snapshot) {
 	return true;
 }
 
-void PowerComm_WriteSettings(int32_t vset_mv, int32_t iset_ma, bool output_enabled) {
-	uint8_t payload[3U + 4U + 3U + 4U + 3U + 1U];
+bool PowerComm_WriteSettings(const ui_power_snapshot_t *snapshot) {
+	uint8_t payload[(3U + 4U) * 6U + 3U + 1U];
 	uint16_t offset = 0U;
+
+	if (snapshot == NULL) {
+		return false;
+	}
 
 	payload[offset++] = F4CP_TYPE_SET_VOLTAGE_LIMIT;
 	put_u16_le(&payload[offset], 4U);
 	offset = (uint16_t) (offset + 2U);
-	put_i32_le(&payload[offset], vset_mv);
+	put_i32_le(&payload[offset], snapshot->vset_mv);
 	offset = (uint16_t) (offset + 4U);
 
 	payload[offset++] = F4CP_TYPE_SET_CURRENT_LIMIT;
 	put_u16_le(&payload[offset], 4U);
 	offset = (uint16_t) (offset + 2U);
-	put_i32_le(&payload[offset], iset_ma);
+	put_i32_le(&payload[offset], snapshot->iset_ma);
 	offset = (uint16_t) (offset + 4U);
+
+	payload[offset++] = F4CP_TYPE_OTP_SET_VALUE;
+	put_u16_le(&payload[offset], 4U);
+	offset = (uint16_t) (offset + 2U);
+	put_i32_le(&payload[offset], snapshot->otp_set_dC * 100);
+	offset = (uint16_t) (offset + 4U);
+
+	payload[offset++] = F4CP_TYPE_OVP_SET_VALUE;
+	put_u16_le(&payload[offset], 4U);
+	offset = (uint16_t) (offset + 2U);
+	put_i32_le(&payload[offset], snapshot->ovp_set_mv);
+	offset = (uint16_t) (offset + 4U);
+
+	payload[offset++] = F4CP_TYPE_OCP_SET_VALUE;
+	put_u16_le(&payload[offset], 4U);
+	offset = (uint16_t) (offset + 2U);
+	put_i32_le(&payload[offset], snapshot->ocp_set_ma);
+	offset = (uint16_t) (offset + 4U);
+
+	payload[offset++] = F4CP_TYPE_FAN_SET_VALUE;
+	put_u16_le(&payload[offset], 4U);
+	offset = (uint16_t) (offset + 2U);
+	put_i32_le(&payload[offset], snapshot->fan_set_permille);
+	offset = (uint16_t) (offset + 4U);
+
+	payload[offset++] = F4CP_TYPE_POWER_STATE;
+	put_u16_le(&payload[offset], 1U);
+	offset = (uint16_t) (offset + 2U);
+	payload[offset++] = snapshot->output_enabled ? 1U : 0U;
+
+	return f4cp_transmit(F4CP_CMD_WRITE, payload, offset);
+}
+
+bool PowerComm_WritePowerState(const bool output_enabled) {
+	uint8_t payload[4U];
+	uint16_t offset = 0U;
 
 	payload[offset++] = F4CP_TYPE_POWER_STATE;
 	put_u16_le(&payload[offset], 1U);
 	offset = (uint16_t) (offset + 2U);
 	payload[offset++] = output_enabled ? 1U : 0U;
 
-	(void) f4cp_transmit(F4CP_CMD_WRITE, payload, offset);
+	return f4cp_transmit(F4CP_CMD_WRITE, payload, offset);
 }

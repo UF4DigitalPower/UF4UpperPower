@@ -156,6 +156,15 @@ SECTIONS
     __bss_end__ = _ebss;
   } >RAM_D1
 
+  /* RAM D2 section for LVGL large buffers (non-cacheable, DMA2D accessible) */
+  .ram_d2 (NOLOAD) :
+  {
+    . = ALIGN(32);
+    *(.ram_d2)
+    *(.ram_d2*)
+    . = ALIGN(32);
+  } >RAM_D2
+
   /* External SDRAM area for big runtime buffers (framebuffer/LVGL/cache, etc.) */
   .sdram (NOLOAD) :
   {

@@ -83,7 +83,41 @@ static uint32_t lcd_get_rect_span_bytes(const uint32_t psx, const uint32_t psy, 
 
 uint32_t LCD_GetDrawBufferAddress(void) {
 	return g_lcd_draw_buffer_addr;
-	}
+}
+
+uint32_t LCD_GetFrontBufferAddress(void) {
+	return g_lcd_front_buffer_addr;
+}
+
+void LCD_SetDrawBufferAddress(uint32_t addr) {
+	g_lcd_draw_buffer_addr = addr;
+}
+
+void LCD_SetFrameBuffers(const uint32_t front_addr, const uint32_t draw_addr) {
+	g_lcd_front_buffer_addr = front_addr;
+	g_lcd_draw_buffer_addr = draw_addr;
+}
+
+/**
+ * @brief  获取 LTDC 当前正在扫描的可见行号
+ * @retval 当前可见行号 (0 ~ LTDC_HEIGHT-1)，VBLANK 期间返回负值
+ * @note   用于在 flush 前判断 LTDC 扫描位置，避免撕裂
+ */
+int32_t LTDC_GetCurrentVisibleLine(void) {
+	const int32_t current_line = (int32_t) ((LTDC->CPSR & LTDC_CPSR_CYPOS) >> LTDC_CPSR_CYPOS_Pos);
+	/*
+	 * LTDC timing (from ltdc.c):
+	 *   AccumulatedVBP  = 43  ->  VSYNC + Back Porch = 44 lines (line 0~43)
+	 *   AccumulatedActiveH = 683 -> active area: line 44~683 (640 visible lines)
+	 *   TotalHeigh = 695 -> total 696 lines (line 0~695)
+	 *
+	 * visible line = physical_line - (AccumulatedVBP + 1):
+	 *   VBLANK:      < 0
+	 *   Active:      0 ~ 639
+	 *   Front Porch: >= 640
+	 */
+	return current_line - (int32_t) hltdc.Init.AccumulatedVBP - 1;
+}
 
 void LCD_CopyRectFromFrontToDraw(uint16_t x, uint16_t y, uint16_t w, uint16_t h) {
 	uint32_t psx;

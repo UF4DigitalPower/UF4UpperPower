@@ -115,10 +115,20 @@ typedef struct {
 	int32_t vout_mv;
 	int32_t iout_ma;
 	int32_t temp_dC;
+	int32_t board_temp_dC;
 	uint16_t fan_permille;
+	uint16_t fan_set_permille;
 	int32_t vset_mv;
 	int32_t iset_ma;
+	int32_t otp_value_dC;
+	int32_t otp_set_dC;
+	int32_t ovp_value_mv;
+	int32_t ovp_set_mv;
+	int32_t ocp_value_ma;
+	int32_t ocp_set_ma;
 	uint16_t fault_code;
+	uint8_t state_flags;
+	uint8_t state_topology;
 	bool output_enabled;
 	bool cc_mode;
 	char status_text[UI_STATUS_TEXT_MAX_LEN];
@@ -134,6 +144,7 @@ void UI_OnKeyInterrupt(uint16_t gpio_pin);
 
 void UI_SetDemoEnabled(bool enabled);
 void UI_SetActionCallback(ui_action_callback_t callback, void *user_data);
+void UI_SetStatusText(const char *text);
 void UI_SetPowerSnapshot(const ui_power_snapshot_t *snapshot);
 void UI_GetPowerSnapshot(ui_power_snapshot_t *snapshot);
 ui_page_id_t UI_GetCurrentPage(void);

@@ -22,7 +22,6 @@ set(CMAKE_AR arm-none-eabi-ar)
 set(CMAKE_OBJCOPY arm-none-eabi-objcopy)
 set(CMAKE_OBJDUMP arm-none-eabi-objdump)
 set(SIZE arm-none-eabi-size)
-
 set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
 
 # project settings
@@ -68,11 +67,6 @@ include_directories(Core/Inc
         Drivers/CMSIS/Include
 
         BSP
-
-        GUI
-        GUI/src
-        GUI/demos
-
         UI
         UI/Font
 )
@@ -83,10 +77,10 @@ file(GLOB_RECURSE SOURCES
         "Core/*.*"
         "Drivers/*.*"
         "BSP/*.*"
-        "GUI/src/*.c"
-        "GUI/demos/benchmark/*.c"
         "UI/*.*"
 )
+
+list(FILTER SOURCES EXCLUDE REGEX ".*/BSP/gui_lvgl_.*\\.c$")
 
 set(LINKER_SCRIPT ${CMAKE_SOURCE_DIR}/STM32H743ZITX_FLASH.ld)
 

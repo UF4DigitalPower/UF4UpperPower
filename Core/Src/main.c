@@ -19,10 +19,10 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "adc.h"
-#include "bdma.h"
 #include "dma2d.h"
 #include "i2c.h"
 #include "ltdc.h"
+#include "memorymap.h"
 #include "quadspi.h"
 #include "spi.h"
 #include "tim.h"
@@ -34,10 +34,7 @@
 /* USER CODE BEGIN Includes */
 #include "bsp_lcd.h"
 #include "bsp_st7701.h"
-#include "gui_lvgl_port.h"
-#include "gui_lvgl_scenes.h"
 
-#include "lvgl.h"
 #include "power_comm.h"
 #include "ui.h"
 #include <string.h>
@@ -52,8 +49,6 @@
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 
-#define APP_RUN_LVGL_TEST_SCENES 1
-
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -64,9 +59,7 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-static int32_t g_last_sent_vset_mv;
-static int32_t g_last_sent_iset_ma;
-static bool g_last_sent_output_enabled;
+static ui_power_snapshot_t g_live_snapshot;
 
 /* USER CODE END PV */
 
@@ -74,61 +67,10 @@ static bool g_last_sent_output_enabled;
 void SystemClock_Config(void);
 static void MPU_Config(void);
 /* USER CODE BEGIN PFP */
-static void App_OnUiAction(ui_action_t action, const ui_power_snapshot_t *snapshot, void *user_data);
-static void App_PollPowerComm(void);
-static void App_SyncUiSettings(void);
+static void APP_OnUiAction(ui_action_t action, const ui_power_snapshot_t *snapshot, void *user_data);
+static void APP_SetUiStatus(const char *status_text);
 
 /* USER CODE END PFP */
-
-/* Private user code ---------------------------------------------------------*/
-/* USER CODE BEGIN 0 */
-static void App_OnUiAction(const ui_action_t action, const ui_power_snapshot_t *snapshot, void *user_data)
-{
-  (void) user_data;
-
-  if (snapshot == NULL) {
-    return;
-  }
-
-  if (action == UI_ACTION_OUTPUT_TOGGLED || action == UI_ACTION_APPLY_SETTINGS) {
-    PowerComm_WriteSettings(snapshot->vset_mv, snapshot->iset_ma, snapshot->output_enabled);
-    g_last_sent_vset_mv = snapshot->vset_mv;
-    g_last_sent_iset_ma = snapshot->iset_ma;
-    g_last_sent_output_enabled = snapshot->output_enabled;
-  }
-}
-
-static void App_PollPowerComm(void)
-{
-  ui_power_snapshot_t snapshot;
-
-  UI_GetPowerSnapshot(&snapshot);
-  if (PowerComm_Tick(&snapshot)) {
-    ui_power_snapshot_t current;
-    UI_GetPowerSnapshot(&current);
-    if (memcmp(&current, &snapshot, sizeof(snapshot)) != 0) {
-      UI_SetPowerSnapshot(&snapshot);
-      g_last_sent_vset_mv = snapshot.vset_mv;
-      g_last_sent_iset_ma = snapshot.iset_ma;
-      g_last_sent_output_enabled = snapshot.output_enabled;
-    }
-  }
-}
-
-static void App_SyncUiSettings(void)
-{
-  ui_power_snapshot_t snapshot;
-
-  UI_GetPowerSnapshot(&snapshot);
-  if (snapshot.vset_mv != g_last_sent_vset_mv ||
-      snapshot.iset_ma != g_last_sent_iset_ma ||
-      snapshot.output_enabled != g_last_sent_output_enabled) {
-    PowerComm_WriteSettings(snapshot.vset_mv, snapshot.iset_ma, snapshot.output_enabled);
-    g_last_sent_vset_mv = snapshot.vset_mv;
-    g_last_sent_iset_ma = snapshot.iset_ma;
-    g_last_sent_output_enabled = snapshot.output_enabled;
-  }
-}
 
 /* USER CODE END 0 */
 
@@ -172,12 +114,11 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
-  MX_BDMA_Init();
   MX_DMA2D_Init();
   MX_FMC_Init();
-  MX_I2C3_Init();
+  // MX_I2C3_Init();
   MX_LTDC_Init();
-  MX_QUADSPI_Init();
+  // MX_QUADSPI_Init();
   MX_SPI6_Init();
   MX_TIM6_Init();
   MX_UART5_Init();
@@ -188,41 +129,17 @@ int main(void)
   MX_TIM4_Init();
   /* USER CODE BEGIN 2 */
 
-  HAL_TIM_Encoder_Start(&htim2, TIM_CHANNEL_ALL);
-  HAL_TIM_Encoder_Start(&htim4, TIM_CHANNEL_ALL);
-  HAL_TIM_Base_Start_IT(&htim6);
-
   LCD_Init();
   ST7701Init();
-  LCD_SetDisplayDir(1);
-  // DigitalPower
+  LCD_SetDisplayDir(1);  // 竖屏 480x640, 与物理 LTDC 一致
+  HAL_TIM_Encoder_Start(&htim2, TIM_CHANNEL_ALL);
+  HAL_TIM_Encoder_Start(&htim4, TIM_CHANNEL_ALL);
 
-  HAL_LTDC_SetAddress(&hltdc, (uint32_t) ltdc_lcd_framebuf, 0);
-
-  LCD_Clear(BLACK);
-
-#if APP_RUN_LVGL_TEST_SCENES
-  GUI_LVGL_PortInit();
-  GUI_LVGL_TestScenesStart();
-#else
-  // PowerComm_Init(&huart1);
-  //
-  // UI_SetDemoEnabled(1);
-  // UI_SetActionCallback(App_OnUiAction, NULL);
-  //
-  // UI_Init();
-  // {
-  //   ui_power_snapshot_t snapshot;
-  //   UI_GetPowerSnapshot(&snapshot);
-  //   g_last_sent_vset_mv = snapshot.vset_mv;
-  //   g_last_sent_iset_ma = snapshot.iset_ma;
-  //   g_last_sent_output_enabled = snapshot.output_enabled;
-  // }
-#endif
-
-  // LCD_TestLoop();
-
-
+  PowerComm_Init(&huart1);
+  UI_SetActionCallback(APP_OnUiAction, NULL);
+  UI_SetDemoEnabled(false);
+  UI_Init();
+  UI_GetPowerSnapshot(&g_live_snapshot);
 
   /* USER CODE END 2 */
 
@@ -230,15 +147,16 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-#if APP_RUN_LVGL_TEST_SCENES
+    UI_Tick();
+
+    const bool updated = PowerComm_Tick(&g_live_snapshot);
+
+    if (updated) {
+      UI_SetPowerSnapshot(&g_live_snapshot);
+    }
+
     HAL_Delay(1);
-    lv_timer_handler();
-#else
-    HAL_Delay(5);
-    // UI_Tick();
-    // App_SyncUiSettings();
-    // App_PollPowerComm();
-#endif
+
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -306,6 +224,37 @@ void SystemClock_Config(void)
 
 /* USER CODE BEGIN 4 */
 
+static void APP_OnUiAction(const ui_action_t action, const ui_power_snapshot_t *snapshot, void *user_data)
+{
+  (void) user_data;
+
+  if (snapshot == NULL) {
+    return;
+  }
+
+  switch (action) {
+    case UI_ACTION_APPLY_SETTINGS:
+      if (PowerComm_WriteSettings(snapshot)) {
+        APP_SetUiStatus("SET SYNC");
+      } else {
+        APP_SetUiStatus("WRITE ERR");
+      }
+      break;
+    case UI_ACTION_OUTPUT_TOGGLED:
+      if (!PowerComm_WritePowerState(snapshot->output_enabled)) {
+        APP_SetUiStatus("WRITE ERR");
+      }
+      break;
+    default:
+      break;
+  }
+}
+
+static void APP_SetUiStatus(const char *status_text)
+{
+  UI_SetStatusText(status_text);
+}
+
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
   UI_OnKeyInterrupt(GPIO_Pin);
@@ -333,7 +282,7 @@ void MPU_Config(void)
   MPU_InitStruct.AccessPermission = MPU_REGION_FULL_ACCESS;
   MPU_InitStruct.DisableExec = MPU_INSTRUCTION_ACCESS_DISABLE;
   MPU_InitStruct.IsShareable = MPU_ACCESS_SHAREABLE;
-  MPU_InitStruct.IsCacheable = MPU_ACCESS_NOT_CACHEABLE;
+  MPU_InitStruct.IsCacheable = MPU_ACCESS_CACHEABLE;
   MPU_InitStruct.IsBufferable = MPU_ACCESS_NOT_BUFFERABLE;
 
   HAL_MPU_ConfigRegion(&MPU_InitStruct);
