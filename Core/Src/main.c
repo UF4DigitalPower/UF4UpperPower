@@ -32,12 +32,12 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "app_user.h"
 #include "bsp_lcd.h"
 #include "bsp_st7701.h"
-
-#include "power_comm.h"
-#include "ui.h"
-#include <string.h>
+#include "gui_lvgl_port.h"
+#include "gui_guider.h"
+#include "lvgl.h"
 
 /* USER CODE END Includes */
 
@@ -59,7 +59,6 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-static ui_power_snapshot_t g_live_snapshot;
 
 /* USER CODE END PV */
 
@@ -67,8 +66,6 @@ static ui_power_snapshot_t g_live_snapshot;
 void SystemClock_Config(void);
 static void MPU_Config(void);
 /* USER CODE BEGIN PFP */
-static void APP_OnUiAction(ui_action_t action, const ui_power_snapshot_t *snapshot, void *user_data);
-static void APP_SetUiStatus(const char *status_text);
 
 /* USER CODE END PFP */
 
@@ -131,15 +128,9 @@ int main(void)
 
   LCD_Init();
   ST7701Init();
-  LCD_SetDisplayDir(1);  // 竖屏 480x640, 与物理 LTDC 一致
-  HAL_TIM_Encoder_Start(&htim2, TIM_CHANNEL_ALL);
-  HAL_TIM_Encoder_Start(&htim4, TIM_CHANNEL_ALL);
-
-  PowerComm_Init(&huart1);
-  UI_SetActionCallback(APP_OnUiAction, NULL);
-  UI_SetDemoEnabled(false);
-  UI_Init();
-  UI_GetPowerSnapshot(&g_live_snapshot);
+  GUI_LVGL_PortInit();
+  setup_ui(&guider_ui);
+  APP_Init();
 
   /* USER CODE END 2 */
 
@@ -147,14 +138,8 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-    UI_Tick();
-
-    const bool updated = PowerComm_Tick(&g_live_snapshot);
-
-    if (updated) {
-      UI_SetPowerSnapshot(&g_live_snapshot);
-    }
-
+    lv_timer_handler();
+    APP_Tick();
     HAL_Delay(1);
 
     /* USER CODE END WHILE */
@@ -223,42 +208,6 @@ void SystemClock_Config(void)
 }
 
 /* USER CODE BEGIN 4 */
-
-static void APP_OnUiAction(const ui_action_t action, const ui_power_snapshot_t *snapshot, void *user_data)
-{
-  (void) user_data;
-
-  if (snapshot == NULL) {
-    return;
-  }
-
-  switch (action) {
-    case UI_ACTION_APPLY_SETTINGS:
-      if (PowerComm_WriteSettings(snapshot)) {
-        APP_SetUiStatus("SET SYNC");
-      } else {
-        APP_SetUiStatus("WRITE ERR");
-      }
-      break;
-    case UI_ACTION_OUTPUT_TOGGLED:
-      if (!PowerComm_WritePowerState(snapshot->output_enabled)) {
-        APP_SetUiStatus("WRITE ERR");
-      }
-      break;
-    default:
-      break;
-  }
-}
-
-static void APP_SetUiStatus(const char *status_text)
-{
-  UI_SetStatusText(status_text);
-}
-
-void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
-{
-  UI_OnKeyInterrupt(GPIO_Pin);
-}
 
 /* USER CODE END 4 */
 

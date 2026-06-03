@@ -35,9 +35,9 @@
  *如果 UI 位于另一层之上，例如 OSD 菜单或视频播放器，也可以使用。*/
 #define LV_COLOR_SCREEN_TRANSP 0
 
-/* Adjust color mix functions rounding. GPUs might calculate color mix (blending) differently.
+/* 调整色彩混合函数的四舍五入。GPU可能计算色彩混合（混合）的方式不同.
  * 0: round down, 64: round up from x.75, 128: round up from half, 192: round up from x.25, 254: round up */
-#define LV_COLOR_MIX_ROUND_OFS 0
+#define LV_COLOR_MIX_ROUND_OFS 128
 
 /*如果采用色度键控，则不会绘制具有此颜色的图像像素）*/
 #define LV_COLOR_CHROMA_KEY lv_color_hex(0x00ff00)         /*pure green*/

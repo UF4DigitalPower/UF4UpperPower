@@ -425,7 +425,7 @@
 
 #define LV_USE_BAR 0
 
-#define LV_USE_BTN 1
+#define LV_USE_BTN 0
 
 #define LV_USE_BTNMATRIX 0
 
@@ -517,7 +517,7 @@
 #define LV_SPAN_SNIPPET_STACK_SIZE 64
 #endif    /* LV_USE_SPAN */
 
-#define LV_USE_SPINBOX 1
+#define LV_USE_SPINBOX 0
 
 #define LV_USE_SPINNER 0
 

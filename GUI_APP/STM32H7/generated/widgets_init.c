@@ -76,32 +76,4 @@ void clock_count(int *hour, int *min, int *sec)
 }
 #endif
 
-void lv_PAGE_MAIN_spinbox_1_increment_event_cb(lv_event_t * event)
-{
-    lv_event_code_t code = lv_event_get_code(event);
-    if(code == LV_EVENT_SHORT_CLICKED || code == LV_EVENT_LONG_PRESSED_REPEAT) {
-        lv_spinbox_increment(guider_ui.PAGE_MAIN_spinbox_1);
-    }
-}
-void lv_PAGE_MAIN_spinbox_1_decrement_event_cb(lv_event_t * event)
-{
-    lv_event_code_t code = lv_event_get_code(event);
-    if(code == LV_EVENT_SHORT_CLICKED || code == LV_EVENT_LONG_PRESSED_REPEAT) {
-        lv_spinbox_decrement(guider_ui.PAGE_MAIN_spinbox_1);
-    }
-}
-void lv_PAGE_MAIN_spinbox_2_increment_event_cb(lv_event_t * event)
-{
-    lv_event_code_t code = lv_event_get_code(event);
-    if(code == LV_EVENT_SHORT_CLICKED || code == LV_EVENT_LONG_PRESSED_REPEAT) {
-        lv_spinbox_increment(guider_ui.PAGE_MAIN_spinbox_2);
-    }
-}
-void lv_PAGE_MAIN_spinbox_2_decrement_event_cb(lv_event_t * event)
-{
-    lv_event_code_t code = lv_event_get_code(event);
-    if(code == LV_EVENT_SHORT_CLICKED || code == LV_EVENT_LONG_PRESSED_REPEAT) {
-        lv_spinbox_decrement(guider_ui.PAGE_MAIN_spinbox_2);
-    }
-}
 

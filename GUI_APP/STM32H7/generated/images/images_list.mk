@@ -1,1 +1,1 @@
-GEN_CSRCS += 
+GEN_CSRCS += _ic_fluent_temperature_48_regular_alpha_24x24.c _ic_fluent_bluetooth_48_regular_alpha_24x24.c

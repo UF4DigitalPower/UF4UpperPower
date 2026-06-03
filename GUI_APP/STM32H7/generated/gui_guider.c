@@ -16,6 +16,8 @@
 #include "gg_external_data.h"
 #endif
 
+lv_ui guider_ui;
+
 void ui_init_style(lv_style_t * style)
 {
     if (style->prop_cnt > 1)
@@ -88,5 +90,15 @@ void setup_ui(lv_ui *ui)
 
 void init_keyboard(lv_ui *ui)
 {
-
+#if LV_USE_KEYBOARD != 0
+    ui->g_kb_top_layer = lv_keyboard_create(lv_layer_top());
+    lv_obj_add_flag(ui->g_kb_top_layer, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_add_event_cb(ui->g_kb_top_layer, kb_event_cb, LV_EVENT_ALL, NULL);
+#elif LV_USE_ZH_KEYBOARD != 0
+    ui->g_kb_top_layer = lv_zh_keyboard_create(lv_layer_top());
+    lv_obj_add_flag(ui->g_kb_top_layer, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_add_event_cb(ui->g_kb_top_layer, kb_event_cb, LV_EVENT_ALL, NULL);
+#else
+    ui->g_kb_top_layer = NULL;
+#endif
 }

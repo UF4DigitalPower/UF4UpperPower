@@ -67,8 +67,16 @@ include_directories(Core/Inc
         Drivers/CMSIS/Include
 
         BSP
-        UI
-        UI/Font
+        GUI
+        GUI_APP/STM32H7/generated
+        GUI_APP/STM32H7/generated/guider_fonts
+        GUI_APP/STM32H7/generated/guider_customer_fonts
+        GUI_APP/STM32H7/generated/images
+        GUI_APP/STM32H7/custom
+        GUI_APP/USER
+        GUI_APP/STM32H7
+        GUI_APP/STM32H7/lvgl
+        GUI_APP/STM32H7/lvgl/src
 )
 
 add_definitions(-DDEBUG -DUSE_PWR_LDO_SUPPLY -DUSE_HAL_DRIVER -DSTM32H743xx)
@@ -77,10 +85,16 @@ file(GLOB_RECURSE SOURCES
         "Core/*.*"
         "Drivers/*.*"
         "BSP/*.*"
-        "UI/*.*"
+        "GUI_APP/STM32H7/generated/*.c"
+        "GUI_APP/STM32H7/generated/guider_fonts/*.c"
+        "GUI_APP/STM32H7/generated/guider_customer_fonts/*.c"
+        "GUI_APP/STM32H7/generated/images/*.c"
+        "GUI_APP/STM32H7/custom/*.c"
+        "GUI_APP/USER/*.c"
+        "GUI_APP/STM32H7/lvgl/src/*.c"
 )
 
-list(FILTER SOURCES EXCLUDE REGEX ".*/BSP/gui_lvgl_.*\\.c$")
+list(FILTER SOURCES EXCLUDE REGEX ".*/GUI_APP/STM32H7/lvgl/src/extra/widgets/video/lv_video\\.c$")
 
 set(LINKER_SCRIPT ${CMAKE_SOURCE_DIR}/STM32H743ZITX_FLASH.ld)
 

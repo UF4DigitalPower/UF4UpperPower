@@ -35,10 +35,10 @@
         #include __LV_TO_STR(LV_CONF_PATH)
         #undef __LV_TO_STR_AUX
         #undef __LV_TO_STR
-    #elif defined(LV_CONF_INCLUDE_SIMPLE)         /*Or simply include lv_conf.h is enabled*/
+    #elif defined(LV_CONF_INCLUDE_SIMPLE)         /*或者干脆写入lv_conf.h已启用*/
         #include "lv_conf.h"
     #else
-        #include "../../lv_conf.h"                /*Else assume lv_conf.h is next to the lvgl folder*/
+        #include "../../lv_conf.h"                /*否则就假设lv_conf.h就在lvgl文件夹旁边*/
     #endif
     #if !defined(LV_CONF_H) && !defined(LV_CONF_SUPPRESS_DEFINE_CHECK)
         /* #include will sometimes silently fail when __has_include is used */
