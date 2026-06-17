@@ -6,6 +6,8 @@
 #include "main.h"
 #include "tim.h"
 #include "usart.h"
+#include "uf4_power_client.h"
+#include "uf4com.h"
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -56,16 +58,6 @@ typedef struct {
   uint32_t down_tick;
 } app_key_state_t;
 
-#define F4CP_SOF0 0xAAU
-#define F4CP_SOF1 0x55U
-#define F4CP_CMD_WRITE 0x02U
-#define F4CP_TYPE_SET_VOLTAGE_LIMIT 17U
-#define F4CP_TYPE_SET_CURRENT_LIMIT 18U
-#define F4CP_TYPE_POWER_STATE 21U
-#define F4CP_TYPE_OTP_SET_VALUE 30U
-#define F4CP_TYPE_OVP_SET_VALUE 32U
-#define F4CP_TYPE_OCP_SET_VALUE 34U
-#define F4CP_TYPE_FAN_SET_VALUE 39U
 #define APP_FIELD_COLOR_VSET 0x005BFFU
 #define APP_FIELD_COLOR_ISET 0x00A651U
 #define APP_FIELD_COLOR_OTP 0xE53935U
@@ -76,29 +68,32 @@ typedef struct {
 #define APP_FIELD_COLOR_CURSOR 0xFFD166U
 #define APP_FIELD_COLOR_SELECTED_TEXT 0x000000U
 #define APP_LONG_PRESS_MS 800U
-#define APP_VI_SEND_DELAY_MS 500U
+#define APP_POWER_STREAM_START_DELAY_MS 300U
+#define APP_POWER_CONNECT_TIMEOUT_MS 1000U
 #define APP_ENCODER_FAST_MS 10U
 #define APP_ENCODER_MEDIUM_MS 25U
 #define APP_ENCODER_SLOW_MS 60U
 
-static uint8_t g_f4cp_seq;
 static app_input_id_t g_active_input = APP_INPUT_VSET;
 static bool g_output_enabled;
-static bool g_vi_send_pending;
-static uint32_t g_vi_last_edit_tick;
+static bool g_input_dirty[APP_INPUT_COUNT];
 static int32_t g_last_v_count;
 static int32_t g_last_i_count;
 static uint32_t g_last_v_encoder_tick;
 static uint32_t g_last_i_encoder_tick;
+static uint32_t g_last_power_rx_count;
+static uint32_t g_last_power_rx_tick;
+static bool g_power_initial_report_received;
+static bool g_power_stream_start_requested;
 
 static app_input_t g_inputs[APP_INPUT_COUNT] = {
-  {APP_INPUT_VSET, &guider_ui.PAGE_MAIN_VSET_INPUT, F4CP_TYPE_SET_VOLTAGE_LIMIT, 0, 50000, 1000, 100, 2, APP_FIELD_COLOR_VSET},
-  {APP_INPUT_ISET, &guider_ui.PAGE_MAIN_ISET_INPUT, F4CP_TYPE_SET_CURRENT_LIMIT, 0, 10000, 1000, 50, 2, APP_FIELD_COLOR_ISET},
-  {APP_INPUT_OTP, &guider_ui.PAGE_MAIN_OTP_SET_INPUT, F4CP_TYPE_OTP_SET_VALUE, 0, 150000, 1000, 100, 2, APP_FIELD_COLOR_OTP},
-  {APP_INPUT_OVP, &guider_ui.PAGE_MAIN_OVP_SET_INPUT, F4CP_TYPE_OVP_SET_VALUE, 0, 60000, 1000, 100, 2, APP_FIELD_COLOR_OVP},
-  {APP_INPUT_OCP, &guider_ui.PAGE_MAIN_OCP_SET_INPUT, F4CP_TYPE_OCP_SET_VALUE, 0, 60000, 1000, 100, 2, APP_FIELD_COLOR_OCP},
+  {APP_INPUT_VSET, &guider_ui.PAGE_MAIN_VSET_INPUT, UF4_ID_SET_VOLTAGE_LIMIT, 0, 50000, 1000, 100, 2, APP_FIELD_COLOR_VSET},
+  {APP_INPUT_ISET, &guider_ui.PAGE_MAIN_ISET_INPUT, UF4_ID_SET_CURRENT_LIMIT, 0, 10000, 1000, 50, 2, APP_FIELD_COLOR_ISET},
+  {APP_INPUT_OTP, &guider_ui.PAGE_MAIN_OTP_SET_INPUT, UF4_ID_OTP_SET_VALUE, 0, 15000, 100, 10, 2, APP_FIELD_COLOR_OTP},
+  {APP_INPUT_OVP, &guider_ui.PAGE_MAIN_OVP_SET_INPUT, UF4_ID_OVP_SET_VALUE, 0, 60000, 1000, 100, 2, APP_FIELD_COLOR_OVP},
+  {APP_INPUT_OCP, &guider_ui.PAGE_MAIN_OCP_SET_INPUT, UF4_ID_OCP_SET_VALUE, 0, 60000, 1000, 100, 2, APP_FIELD_COLOR_OCP},
   {APP_INPUT_UVP, &guider_ui.PAGE_MAIN_UVP_SET_INPUT, 0, 0, 60000, 1000, 100, 2, APP_FIELD_COLOR_UVP},
-  {APP_INPUT_FAN, &guider_ui.PAGE_MAIN_FAN_SET_INPUT, F4CP_TYPE_FAN_SET_VALUE, 0, 1000, 100, 10, 2, APP_FIELD_COLOR_FAN},
+  {APP_INPUT_FAN, &guider_ui.PAGE_MAIN_FAN_SET_INPUT, UF4_ID_FAN_SET_VALUE, 0, 1000, 100, 10, 2, APP_FIELD_COLOR_FAN},
 };
 
 static app_key_state_t g_keys[APP_KEY_COUNT] = {
@@ -111,12 +106,7 @@ static app_key_state_t g_keys[APP_KEY_COUNT] = {
   {KEY_I_PUSH_GPIO_Port, KEY_I_PUSH_Pin, true, false, false, 0},
 };
 
-static uint16_t APP_Crc16(const uint8_t *data, uint16_t len);
-static void APP_PutU16(uint8_t *dst, uint16_t value);
-static void APP_PutI32(uint8_t *dst, int32_t value);
-static bool APP_SendFrame(uint8_t cmd, const uint8_t *payload, uint16_t payload_len);
-static uint16_t APP_AddTlvI32(uint8_t *payload, uint16_t offset, uint8_t type, int32_t value);
-static uint16_t APP_AddTlvU8(uint8_t *payload, uint16_t offset, uint8_t type, uint8_t value);
+static uint16_t APP_FieldValueU16(const app_input_t *input);
 static int32_t APP_Pow10(uint8_t n);
 static int32_t APP_FieldValue(const app_input_t *input);
 static void APP_SetInputText(app_input_t *input, const char *text);
@@ -125,9 +115,9 @@ static void APP_UpdateFocus(void);
 static void APP_SelectInput(app_input_id_t id);
 static void APP_NextSettingsInput(void);
 static void APP_AdjustInput(app_input_t *input, int32_t steps);
-static void APP_SendVsetIset(void);
+static void APP_SendInput(app_input_id_t id);
 static void APP_SaveSettingsNoVi(void);
-static void APP_ToggleOutput(void);
+static void APP_SetOutput(bool enable);
 static void APP_HandleShortPress(app_key_id_t key);
 static void APP_HandleLongPress(app_key_id_t key);
 static bool APP_ReadKey(const app_key_state_t *key);
@@ -137,76 +127,21 @@ static int32_t APP_EncoderStepMultiplier(uint32_t now, uint32_t *last_tick);
 static void APP_ScanEncoders(void);
 static void APP_SetAcceptedChars(void);
 static void APP_DisableInputHoverAnimation(void);
+static void APP_RequestPowerStatus(void);
+static void APP_StartPowerStream(void);
+static void APP_UpdatePowerUi(void);
 
-static uint16_t APP_Crc16(const uint8_t *data, uint16_t len)
+static uint16_t APP_FieldValueU16(const app_input_t *input)
 {
-  uint16_t crc = 0xFFFFU;
+  int32_t value = APP_FieldValue(input);
 
-  for (uint16_t i = 0; i < len; ++i) {
-    crc ^= data[i];
-    for (uint8_t bit = 0; bit < 8U; ++bit) {
-      crc = (crc & 1U) ? (uint16_t)((crc >> 1U) ^ 0xA001U) : (uint16_t)(crc >> 1U);
-    }
+  if (value < 0) {
+    value = 0;
+  } else if (value > 65535) {
+    value = 65535;
   }
 
-  return crc;
-}
-
-static void APP_PutU16(uint8_t *dst, uint16_t value)
-{
-  dst[0] = (uint8_t)value;
-  dst[1] = (uint8_t)(value >> 8U);
-}
-
-static void APP_PutI32(uint8_t *dst, int32_t value)
-{
-  dst[0] = (uint8_t)value;
-  dst[1] = (uint8_t)((uint32_t)value >> 8U);
-  dst[2] = (uint8_t)((uint32_t)value >> 16U);
-  dst[3] = (uint8_t)((uint32_t)value >> 24U);
-}
-
-static bool APP_SendFrame(uint8_t cmd, const uint8_t *payload, uint16_t payload_len)
-{
-  uint8_t frame[96];
-  const uint16_t body_len = (uint16_t)(2U + payload_len);
-  const uint16_t frame_len = (uint16_t)(body_len + 6U);
-  uint16_t crc;
-
-  if (frame_len > sizeof(frame)) {
-    return false;
-  }
-
-  frame[0] = F4CP_SOF0;
-  frame[1] = F4CP_SOF1;
-  APP_PutU16(&frame[2], body_len);
-  frame[4] = cmd;
-  frame[5] = g_f4cp_seq++;
-  if (payload_len > 0U && payload != NULL) {
-    memcpy(&frame[6], payload, payload_len);
-  }
-  crc = APP_Crc16(frame, (uint16_t)(body_len + 4U));
-  APP_PutU16(&frame[body_len + 4U], crc);
-
-  return HAL_UART_Transmit(&huart1, frame, frame_len, 20U) == HAL_OK;
-}
-
-static uint16_t APP_AddTlvI32(uint8_t *payload, uint16_t offset, uint8_t type, int32_t value)
-{
-  payload[offset++] = type;
-  APP_PutU16(&payload[offset], 4U);
-  offset = (uint16_t)(offset + 2U);
-  APP_PutI32(&payload[offset], value);
-  return (uint16_t)(offset + 4U);
-}
-
-static uint16_t APP_AddTlvU8(uint8_t *payload, uint16_t offset, uint8_t type, uint8_t value)
-{
-  payload[offset++] = type;
-  APP_PutU16(&payload[offset], 1U);
-  offset = (uint16_t)(offset + 2U);
-  payload[offset++] = value;
-  return offset;
+  return (uint16_t)value;
 }
 
 static int32_t APP_Pow10(uint8_t n)
@@ -326,43 +261,52 @@ static void APP_AdjustInput(app_input_t *input, int32_t steps)
   const int32_t value = APP_FieldValue(input) + steps * input->step_value;
 
   APP_SetFieldValue(input, value);
+  g_input_dirty[input->id] = true;
   APP_UpdateFocus();
-  if (input->id == APP_INPUT_VSET || input->id == APP_INPUT_ISET) {
-    g_vi_send_pending = true;
-    g_vi_last_edit_tick = HAL_GetTick();
-  }
 }
 
-static void APP_SendVsetIset(void)
+static void APP_SendInput(app_input_id_t id)
 {
-  uint8_t payload[14];
-  uint16_t offset = 0;
+  if (id >= APP_INPUT_COUNT || g_inputs[id].tlv_type == 0U) {
+    return;
+  }
 
-  offset = APP_AddTlvI32(payload, offset, F4CP_TYPE_SET_VOLTAGE_LIMIT, APP_FieldValue(&g_inputs[APP_INPUT_VSET]));
-  offset = APP_AddTlvI32(payload, offset, F4CP_TYPE_SET_CURRENT_LIMIT, APP_FieldValue(&g_inputs[APP_INPUT_ISET]));
-  (void)APP_SendFrame(F4CP_CMD_WRITE, payload, offset);
+  if (UF4PowerClient_WriteU16(g_inputs[id].tlv_type, APP_FieldValueU16(&g_inputs[id]))) {
+    g_input_dirty[id] = false;
+    APP_RequestPowerStatus();
+  }
 }
 
 static void APP_SaveSettingsNoVi(void)
 {
-  uint8_t payload[32];
-  uint16_t offset = 0;
+  const uint8_t ids[] = {
+    UF4_ID_OTP_SET_VALUE,
+    UF4_ID_OVP_SET_VALUE,
+    UF4_ID_OCP_SET_VALUE,
+    UF4_ID_FAN_SET_VALUE,
+  };
+  const uint16_t values[] = {
+    APP_FieldValueU16(&g_inputs[APP_INPUT_OTP]),
+    APP_FieldValueU16(&g_inputs[APP_INPUT_OVP]),
+    APP_FieldValueU16(&g_inputs[APP_INPUT_OCP]),
+    APP_FieldValueU16(&g_inputs[APP_INPUT_FAN]),
+  };
 
-  offset = APP_AddTlvI32(payload, offset, F4CP_TYPE_OTP_SET_VALUE, APP_FieldValue(&g_inputs[APP_INPUT_OTP]));
-  offset = APP_AddTlvI32(payload, offset, F4CP_TYPE_OVP_SET_VALUE, APP_FieldValue(&g_inputs[APP_INPUT_OVP]));
-  offset = APP_AddTlvI32(payload, offset, F4CP_TYPE_OCP_SET_VALUE, APP_FieldValue(&g_inputs[APP_INPUT_OCP]));
-  offset = APP_AddTlvI32(payload, offset, F4CP_TYPE_FAN_SET_VALUE, APP_FieldValue(&g_inputs[APP_INPUT_FAN]));
-  (void)APP_SendFrame(F4CP_CMD_WRITE, payload, offset);
+  if (UF4PowerClient_WriteU16Pairs(ids, values, 4U)) {
+    g_input_dirty[APP_INPUT_OTP] = false;
+    g_input_dirty[APP_INPUT_OVP] = false;
+    g_input_dirty[APP_INPUT_OCP] = false;
+    g_input_dirty[APP_INPUT_FAN] = false;
+    APP_RequestPowerStatus();
+  }
 }
 
-static void APP_ToggleOutput(void)
+static void APP_SetOutput(bool enable)
 {
-  uint8_t payload[4];
-  uint16_t offset = 0;
-
-  g_output_enabled = !g_output_enabled;
-  offset = APP_AddTlvU8(payload, offset, F4CP_TYPE_POWER_STATE, g_output_enabled ? 1U : 0U);
-  (void)APP_SendFrame(F4CP_CMD_WRITE, payload, offset);
+  g_output_enabled = enable;
+  if (UF4PowerClient_WriteU16(UF4_ID_POWER_STATE, g_output_enabled ? 1U : 0U)) {
+    APP_RequestPowerStatus();
+  }
   lv_label_set_text(guider_ui.PAGE_MAIN_FSM_LABEL, g_output_enabled ? "RUN" : "STOP");
 }
 
@@ -383,9 +327,15 @@ static void APP_HandleShortPress(app_key_id_t key)
       APP_NextSettingsInput();
       break;
     case APP_KEY_V_PUSH:
+      if (g_active_input == APP_INPUT_VSET && g_input_dirty[APP_INPUT_VSET]) {
+        APP_SendInput(APP_INPUT_VSET);
+      }
       APP_SelectInput(APP_INPUT_VSET);
       break;
     case APP_KEY_I_PUSH:
+      if (g_active_input == APP_INPUT_ISET && g_input_dirty[APP_INPUT_ISET]) {
+        APP_SendInput(APP_INPUT_ISET);
+      }
       APP_SelectInput(APP_INPUT_ISET);
       break;
     default:
@@ -397,8 +347,10 @@ static void APP_HandleLongPress(app_key_id_t key)
 {
   if (key == APP_KEY_M) {
     APP_SaveSettingsNoVi();
-  } else if (key == APP_KEY_V_PUSH || key == APP_KEY_I_PUSH) {
-    APP_ToggleOutput();
+  } else if (key == APP_KEY_V_PUSH) {
+    APP_SetOutput(true);
+  } else if (key == APP_KEY_I_PUSH) {
+    APP_SetOutput(false);
   }
 }
 
@@ -460,7 +412,7 @@ static int32_t APP_EncoderStepMultiplier(uint32_t now, uint32_t *last_tick)
     return 5;
   }
   if (elapsed <= APP_ENCODER_SLOW_MS) {
-    return 2;
+    return 1;
   }
   return 1;
 }
@@ -535,27 +487,228 @@ static void APP_DisableInputHoverAnimation(void)
   }
 }
 
+static void APP_FormatFixed(char *text, size_t text_size, uint16_t value, uint16_t scale, uint8_t decimals)
+{
+  const uint16_t whole = (scale == 0U) ? value : (uint16_t)(value / scale);
+  uint16_t frac = (scale == 0U) ? 0U : (uint16_t)(value % scale);
+
+  if (decimals == 0U) {
+    snprintf(text, text_size, "%u", (unsigned)value);
+  } else if (decimals == 1U) {
+    frac = (uint16_t)(frac / (scale / 10U));
+    snprintf(text, text_size, "%u.%01u", (unsigned)whole, (unsigned)frac);
+  } else {
+    frac = (uint16_t)(frac / (scale / 100U));
+    snprintf(text, text_size, "%u.%02u", (unsigned)whole, (unsigned)frac);
+  }
+}
+
+static void APP_SetLabelFixed(lv_obj_t *label, uint16_t value, uint16_t scale, uint8_t decimals)
+{
+  char text[16];
+
+  APP_FormatFixed(text, sizeof(text), value, scale, decimals);
+  lv_label_set_text(label, text);
+}
+
+static void APP_SetInputFromRegister(app_input_id_t input_id, uint8_t uf4_id)
+{
+  uint16_t value;
+
+  if (!g_input_dirty[input_id] && UF4PowerClient_GetU16(uf4_id, &value)) {
+    APP_SetFieldValue(&g_inputs[input_id], value);
+  }
+}
+
+static void APP_SetLabelFromRegister(lv_obj_t *label, uint8_t uf4_id, uint16_t scale, uint8_t decimals)
+{
+  uint16_t value;
+
+  if (UF4PowerClient_GetU16(uf4_id, &value)) {
+    APP_SetLabelFixed(label, value, scale, decimals);
+  }
+}
+
+static const char *APP_CcCvText(uint16_t value)
+{
+  return (value == 0U) ? "CC" : "CV";
+}
+
+static const char *APP_TopoText(uint16_t value)
+{
+  switch (value) {
+    case 1U:
+      return "BUCK";
+    case 2U:
+      return "BOOST";
+    case 3U:
+      return "MIX";
+    default:
+      return "NA";
+  }
+}
+
+static const char *APP_FsmText(uint16_t value)
+{
+  if ((value & 0x0008U) != 0U) {
+    return "RUN";
+  }
+  if ((value & 0x0004U) != 0U) {
+    return "RISE";
+  }
+  if ((value & 0x0002U) != 0U) {
+    return "WAIT";
+  }
+  if ((value & 0x0001U) != 0U) {
+    return "INIT";
+  }
+  return "ERR";
+}
+
+static const char *APP_FaultText(uint16_t value)
+{
+  return (value == 0U) ? "NONE" : "FAULT";
+}
+
+static void APP_RequestPowerStatus(void)
+{
+  const uint8_t ids[] = {
+    UF4_ID_INPUT_VOLTAGE,
+    UF4_ID_INPUT_CURRENT,
+    UF4_ID_OUTPUT_VOLTAGE,
+    UF4_ID_OUTPUT_CURRENT,
+    UF4_ID_CORE_TEMPERATURE,
+    UF4_ID_TEMP1_TEMPERATURE,
+    UF4_ID_TEMP2_TEMPERATURE,
+    UF4_ID_SET_VOLTAGE_LIMIT,
+    UF4_ID_SET_CURRENT_LIMIT,
+    UF4_ID_CC_CV_MODE,
+    UF4_ID_POWER_STATE,
+    UF4_ID_FAULT_STATE,
+    UF4_ID_STATE_MACHINE_FLAG_BITS,
+    UF4_ID_STATE_MACHINE_STATE,
+    UF4_ID_OTP_SET_VALUE,
+    UF4_ID_OVP_SET_VALUE,
+    UF4_ID_OCP_SET_VALUE,
+    UF4_ID_DUTY_CMD,
+    UF4_ID_PWM_A_COMPARE,
+    UF4_ID_PWM_D_COMPARE,
+    UF4_ID_FAN_SPEED,
+    UF4_ID_FAN_SET_VALUE,
+  };
+
+  (void)UF4PowerClient_ReadU16Pairs(ids, (uint8_t)(sizeof(ids) / sizeof(ids[0])));
+}
+
+static void APP_StartPowerStream(void)
+{
+  (void)UF4PowerClient_StartStreamAll();
+  g_power_stream_start_requested = true;
+}
+
+static void APP_UpdatePowerUi(void)
+{
+  uint16_t value;
+  uint16_t vin = 0U;
+  uint16_t iin = 0U;
+  uint16_t vout = 0U;
+  uint16_t iout = 0U;
+
+  APP_SetLabelFromRegister(guider_ui.PAGE_MAIN_VIN_LABEL, UF4_ID_INPUT_VOLTAGE, 1000U, 2U);
+  APP_SetLabelFromRegister(guider_ui.PAGE_MAIN_IIN_LABEL, UF4_ID_INPUT_CURRENT, 1000U, 2U);
+  APP_SetLabelFromRegister(guider_ui.PAGE_MAIN_VOUT_LABEL, UF4_ID_OUTPUT_VOLTAGE, 1000U, 2U);
+  APP_SetLabelFromRegister(guider_ui.PAGE_MAIN_IOUT_LABEL, UF4_ID_OUTPUT_CURRENT, 1000U, 2U);
+  APP_SetLabelFromRegister(guider_ui.PAGE_MAIN_CORETEMP_LABEL, UF4_ID_CORE_TEMPERATURE, 100U, 2U);
+  APP_SetLabelFromRegister(guider_ui.PAGE_MAIN_TEMP1_LABEL, UF4_ID_TEMP1_TEMPERATURE, 100U, 2U);
+  APP_SetLabelFromRegister(guider_ui.PAGE_MAIN_TEMP2_LABEL, UF4_ID_TEMP2_TEMPERATURE, 100U, 2U);
+
+  if (UF4PowerClient_GetU16(UF4_ID_INPUT_VOLTAGE, &vin) &&
+      UF4PowerClient_GetU16(UF4_ID_INPUT_CURRENT, &iin)) {
+    APP_SetLabelFixed(guider_ui.PAGE_MAIN_PIN_LABEL, (uint16_t)(((uint32_t)vin * (uint32_t)iin) / 1000000U), 1U, 0U);
+  }
+  if (UF4PowerClient_GetU16(UF4_ID_OUTPUT_VOLTAGE, &vout) &&
+      UF4PowerClient_GetU16(UF4_ID_OUTPUT_CURRENT, &iout)) {
+    APP_SetLabelFixed(guider_ui.PAGE_MAIN_POUT_LABEL, (uint16_t)(((uint32_t)vout * (uint32_t)iout) / 1000000U), 1U, 0U);
+  }
+
+  APP_SetInputFromRegister(APP_INPUT_VSET, UF4_ID_SET_VOLTAGE_LIMIT);
+  APP_SetInputFromRegister(APP_INPUT_ISET, UF4_ID_SET_CURRENT_LIMIT);
+  APP_SetInputFromRegister(APP_INPUT_OTP, UF4_ID_OTP_SET_VALUE);
+  APP_SetInputFromRegister(APP_INPUT_OVP, UF4_ID_OVP_SET_VALUE);
+  APP_SetInputFromRegister(APP_INPUT_OCP, UF4_ID_OCP_SET_VALUE);
+  APP_SetInputFromRegister(APP_INPUT_FAN, UF4_ID_FAN_SET_VALUE);
+  APP_UpdateFocus();
+
+  if (UF4PowerClient_GetU16(UF4_ID_CC_CV_MODE, &value)) {
+    lv_label_set_text(guider_ui.PAGE_MAIN_MODE_LABEL, APP_CcCvText(value));
+  }
+  if (UF4PowerClient_GetU16(UF4_ID_STATE_MACHINE_STATE, &value)) {
+    lv_label_set_text(guider_ui.PAGE_MAIN_TOPO_LABEL, APP_TopoText(value));
+  }
+  if (UF4PowerClient_GetU16(UF4_ID_FAULT_STATE, &value)) {
+    lv_label_set_text(guider_ui.PAGE_MAIN_FAULT_LABEL, APP_FaultText(value));
+  }
+  if (UF4PowerClient_GetU16(UF4_ID_STATE_MACHINE_FLAG_BITS, &value)) {
+    lv_label_set_text(guider_ui.PAGE_MAIN_FSM_LABEL, APP_FsmText(value));
+  }
+  if (UF4PowerClient_GetU16(UF4_ID_POWER_STATE, &value)) {
+    g_output_enabled = value != 0U;
+  }
+  if (UF4PowerClient_GetU16(UF4_ID_FAN_SPEED, &value)) {
+    (void)value;
+  }
+
+  if (UF4PowerClient_RxFrameCount() != g_last_power_rx_count) {
+    g_last_power_rx_count = UF4PowerClient_RxFrameCount();
+    g_last_power_rx_tick = HAL_GetTick();
+    g_power_initial_report_received = true;
+  }
+  {
+    char text[20];
+    snprintf(text, sizeof(text), "T%lu R%lu",
+             (unsigned long)UF4PowerClient_TxOkCount(),
+             (unsigned long)UF4PowerClient_RxFrameCount());
+    lv_label_set_text(guider_ui.PAGE_MAIN_CONNECT_TO_PC_LABEL, text);
+    snprintf(text, sizeof(text), "B%lu E%lu%s",
+             (unsigned long)UF4PowerClient_RxByteCount(),
+             (unsigned long)(UF4PowerClient_RxErrorCount() + UF4PowerClient_TxFailCount()),
+             UF4PowerClient_IsStreamEnabled() ? " S" : "");
+    lv_label_set_text(guider_ui.PAGE_MAIN_PC_CTRL_LABEL, text);
+  }
+}
+
 void APP_Init(void)
 {
+  UF4PowerClient_Init();
   APP_SetAcceptedChars();
   APP_DisableInputHoverAnimation();
+  APP_SetFieldValue(&g_inputs[APP_INPUT_VSET], 5000);
+  APP_SetFieldValue(&g_inputs[APP_INPUT_ISET], 1000);
   HAL_TIM_Encoder_Start(&htim2, TIM_CHANNEL_ALL);
   HAL_TIM_Encoder_Start(&htim4, TIM_CHANNEL_ALL);
   g_last_i_count = (int32_t)__HAL_TIM_GET_COUNTER(&htim2);
   g_last_v_count = (int32_t)__HAL_TIM_GET_COUNTER(&htim4);
   g_last_i_encoder_tick = HAL_GetTick();
   g_last_v_encoder_tick = g_last_i_encoder_tick;
+  g_last_power_rx_tick = g_last_i_encoder_tick;
+  APP_RequestPowerStatus();
   APP_UpdateFocus();
 }
 
 void APP_Tick(void)
 {
+  UF4PowerClient_Tick();
   APP_ScanKeys();
   APP_ScanEncoders();
 
-  if (g_vi_send_pending && (HAL_GetTick() - g_vi_last_edit_tick) >= APP_VI_SEND_DELAY_MS) {
-    g_vi_send_pending = false;
-    APP_SendVsetIset();
+  if (UF4PowerClient_ConsumeDataChanged() ||
+      ((HAL_GetTick() - g_last_power_rx_tick) >= APP_POWER_CONNECT_TIMEOUT_MS)) {
+    APP_UpdatePowerUi();
+  }
+  if (!g_power_stream_start_requested &&
+      g_power_initial_report_received &&
+      ((HAL_GetTick() - g_last_power_rx_tick) >= APP_POWER_STREAM_START_DELAY_MS)) {
+    APP_StartPowerStream();
   }
 }
 

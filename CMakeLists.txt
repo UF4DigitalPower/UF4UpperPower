@@ -34,7 +34,7 @@ add_compile_definitions(ARM_MATH_CM4;ARM_MATH_MATRIX_CHECK;ARM_MATH_ROUNDING)
 add_compile_options(-mfloat-abi=hard -mfpu=fpv4-sp-d16)
 add_link_options(-mfloat-abi=hard -mfpu=fpv4-sp-d16)
 
-#Uncomment for software floating point
+#关于软件浮点数的评论取消
 #add_compile_options(-mfloat-abi=soft)
 
 add_compile_options(-mcpu=cortex-m7 -mthumb -mthumb-interwork)
@@ -65,6 +65,9 @@ include_directories(Core/Inc
         Drivers/STM32H7xx_HAL_Driver/Inc/Legacy
         Drivers/CMSIS/Device/ST/STM32H7xx/Include
         Drivers/CMSIS/Include
+        E:/PROJECT_C/UF4COM/uf4com/protocol/Inc
+        E:/PROJECT_C/UF4COM/uf4com/register/Inc
+        E:/PROJECT_C/UF4COM/uf4com/transport/uf4com_uart/Inc
 
         BSP
         GUI
@@ -84,6 +87,9 @@ add_definitions(-DDEBUG -DUSE_PWR_LDO_SUPPLY -DUSE_HAL_DRIVER -DSTM32H743xx)
 file(GLOB_RECURSE SOURCES
         "Core/*.*"
         "Drivers/*.*"
+        "E:/PROJECT_C/UF4COM/uf4com/protocol/Src/*.c"
+        "E:/PROJECT_C/UF4COM/uf4com/register/Src/*.c"
+        "E:/PROJECT_C/UF4COM/uf4com/transport/uf4com_uart/Src/*.c"
         "BSP/*.*"
         "GUI_APP/STM32H7/generated/*.c"
         "GUI_APP/STM32H7/generated/guider_fonts/*.c"
