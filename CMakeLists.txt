@@ -60,14 +60,16 @@ else ()
     add_compile_options(-Og -g)
 endif ()
 
+set(UF4COM "${CMAKE_SOURCE_DIR}/UF4COM")
+
 include_directories(Core/Inc
         Drivers/STM32H7xx_HAL_Driver/Inc
         Drivers/STM32H7xx_HAL_Driver/Inc/Legacy
         Drivers/CMSIS/Device/ST/STM32H7xx/Include
         Drivers/CMSIS/Include
-        E:/PROJECT_C/UF4COM/uf4com/protocol/Inc
-        E:/PROJECT_C/UF4COM/uf4com/register/Inc
-        E:/PROJECT_C/UF4COM/uf4com/transport/uf4com_uart/Inc
+        ${UF4COM}/uf4com/protocol/Inc
+        ${UF4COM}/uf4com/register/Inc
+        ${UF4COM}/uf4com/transport/uf4com_uart/Inc
 
         BSP
         GUI
@@ -84,12 +86,12 @@ include_directories(Core/Inc
 
 add_definitions(-DDEBUG -DUSE_PWR_LDO_SUPPLY -DUSE_HAL_DRIVER -DSTM32H743xx)
 
-file(GLOB_RECURSE SOURCES
+file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS
         "Core/*.*"
         "Drivers/*.*"
-        "E:/PROJECT_C/UF4COM/uf4com/protocol/Src/*.c"
-        "E:/PROJECT_C/UF4COM/uf4com/register/Src/*.c"
-        "E:/PROJECT_C/UF4COM/uf4com/transport/uf4com_uart/Src/*.c"
+        "${UF4COM}/uf4com/protocol/Src/*.c"
+        "${UF4COM}/uf4com/register/Src/*.c"
+        "${UF4COM}/uf4com/transport/uf4com_uart/Src/*.c"
         "BSP/*.*"
         "GUI_APP/STM32H7/generated/*.c"
         "GUI_APP/STM32H7/generated/guider_fonts/*.c"
