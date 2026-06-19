@@ -24,15 +24,12 @@ __attribute__((unused)) void kb_event_cb (lv_event_t *e) {
 
 __attribute__((unused)) void ta_event_cb (lv_event_t *e) {
     lv_event_code_t code = lv_event_get_code(e);
-#if LV_USE_KEYBOARD || LV_USE_ZH_KEYBOARD
+#if LV_USE_KEYBOARD
     lv_obj_t *ta = lv_event_get_target(e);
 #endif
     lv_obj_t *kb = lv_event_get_user_data(e);
     if (code == LV_EVENT_FOCUSED || code == LV_EVENT_CLICKED)
     {
-#if LV_USE_ZH_KEYBOARD != 0
-        lv_zh_keyboard_set_textarea(kb, ta);
-#endif
 #if LV_USE_KEYBOARD != 0
         lv_keyboard_set_textarea(kb, ta);
 #endif
@@ -42,9 +39,6 @@ __attribute__((unused)) void ta_event_cb (lv_event_t *e) {
     if (code == LV_EVENT_CANCEL || code == LV_EVENT_DEFOCUSED)
     {
 
-#if LV_USE_ZH_KEYBOARD != 0
-        lv_zh_keyboard_set_textarea(kb, ta);
-#endif
 #if LV_USE_KEYBOARD != 0
         lv_keyboard_set_textarea(kb, ta);
 #endif
@@ -75,5 +69,3 @@ void clock_count(int *hour, int *min, int *sec)
     }
 }
 #endif
-
-

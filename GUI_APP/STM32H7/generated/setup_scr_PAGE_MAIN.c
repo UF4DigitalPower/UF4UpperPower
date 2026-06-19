@@ -14,92 +14,6 @@
 #include "widgets_init.h"
 #include "custom.h"
 
-static void setup_input_no_float(lv_obj_t *obj)
-{
-    lv_obj_t *label = lv_textarea_get_label(obj);
-
-    lv_obj_clear_flag(obj, LV_OBJ_FLAG_CLICKABLE | LV_OBJ_FLAG_SCROLLABLE | LV_OBJ_FLAG_SCROLL_ON_FOCUS);
-    lv_obj_clear_flag(label, LV_OBJ_FLAG_CLICKABLE | LV_OBJ_FLAG_SCROLLABLE | LV_OBJ_FLAG_SCROLL_ON_FOCUS);
-    lv_obj_set_scrollbar_mode(obj, LV_SCROLLBAR_MODE_OFF);
-    lv_obj_set_pos(label, 0, 0);
-    lv_obj_set_style_anim_time(obj, 0, LV_PART_CURSOR | LV_STATE_DEFAULT);
-    lv_obj_set_style_anim_time(obj, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_set_style_anim_time(label, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_set_style_transform_width(obj, 0, LV_PART_MAIN | LV_STATE_HOVERED);
-    lv_obj_set_style_transform_height(obj, 0, LV_PART_MAIN | LV_STATE_HOVERED);
-    lv_obj_set_style_translate_x(obj, 0, LV_PART_MAIN | LV_STATE_HOVERED);
-    lv_obj_set_style_translate_y(obj, 0, LV_PART_MAIN | LV_STATE_HOVERED);
-    lv_obj_set_style_transform_width(obj, 0, LV_PART_MAIN | LV_STATE_FOCUSED);
-    lv_obj_set_style_transform_height(obj, 0, LV_PART_MAIN | LV_STATE_FOCUSED);
-    lv_obj_set_style_translate_x(obj, 0, LV_PART_MAIN | LV_STATE_FOCUSED);
-    lv_obj_set_style_translate_y(obj, 0, LV_PART_MAIN | LV_STATE_FOCUSED);
-    lv_obj_set_style_transform_width(obj, 0, LV_PART_MAIN | LV_STATE_PRESSED);
-    lv_obj_set_style_transform_height(obj, 0, LV_PART_MAIN | LV_STATE_PRESSED);
-    lv_obj_set_style_translate_x(obj, 0, LV_PART_MAIN | LV_STATE_PRESSED);
-    lv_obj_set_style_translate_y(obj, 0, LV_PART_MAIN | LV_STATE_PRESSED);
-    lv_obj_set_style_transform_width(label, 0, LV_PART_MAIN | LV_STATE_HOVERED);
-    lv_obj_set_style_transform_height(label, 0, LV_PART_MAIN | LV_STATE_HOVERED);
-    lv_obj_set_style_translate_x(label, 0, LV_PART_MAIN | LV_STATE_HOVERED);
-    lv_obj_set_style_translate_y(label, 0, LV_PART_MAIN | LV_STATE_HOVERED);
-    lv_obj_set_style_transform_width(label, 0, LV_PART_MAIN | LV_STATE_FOCUSED);
-    lv_obj_set_style_transform_height(label, 0, LV_PART_MAIN | LV_STATE_FOCUSED);
-    lv_obj_set_style_translate_x(label, 0, LV_PART_MAIN | LV_STATE_FOCUSED);
-    lv_obj_set_style_translate_y(label, 0, LV_PART_MAIN | LV_STATE_FOCUSED);
-    lv_obj_set_style_transform_width(label, 0, LV_PART_MAIN | LV_STATE_PRESSED);
-    lv_obj_set_style_transform_height(label, 0, LV_PART_MAIN | LV_STATE_PRESSED);
-    lv_obj_set_style_translate_x(label, 0, LV_PART_MAIN | LV_STATE_PRESSED);
-    lv_obj_set_style_translate_y(label, 0, LV_PART_MAIN | LV_STATE_PRESSED);
-}
-
-static void setup_label_color(lv_obj_t *obj, uint32_t color)
-{
-    lv_obj_set_style_bg_opa(obj, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_set_style_text_color(obj, lv_color_hex(color), LV_PART_MAIN | LV_STATE_DEFAULT);
-}
-
-static void setup_input_color(lv_obj_t *obj, uint32_t color)
-{
-    lv_obj_t *label = lv_textarea_get_label(obj);
-
-    lv_obj_set_style_bg_opa(obj, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_set_style_text_color(obj, lv_color_hex(color), LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_set_style_text_color(label, lv_color_hex(color), LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_set_style_bg_opa(obj, LV_OPA_COVER, LV_PART_SELECTED | LV_STATE_DEFAULT);
-    lv_obj_set_style_bg_color(obj, lv_color_hex(0xffd166), LV_PART_SELECTED | LV_STATE_DEFAULT);
-    lv_obj_set_style_text_color(obj, lv_color_hex(0x000000), LV_PART_SELECTED | LV_STATE_DEFAULT);
-    lv_obj_set_style_bg_opa(label, LV_OPA_COVER, LV_PART_SELECTED | LV_STATE_DEFAULT);
-    lv_obj_set_style_bg_color(label, lv_color_hex(0xffd166), LV_PART_SELECTED | LV_STATE_DEFAULT);
-    lv_obj_set_style_text_color(label, lv_color_hex(0x000000), LV_PART_SELECTED | LV_STATE_DEFAULT);
-}
-
-static void setup_page_main_colors(lv_ui *ui)
-{
-    setup_label_color(ui->PAGE_MAIN_VIN_LABEL, 0x005bff);
-    setup_label_color(ui->PAGE_MAIN_IIN_LABEL, 0x00a651);
-    setup_label_color(ui->PAGE_MAIN_PIN_LABEL, 0xff6d00);
-    setup_label_color(ui->PAGE_MAIN_VERSION_LABEL, 0x7c4dff);
-    setup_label_color(ui->PAGE_MAIN_VOUT_LABEL, 0x2962ff);
-    setup_label_color(ui->PAGE_MAIN_IOUT_LABEL, 0x00bfa5);
-    setup_label_color(ui->PAGE_MAIN_POUT_LABEL, 0xff8f00);
-    setup_label_color(ui->PAGE_MAIN_CORETEMP_LABEL, 0xe53935);
-    setup_label_color(ui->PAGE_MAIN_TEMP2_LABEL, 0xd500f9);
-    setup_label_color(ui->PAGE_MAIN_TEMP1_LABEL, 0xff1744);
-    setup_label_color(ui->PAGE_MAIN_MODE_LABEL, 0x7c4dff);
-    setup_label_color(ui->PAGE_MAIN_TOPO_LABEL, 0x00a8d8);
-    setup_label_color(ui->PAGE_MAIN_FAULT_LABEL, 0xff1744);
-    setup_label_color(ui->PAGE_MAIN_FSM_LABEL, 0x00c853);
-    setup_label_color(ui->PAGE_MAIN_PC_CTRL_LABEL, 0x2962ff);
-    setup_label_color(ui->PAGE_MAIN_CONNECT_TO_PC_LABEL, 0x00c853);
-
-    setup_input_color(ui->PAGE_MAIN_VSET_INPUT, 0x005bff);
-    setup_input_color(ui->PAGE_MAIN_ISET_INPUT, 0x00a651);
-    setup_input_color(ui->PAGE_MAIN_OTP_SET_INPUT, 0xe53935);
-    setup_input_color(ui->PAGE_MAIN_OVP_SET_INPUT, 0xd500f9);
-    setup_input_color(ui->PAGE_MAIN_OCP_SET_INPUT, 0xff8f00);
-    setup_input_color(ui->PAGE_MAIN_UVP_SET_INPUT, 0x00a8d8);
-    setup_input_color(ui->PAGE_MAIN_FAN_SET_INPUT, 0x7c4dff);
-}
-
 
 
 void setup_scr_PAGE_MAIN(lv_ui *ui)
@@ -382,7 +296,7 @@ void setup_scr_PAGE_MAIN(lv_ui *ui)
 
     //Write codes PAGE_MAIN_VERSION_LABEL
     ui->PAGE_MAIN_VERSION_LABEL = lv_label_create(ui->PAGE_MAIN_cont_3);
-    lv_label_set_text(ui->PAGE_MAIN_VERSION_LABEL, "V0.0.3");
+    lv_label_set_text(ui->PAGE_MAIN_VERSION_LABEL, "V1.0.0.112");
     lv_label_set_long_mode(ui->PAGE_MAIN_VERSION_LABEL, LV_LABEL_LONG_WRAP);
     lv_obj_set_pos(ui->PAGE_MAIN_VERSION_LABEL, 231, 3);
     lv_obj_set_size(ui->PAGE_MAIN_VERSION_LABEL, 180, 24);
@@ -557,7 +471,6 @@ void setup_scr_PAGE_MAIN(lv_ui *ui)
 
     //Write codes PAGE_MAIN_VSET_INPUT
     ui->PAGE_MAIN_VSET_INPUT = lv_textarea_create(ui->PAGE_MAIN_cont_4);
-    setup_input_no_float(ui->PAGE_MAIN_VSET_INPUT);
     lv_textarea_set_text(ui->PAGE_MAIN_VSET_INPUT, "45.00");
     lv_textarea_set_placeholder_text(ui->PAGE_MAIN_VSET_INPUT, "");
     lv_textarea_set_password_bullet(ui->PAGE_MAIN_VSET_INPUT, "*");
@@ -577,21 +490,13 @@ void setup_scr_PAGE_MAIN(lv_ui *ui)
     lv_obj_set_style_text_opa(ui->PAGE_MAIN_VSET_INPUT, 255, LV_PART_MAIN|LV_STATE_DEFAULT);
     lv_obj_set_style_text_letter_space(ui->PAGE_MAIN_VSET_INPUT, 3, LV_PART_MAIN|LV_STATE_DEFAULT);
     lv_obj_set_style_text_align(ui->PAGE_MAIN_VSET_INPUT, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN|LV_STATE_DEFAULT);
-    lv_obj_set_style_bg_opa(ui->PAGE_MAIN_VSET_INPUT, 255, LV_PART_MAIN|LV_STATE_DEFAULT);
-    lv_obj_set_style_bg_color(ui->PAGE_MAIN_VSET_INPUT, lv_color_hex(0xd8ecff), LV_PART_MAIN|LV_STATE_DEFAULT);
-    lv_obj_set_style_bg_grad_dir(ui->PAGE_MAIN_VSET_INPUT, LV_GRAD_DIR_NONE, LV_PART_MAIN|LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_opa(ui->PAGE_MAIN_VSET_INPUT, 0, LV_PART_MAIN|LV_STATE_DEFAULT);
     lv_obj_set_style_border_width(ui->PAGE_MAIN_VSET_INPUT, 0, LV_PART_MAIN|LV_STATE_DEFAULT);
     lv_obj_set_style_shadow_width(ui->PAGE_MAIN_VSET_INPUT, 0, LV_PART_MAIN|LV_STATE_DEFAULT);
     lv_obj_set_style_pad_top(ui->PAGE_MAIN_VSET_INPUT, 0, LV_PART_MAIN|LV_STATE_DEFAULT);
     lv_obj_set_style_pad_right(ui->PAGE_MAIN_VSET_INPUT, 0, LV_PART_MAIN|LV_STATE_DEFAULT);
     lv_obj_set_style_pad_left(ui->PAGE_MAIN_VSET_INPUT, 0, LV_PART_MAIN|LV_STATE_DEFAULT);
     lv_obj_set_style_radius(ui->PAGE_MAIN_VSET_INPUT, 0, LV_PART_MAIN|LV_STATE_DEFAULT);
-    lv_obj_set_style_bg_color(ui->PAGE_MAIN_VSET_INPUT, lv_color_hex(0xffd166), LV_PART_SELECTED|LV_STATE_DEFAULT);
-    lv_obj_set_style_text_color(ui->PAGE_MAIN_VSET_INPUT, lv_color_hex(0x000000), LV_PART_SELECTED|LV_STATE_DEFAULT);
-    lv_obj_set_style_transform_width(ui->PAGE_MAIN_VSET_INPUT, 0, LV_PART_MAIN|LV_STATE_HOVERED);
-    lv_obj_set_style_transform_height(ui->PAGE_MAIN_VSET_INPUT, 0, LV_PART_MAIN|LV_STATE_HOVERED);
-    lv_obj_set_style_translate_x(ui->PAGE_MAIN_VSET_INPUT, 0, LV_PART_MAIN|LV_STATE_HOVERED);
-    lv_obj_set_style_translate_y(ui->PAGE_MAIN_VSET_INPUT, 0, LV_PART_MAIN|LV_STATE_HOVERED);
 
     //Write style for PAGE_MAIN_VSET_INPUT, Part: LV_PART_SCROLLBAR, State: LV_STATE_DEFAULT.
     lv_obj_set_style_bg_opa(ui->PAGE_MAIN_VSET_INPUT, 255, LV_PART_SCROLLBAR|LV_STATE_DEFAULT);
@@ -601,7 +506,6 @@ void setup_scr_PAGE_MAIN(lv_ui *ui)
 
     //Write codes PAGE_MAIN_ISET_INPUT
     ui->PAGE_MAIN_ISET_INPUT = lv_textarea_create(ui->PAGE_MAIN_cont_4);
-    setup_input_no_float(ui->PAGE_MAIN_ISET_INPUT);
     lv_textarea_set_text(ui->PAGE_MAIN_ISET_INPUT, "45.00");
     lv_textarea_set_placeholder_text(ui->PAGE_MAIN_ISET_INPUT, "");
     lv_textarea_set_password_bullet(ui->PAGE_MAIN_ISET_INPUT, "*");
@@ -622,7 +526,7 @@ void setup_scr_PAGE_MAIN(lv_ui *ui)
     lv_obj_set_style_text_letter_space(ui->PAGE_MAIN_ISET_INPUT, 3, LV_PART_MAIN|LV_STATE_DEFAULT);
     lv_obj_set_style_text_align(ui->PAGE_MAIN_ISET_INPUT, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN|LV_STATE_DEFAULT);
     lv_obj_set_style_bg_opa(ui->PAGE_MAIN_ISET_INPUT, 255, LV_PART_MAIN|LV_STATE_DEFAULT);
-    lv_obj_set_style_bg_color(ui->PAGE_MAIN_ISET_INPUT, lv_color_hex(0xd8ecff), LV_PART_MAIN|LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_color(ui->PAGE_MAIN_ISET_INPUT, lv_color_hex(0xffffff), LV_PART_MAIN|LV_STATE_DEFAULT);
     lv_obj_set_style_bg_grad_dir(ui->PAGE_MAIN_ISET_INPUT, LV_GRAD_DIR_NONE, LV_PART_MAIN|LV_STATE_DEFAULT);
     lv_obj_set_style_border_width(ui->PAGE_MAIN_ISET_INPUT, 0, LV_PART_MAIN|LV_STATE_DEFAULT);
     lv_obj_set_style_shadow_width(ui->PAGE_MAIN_ISET_INPUT, 0, LV_PART_MAIN|LV_STATE_DEFAULT);
@@ -630,12 +534,6 @@ void setup_scr_PAGE_MAIN(lv_ui *ui)
     lv_obj_set_style_pad_right(ui->PAGE_MAIN_ISET_INPUT, 0, LV_PART_MAIN|LV_STATE_DEFAULT);
     lv_obj_set_style_pad_left(ui->PAGE_MAIN_ISET_INPUT, 0, LV_PART_MAIN|LV_STATE_DEFAULT);
     lv_obj_set_style_radius(ui->PAGE_MAIN_ISET_INPUT, 0, LV_PART_MAIN|LV_STATE_DEFAULT);
-    lv_obj_set_style_bg_color(ui->PAGE_MAIN_ISET_INPUT, lv_color_hex(0xffd166), LV_PART_SELECTED|LV_STATE_DEFAULT);
-    lv_obj_set_style_text_color(ui->PAGE_MAIN_ISET_INPUT, lv_color_hex(0x000000), LV_PART_SELECTED|LV_STATE_DEFAULT);
-    lv_obj_set_style_transform_width(ui->PAGE_MAIN_ISET_INPUT, 0, LV_PART_MAIN|LV_STATE_HOVERED);
-    lv_obj_set_style_transform_height(ui->PAGE_MAIN_ISET_INPUT, 0, LV_PART_MAIN|LV_STATE_HOVERED);
-    lv_obj_set_style_translate_x(ui->PAGE_MAIN_ISET_INPUT, 0, LV_PART_MAIN|LV_STATE_HOVERED);
-    lv_obj_set_style_translate_y(ui->PAGE_MAIN_ISET_INPUT, 0, LV_PART_MAIN|LV_STATE_HOVERED);
 
     //Write style for PAGE_MAIN_ISET_INPUT, Part: LV_PART_SCROLLBAR, State: LV_STATE_DEFAULT.
     lv_obj_set_style_bg_opa(ui->PAGE_MAIN_ISET_INPUT, 255, LV_PART_SCROLLBAR|LV_STATE_DEFAULT);
@@ -755,7 +653,6 @@ void setup_scr_PAGE_MAIN(lv_ui *ui)
 
     //Write codes PAGE_MAIN_OTP_SET_INPUT
     ui->PAGE_MAIN_OTP_SET_INPUT = lv_textarea_create(ui->PAGE_MAIN_cont_7);
-    setup_input_no_float(ui->PAGE_MAIN_OTP_SET_INPUT);
     lv_textarea_set_text(ui->PAGE_MAIN_OTP_SET_INPUT, "80.00");
     lv_textarea_set_placeholder_text(ui->PAGE_MAIN_OTP_SET_INPUT, "");
     lv_textarea_set_password_bullet(ui->PAGE_MAIN_OTP_SET_INPUT, "*");
@@ -791,7 +688,6 @@ void setup_scr_PAGE_MAIN(lv_ui *ui)
 
     //Write codes PAGE_MAIN_OVP_SET_INPUT
     ui->PAGE_MAIN_OVP_SET_INPUT = lv_textarea_create(ui->PAGE_MAIN_cont_7);
-    setup_input_no_float(ui->PAGE_MAIN_OVP_SET_INPUT);
     lv_textarea_set_text(ui->PAGE_MAIN_OVP_SET_INPUT, "45.00");
     lv_textarea_set_placeholder_text(ui->PAGE_MAIN_OVP_SET_INPUT, "");
     lv_textarea_set_password_bullet(ui->PAGE_MAIN_OVP_SET_INPUT, "*");
@@ -827,7 +723,6 @@ void setup_scr_PAGE_MAIN(lv_ui *ui)
 
     //Write codes PAGE_MAIN_OCP_SET_INPUT
     ui->PAGE_MAIN_OCP_SET_INPUT = lv_textarea_create(ui->PAGE_MAIN_cont_7);
-    setup_input_no_float(ui->PAGE_MAIN_OCP_SET_INPUT);
     lv_textarea_set_text(ui->PAGE_MAIN_OCP_SET_INPUT, "10.00");
     lv_textarea_set_placeholder_text(ui->PAGE_MAIN_OCP_SET_INPUT, "");
     lv_textarea_set_password_bullet(ui->PAGE_MAIN_OCP_SET_INPUT, "*");
@@ -863,7 +758,6 @@ void setup_scr_PAGE_MAIN(lv_ui *ui)
 
     //Write codes PAGE_MAIN_UVP_SET_INPUT
     ui->PAGE_MAIN_UVP_SET_INPUT = lv_textarea_create(ui->PAGE_MAIN_cont_7);
-    setup_input_no_float(ui->PAGE_MAIN_UVP_SET_INPUT);
     lv_textarea_set_text(ui->PAGE_MAIN_UVP_SET_INPUT, "05.00");
     lv_textarea_set_placeholder_text(ui->PAGE_MAIN_UVP_SET_INPUT, "");
     lv_textarea_set_password_bullet(ui->PAGE_MAIN_UVP_SET_INPUT, "*");
@@ -922,8 +816,7 @@ void setup_scr_PAGE_MAIN(lv_ui *ui)
 
     //Write codes PAGE_MAIN_FAN_SET_INPUT
     ui->PAGE_MAIN_FAN_SET_INPUT = lv_textarea_create(ui->PAGE_MAIN_cont_7);
-    setup_input_no_float(ui->PAGE_MAIN_FAN_SET_INPUT);
-    lv_textarea_set_text(ui->PAGE_MAIN_FAN_SET_INPUT, "10.00");
+    lv_textarea_set_text(ui->PAGE_MAIN_FAN_SET_INPUT, "1000");
     lv_textarea_set_placeholder_text(ui->PAGE_MAIN_FAN_SET_INPUT, "");
     lv_textarea_set_password_bullet(ui->PAGE_MAIN_FAN_SET_INPUT, "*");
     lv_textarea_set_password_mode(ui->PAGE_MAIN_FAN_SET_INPUT, false);
@@ -1776,7 +1669,6 @@ void setup_scr_PAGE_MAIN(lv_ui *ui)
 
     //The custom code of PAGE_MAIN.
 
-    setup_page_main_colors(ui);
 
     //Update current screen layout.
     lv_obj_update_layout(ui->PAGE_MAIN);

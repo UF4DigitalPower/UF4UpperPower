@@ -532,8 +532,7 @@
 									"border_color": "#2195f6",
 									"radius": 10
 								}
-							],
-							"dropToGap": false
+							]
 						},
 						{
 							"name": "img_2",
@@ -565,8 +564,7 @@
 									"image_opa": 255,
 									"radius": 0
 								}
-							],
-							"dropToGap": false
+							]
 						},
 						{
 							"name": "label_70",
@@ -2100,8 +2098,7 @@
 									"image_opa": 255,
 									"radius": 0
 								}
-							],
-							"dropToGap": false
+							]
 						},
 						{
 							"name": "label_45",
@@ -3905,8 +3902,7 @@
 									"bg_opa": 255,
 									"radius": 0
 								}
-							],
-							"dropToGap": false
+							]
 						},
 						{
 							"name": "label_67",
@@ -4108,8 +4104,7 @@
 									"bg_opa": 255,
 									"radius": 0
 								}
-							],
-							"dropToGap": false
+							]
 						},
 						{
 							"name": "OCP_SET_INPUT",
@@ -4211,8 +4206,7 @@
 									"bg_opa": 255,
 									"radius": 0
 								}
-							],
-							"dropToGap": false
+							]
 						},
 						{
 							"name": "OVP_SET_INPUT",
@@ -4314,8 +4308,7 @@
 									"bg_opa": 255,
 									"radius": 0
 								}
-							],
-							"dropToGap": false
+							]
 						},
 						{
 							"name": "OTP_SET_INPUT",
@@ -4417,8 +4410,7 @@
 									"bg_opa": 255,
 									"radius": 0
 								}
-							],
-							"dropToGap": false
+							]
 						},
 						{
 							"name": "label_66",
@@ -4971,8 +4963,7 @@
 									"bg_opa": 255,
 									"radius": 0
 								}
-							],
-							"dropToGap": false
+							]
 						},
 						{
 							"name": "VSET_INPUT",
@@ -5074,8 +5065,7 @@
 									"bg_opa": 255,
 									"radius": 0
 								}
-							],
-							"dropToGap": false
+							]
 						},
 						{
 							"name": "label_62",

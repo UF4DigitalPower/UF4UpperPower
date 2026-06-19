@@ -18,6 +18,7 @@ extern "C" {
 typedef struct
 {
   
+	lv_obj_t *g_kb_top_layer;
 	lv_obj_t *PAGE_MAIN;
 	bool PAGE_MAIN_del;
 	lv_obj_t *PAGE_MAIN_cont_1;
@@ -90,7 +91,6 @@ typedef struct
 	lv_obj_t *PAGE_MAIN_label_70;
 	lv_obj_t *PAGE_MAIN_img_2;
 	lv_obj_t *PAGE_MAIN_SWITCH_BLE;
-	lv_obj_t *g_kb_top_layer;
 }lv_ui;
 
 typedef void (*ui_setup_scr_t)(lv_ui * ui);

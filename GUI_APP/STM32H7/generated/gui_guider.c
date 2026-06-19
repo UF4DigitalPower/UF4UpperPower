@@ -12,11 +12,11 @@
 #include "gui_guider.h"
 #include "widgets_init.h"
 
+lv_ui guider_ui;
+
 #if LV_USE_GUIDER_SIMULATOR && LV_USE_FREEMASTER
 #include "gg_external_data.h"
 #endif
-
-lv_ui guider_ui;
 
 void ui_init_style(lv_style_t * style)
 {
@@ -92,12 +92,10 @@ void init_keyboard(lv_ui *ui)
 {
 #if LV_USE_KEYBOARD != 0
     ui->g_kb_top_layer = lv_keyboard_create(lv_layer_top());
-    lv_obj_add_flag(ui->g_kb_top_layer, LV_OBJ_FLAG_HIDDEN);
     lv_obj_add_event_cb(ui->g_kb_top_layer, kb_event_cb, LV_EVENT_ALL, NULL);
-#elif LV_USE_ZH_KEYBOARD != 0
-    ui->g_kb_top_layer = lv_zh_keyboard_create(lv_layer_top());
+    lv_obj_set_size(ui->g_kb_top_layer, lv_pct(100), 220);
+    lv_obj_align(ui->g_kb_top_layer, LV_ALIGN_BOTTOM_MID, 0, 0);
     lv_obj_add_flag(ui->g_kb_top_layer, LV_OBJ_FLAG_HIDDEN);
-    lv_obj_add_event_cb(ui->g_kb_top_layer, kb_event_cb, LV_EVENT_ALL, NULL);
 #else
     ui->g_kb_top_layer = NULL;
 #endif

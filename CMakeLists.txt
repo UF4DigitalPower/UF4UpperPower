@@ -60,28 +60,21 @@ else ()
     add_compile_options(-Og -g)
 endif ()
 
-set(UF4COM "${CMAKE_SOURCE_DIR}/UF4COM")
-
 include_directories(Core/Inc
         Drivers/STM32H7xx_HAL_Driver/Inc
         Drivers/STM32H7xx_HAL_Driver/Inc/Legacy
         Drivers/CMSIS/Device/ST/STM32H7xx/Include
         Drivers/CMSIS/Include
-        ${UF4COM}/uf4com/protocol/Inc
-        ${UF4COM}/uf4com/register/Inc
-        ${UF4COM}/uf4com/transport/uf4com_uart/Inc
 
         BSP
         GUI
+        GUI/src
         GUI_APP/STM32H7/generated
         GUI_APP/STM32H7/generated/guider_fonts
         GUI_APP/STM32H7/generated/guider_customer_fonts
         GUI_APP/STM32H7/generated/images
         GUI_APP/STM32H7/custom
-        GUI_APP/USER
         GUI_APP/STM32H7
-        GUI_APP/STM32H7/lvgl
-        GUI_APP/STM32H7/lvgl/src
 )
 
 add_definitions(-DDEBUG -DUSE_PWR_LDO_SUPPLY -DUSE_HAL_DRIVER -DSTM32H743xx)
@@ -89,20 +82,16 @@ add_definitions(-DDEBUG -DUSE_PWR_LDO_SUPPLY -DUSE_HAL_DRIVER -DSTM32H743xx)
 file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS
         "Core/*.*"
         "Drivers/*.*"
-        "${UF4COM}/uf4com/protocol/Src/*.c"
-        "${UF4COM}/uf4com/register/Src/*.c"
-        "${UF4COM}/uf4com/transport/uf4com_uart/Src/*.c"
         "BSP/*.*"
         "GUI_APP/STM32H7/generated/*.c"
         "GUI_APP/STM32H7/generated/guider_fonts/*.c"
         "GUI_APP/STM32H7/generated/guider_customer_fonts/*.c"
         "GUI_APP/STM32H7/generated/images/*.c"
         "GUI_APP/STM32H7/custom/*.c"
-        "GUI_APP/USER/*.c"
-        "GUI_APP/STM32H7/lvgl/src/*.c"
+        "GUI/src/*.c"
 )
 
-list(FILTER SOURCES EXCLUDE REGEX ".*/GUI_APP/STM32H7/lvgl/src/extra/widgets/video/lv_video\\.c$")
+list(FILTER SOURCES EXCLUDE REGEX ".*/GUI/src/extra/widgets/video/lv_video\\.c$")
 
 set(LINKER_SCRIPT ${CMAKE_SOURCE_DIR}/STM32H743ZITX_FLASH.ld)
 
