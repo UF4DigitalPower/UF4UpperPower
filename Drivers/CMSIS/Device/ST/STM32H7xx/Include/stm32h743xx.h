@@ -13106,7 +13106,7 @@ typedef struct
 /********************  Bit definition for CONFR1 register  ********************/
 #define JPEG_CONFR1_NF_Pos              (0U)
 #define JPEG_CONFR1_NF_Msk              (0x3UL << JPEG_CONFR1_NF_Pos)          /*!< 0x00000003 */
-#define JPEG_CONFR1_NF                  JPEG_CONFR1_NF_Msk                     /*!<Number of color components */
+#define JPEG_CONFR1_NF                  JPEG_CONFR1_NF_Msk                     /*!<Number of color COMPONENT */
 #define JPEG_CONFR1_NF_0                (0x1UL << JPEG_CONFR1_NF_Pos)           /*!< 0x00000001 */
 #define JPEG_CONFR1_NF_1                (0x2UL << JPEG_CONFR1_NF_Pos)           /*!< 0x00000002 */
 #define JPEG_CONFR1_DE_Pos              (3U)
@@ -13119,7 +13119,7 @@ typedef struct
 #define JPEG_CONFR1_COLORSPACE_1        (0x2UL << JPEG_CONFR1_COLORSPACE_Pos)   /*!< 0x00000020 */
 #define JPEG_CONFR1_NS_Pos              (6U)
 #define JPEG_CONFR1_NS_Msk              (0x3UL << JPEG_CONFR1_NS_Pos)          /*!< 0x000000C0 */
-#define JPEG_CONFR1_NS                  JPEG_CONFR1_NS_Msk                     /*!<Number of components for Scan */
+#define JPEG_CONFR1_NS                  JPEG_CONFR1_NS_Msk                     /*!<Number of COMPONENT for Scan */
 #define JPEG_CONFR1_NS_0                (0x1UL << JPEG_CONFR1_NS_Pos)           /*!< 0x00000040 */
 #define JPEG_CONFR1_NS_1                (0x2UL << JPEG_CONFR1_NS_Pos)           /*!< 0x00000080 */
 #define JPEG_CONFR1_HDR_Pos             (8U)

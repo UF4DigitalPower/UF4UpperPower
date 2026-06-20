@@ -158,18 +158,14 @@ void LCD_CopyRectFromFrontToDraw(uint16_t x, uint16_t y, uint16_t w, uint16_t h)
 }
 
 void LCD_Present(void) {
-	uint32_t old_front_addr;
-
 	LCD_PresentBuffer(g_lcd_draw_buffer_addr);
 
-	old_front_addr = g_lcd_front_buffer_addr;
+	const uint32_t old_front_addr = g_lcd_front_buffer_addr;
 	g_lcd_front_buffer_addr = g_lcd_draw_buffer_addr;
 	g_lcd_draw_buffer_addr = old_front_addr;
 }
 
 void LCD_PresentBuffer(const uint32_t buffer_addr) {
-	uint32_t timeout;
-
 	lcd_clean_dcache(buffer_addr, LCD_FRAMEBUFFER_BYTES);
 
 	if (HAL_LTDC_SetAddress_NoReload(&hltdc, buffer_addr, 0) != HAL_OK) {
@@ -178,9 +174,9 @@ void LCD_PresentBuffer(const uint32_t buffer_addr) {
 
 	HAL_LTDC_Reload(&hltdc, LTDC_RELOAD_VERTICAL_BLANKING);
 
-	timeout = HAL_GetTick();
+	const uint32_t timeout = HAL_GetTick();
 	while ((LTDC->SRCR & LTDC_SRCR_VBR) != 0U) {
-		if ((HAL_GetTick() - timeout) > 50U) {
+		if (HAL_GetTick() - timeout > 50U) {
 			break;
 		}
 	}

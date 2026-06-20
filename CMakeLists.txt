@@ -67,8 +67,11 @@ include_directories(Core/Inc
         Drivers/STM32H7xx_HAL_Driver/Inc/Legacy
         Drivers/CMSIS/Device/ST/STM32H7xx/Include
         Drivers/CMSIS/Include
+
         UF4APP/USER
         UF4APP/TELECOM
+        UF4APP/GUI
+
         UF4BSP
 
         ${UF4COM}/uf4com/protocol/Inc
