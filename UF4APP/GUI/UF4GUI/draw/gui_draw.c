@@ -1,3 +1,19 @@
+/**
+  ******************************************************************************
+  * @file    gui_draw.c
+  * @author  UF4
+  * @date    26-6-20 下午6:22
+  * @brief   UF4GUI RGB565 drawing primitives and clipping services.
+  ******************************************************************************
+  * @attention
+  *
+  * Copyright (c) 2026 UF4.
+  * All rights reserved.
+  *
+  * This software is provided "as is", without warranty of any kind.
+  *
+  ******************************************************************************
+  */
 #include "gui.h"
 #include "bsp_lcd.h"
 
@@ -12,11 +28,25 @@ static const uint8_t g_font5x7[96][5] = {
     {0x7C,0x14,0x14,0x14,8},{8,0x14,0x14,0x18,0x7C},{0x7C,8,4,4,8},{0x48,0x54,0x54,0x54,0x20},{4,0x3F,0x44,0x40,0x20},{0x3C,0x40,0x40,0x20,0x7C},{0x1C,0x20,0x40,0x20,0x1C},{0x3C,0x40,0x30,0x40,0x3C},{0x44,0x28,0x10,0x28,0x44},{0x0C,0x50,0x50,0x50,0x3C},{0x44,0x64,0x54,0x4C,0x44},{0,8,0x36,0x41,0},{0,0,0x7F,0,0},{0,0x41,0x36,8,0},{0x10,8,8,0x10,8},{0}
 };
 
+/**
+  * @brief  Encodes 8-bit RGB color components to RGB565.
+  * @param  r Red component.
+  * @param  g Green component.
+  * @param  b Blue component.
+  * @retval RGB565 color value.
+  */
 GUI_Color GUI_RGB565(uint8_t r, uint8_t g, uint8_t b)
 {
     return (GUI_Color)(((r & 0xF8U) << 8) | ((g & 0xFCU) << 3) | (b >> 3));
 }
 
+/**
+  * @brief  Alpha blends two RGB565 colors.
+  * @param  fg Foreground color.
+  * @param  bg Background color.
+  * @param  alpha Foreground alpha, 0 transparent and 255 opaque.
+  * @retval Blended RGB565 color.
+  */
 GUI_Color GUI_Blend565(GUI_Color fg, GUI_Color bg, uint8_t alpha)
 {
     uint32_t fr = (fg >> 11) & 0x1FU;
@@ -31,6 +61,11 @@ GUI_Color GUI_Blend565(GUI_Color fg, GUI_Color bg, uint8_t alpha)
     return (GUI_Color)((r << 11) | (g << 5) | b);
 }
 
+/**
+  * @brief  Sets the active drawing clip rectangle.
+  * @param  clip Pointer to clip rectangle.
+  * @retval None
+  */
 void GUI_DrawSetClip(const GUI_Rect *clip)
 {
     g_clip = *clip;
@@ -50,6 +85,10 @@ void GUI_DrawSetClip(const GUI_Rect *clip)
     }
 }
 
+/**
+  * @brief  Resets drawing clip to the full screen.
+  * @retval None
+  */
 void GUI_DrawResetClip(void)
 {
     g_clip.x = 0;
@@ -58,6 +97,13 @@ void GUI_DrawResetClip(void)
     g_clip.h = GUI_SCREEN_HEIGHT;
 }
 
+/**
+  * @brief  Draws one clipped RGB565 pixel.
+  * @param  x Pixel x coordinate.
+  * @param  y Pixel y coordinate.
+  * @param  color RGB565 color.
+  * @retval None
+  */
 void GUI_DrawPixel(int16_t x, int16_t y, GUI_Color color)
 {
     if ((x < 0) || (y < 0) || (x >= (int16_t)GUI_SCREEN_WIDTH) || (y >= (int16_t)GUI_SCREEN_HEIGHT)) {
@@ -70,6 +116,15 @@ void GUI_DrawPixel(int16_t x, int16_t y, GUI_Color color)
     LCD_DrawPoint((uint16_t)x, (uint16_t)y);
 }
 
+/**
+  * @brief  Draws a clipped line using Bresenham rasterization.
+  * @param  x1 Start x coordinate.
+  * @param  y1 Start y coordinate.
+  * @param  x2 End x coordinate.
+  * @param  y2 End y coordinate.
+  * @param  color RGB565 color.
+  * @retval None
+  */
 void GUI_DrawLine(int16_t x1, int16_t y1, int16_t x2, int16_t y2, GUI_Color color)
 {
     int16_t dx = (x1 < x2) ? (int16_t)(x2 - x1) : (int16_t)(x1 - x2);
@@ -94,6 +149,12 @@ void GUI_DrawLine(int16_t x1, int16_t y1, int16_t x2, int16_t y2, GUI_Color colo
     }
 }
 
+/**
+  * @brief  Draws a rectangle outline.
+  * @param  rect Pointer to rectangle.
+  * @param  color RGB565 color.
+  * @retval None
+  */
 void GUI_DrawRect(const GUI_Rect *rect, GUI_Color color)
 {
     if ((rect->w <= 0) || (rect->h <= 0)) {
@@ -104,6 +165,12 @@ void GUI_DrawRect(const GUI_Rect *rect, GUI_Color color)
                       (uint16_t)(rect->x + rect->w - 1), (uint16_t)(rect->y + rect->h - 1));
 }
 
+/**
+  * @brief  Fills a clipped rectangle, using the LCD DMA2D-backed fill path.
+  * @param  rect Pointer to rectangle.
+  * @param  color RGB565 color.
+  * @retval None
+  */
 void GUI_FillRect(const GUI_Rect *rect, GUI_Color color)
 {
     int16_t x = rect->x;
@@ -129,12 +196,29 @@ void GUI_FillRect(const GUI_Rect *rect, GUI_Color color)
     LCD_Rect_Fill((uint16_t)x, (uint16_t)y, (uint16_t)(x + w - 1), (uint16_t)(y + h - 1), color);
 }
 
+/**
+  * @brief  Draws a circle outline.
+  * @param  x0 Center x coordinate.
+  * @param  y0 Center y coordinate.
+  * @param  r Circle radius.
+  * @param  color RGB565 color.
+  * @retval None
+  */
 void GUI_DrawCircle(int16_t x0, int16_t y0, int16_t r, GUI_Color color)
 {
     POINT_COLOR = color;
     LCD_Draw_Circle((uint16_t)x0, (uint16_t)y0, (uint8_t)r);
 }
 
+/**
+  * @brief  Draws an ASCII string with the built-in bitmap font.
+  * @param  x Start x coordinate.
+  * @param  y Start y coordinate.
+  * @param  text Null-terminated string.
+  * @param  color RGB565 text color.
+  * @param  scale Integer bitmap scale.
+  * @retval None
+  */
 void GUI_DrawString(int16_t x, int16_t y, const char *text, GUI_Color color, uint8_t scale)
 {
     int16_t cursor = x;
@@ -158,6 +242,15 @@ void GUI_DrawString(int16_t x, int16_t y, const char *text, GUI_Color color, uin
     }
 }
 
+/**
+  * @brief  Draws an RGB565 image block.
+  * @param  x Image x coordinate.
+  * @param  y Image y coordinate.
+  * @param  w Image width.
+  * @param  h Image height.
+  * @param  pixels Pointer to RGB565 pixel array.
+  * @retval None
+  */
 void GUI_DrawImage(int16_t x, int16_t y, uint16_t w, uint16_t h, const GUI_Color *pixels)
 {
     if ((pixels == 0) || (w == 0U) || (h == 0U)) {

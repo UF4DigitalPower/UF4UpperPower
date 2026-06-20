@@ -1,3 +1,19 @@
+/**
+  ******************************************************************************
+  * @file    gui_demo_power.c
+  * @author  UF4
+  * @date    26-6-20 下午6:22
+  * @brief   UF4GUI digital power supply reference user interface.
+  ******************************************************************************
+  * @attention
+  *
+  * Copyright (c) 2026 UF4.
+  * All rights reserved.
+  *
+  * This software is provided "as is", without warranty of any kind.
+  *
+  ******************************************************************************
+  */
 #include "gui.h"
 
 #include <stdio.h>
@@ -39,26 +55,27 @@ static char g_power_text[24];
 static char g_temp_text[24];
 static char g_mode_text[12];
 
-static void demo_go_param(GUI_Widget *w)
+static void PowerUi_GoParamPage(GUI_Widget *w)
 {
     (void)w;
     (void)GUI_Page_Switch(PAGE_PARAM);
 }
 
-static void demo_page_bg(const GUI_Rect *clip)
+static void PowerUi_DrawBackground(const GUI_Rect *clip)
 {
     (void)clip;
     GUI_FillRect(&(GUI_Rect){0, 0, GUI_SCREEN_WIDTH, GUI_SCREEN_HEIGHT}, GUI_GetTheme()->bg);
 }
 
-static void demo_home_enter(void)
+static void PowerUi_HomeEnter(void)
 {
     GUI_InvalidateRect(&(GUI_Rect){0, 0, GUI_SCREEN_WIDTH, GUI_SCREEN_HEIGHT});
 }
 
-static void demo_home_update(uint32_t elapsed_ms)
+static void PowerUi_HomeUpdate(uint32_t elapsed_ms)
 {
     static uint32_t acc;
+
     acc += elapsed_ms;
     if (acc >= 80U) {
         acc = 0U;
@@ -67,12 +84,16 @@ static void demo_home_update(uint32_t elapsed_ms)
 }
 
 static GUI_Page g_pages[] = {
-    {PAGE_HOME, "Home", &g_home_root, demo_home_enter, 0, demo_home_update, demo_page_bg},
-    {PAGE_PARAM, "Parameters", &g_param_root, 0, 0, 0, demo_page_bg},
-    {PAGE_WAVE, "Wave", &g_wave_root, 0, 0, 0, demo_page_bg},
-    {PAGE_INFO, "System", &g_info_root, 0, 0, 0, demo_page_bg}
+    {PAGE_HOME, "Home", &g_home_root, PowerUi_HomeEnter, 0, PowerUi_HomeUpdate, PowerUi_DrawBackground},
+    {PAGE_PARAM, "Parameters", &g_param_root, 0, 0, 0, PowerUi_DrawBackground},
+    {PAGE_WAVE, "Wave", &g_wave_root, 0, 0, 0, PowerUi_DrawBackground},
+    {PAGE_INFO, "System", &g_info_root, 0, 0, 0, PowerUi_DrawBackground}
 };
 
+/**
+  * @brief  Initializes the digital power supply reference UI.
+  * @retval None
+  */
 void GUI_DemoPower_Init(void)
 {
     static const char *menu_items[] = {"Voltage", "Current", "Protection", "Back"};
@@ -97,7 +118,7 @@ void GUI_DemoPower_Init(void)
     g_mode.data.label.scale = 2U;
     GUI_WaveView_Create(&g_wave, &(GUI_Rect){20, 200, 600, 190}, 0, 500);
     GUI_Switch_Create(&g_output_sw, &(GUI_Rect){500, 72, 92, 34}, 0U);
-    GUI_Button_Create(&g_param_btn, &(GUI_Rect){470, 126, 132, 42}, "PARAM", demo_go_param);
+    GUI_Button_Create(&g_param_btn, &(GUI_Rect){470, 126, 132, 42}, "PARAM", PowerUi_GoParamPage);
     GUI_Widget_AddChild(&g_home_root, &g_title);
     GUI_Widget_AddChild(&g_home_root, &g_voltage);
     GUI_Widget_AddChild(&g_home_root, &g_current);
@@ -145,6 +166,15 @@ void GUI_DemoPower_Init(void)
     (void)GUI_Page_Switch(PAGE_HOME);
 }
 
+/**
+  * @brief  Updates measured values shown by the digital power supply UI.
+  * @param  mv Output voltage in millivolts.
+  * @param  ma Output current in milliamps.
+  * @param  mw Output power in milliwatts.
+  * @param  temp_c10 Temperature in 0.1 degree Celsius.
+  * @param  cc_mode Constant-current state flag.
+  * @retval None
+  */
 void GUI_DemoPower_Update(int32_t mv, int32_t ma, int32_t mw, int32_t temp_c10, uint8_t cc_mode)
 {
     (void)snprintf(g_voltage_text, sizeof(g_voltage_text), "%02ld.%02ldV", mv / 1000L, (mv % 1000L) / 10L);
@@ -153,8 +183,10 @@ void GUI_DemoPower_Update(int32_t mv, int32_t ma, int32_t mw, int32_t temp_c10, 
     (void)snprintf(g_temp_text, sizeof(g_temp_text), "T %ld.%ldC", temp_c10 / 10L, temp_c10 % 10L);
     (void)snprintf(g_mode_text, sizeof(g_mode_text), "%s", cc_mode ? "CC" : "CV");
 
-    GUI_WaveView_Push(&g_wave, (int16_t)(mv / 100), (int16_t)(ma / 20), (int16_t)(temp_c10 / 2), (int16_t)(mw / 200));
-    GUI_WaveView_Push(&g_wave_full, (int16_t)(mv / 100), (int16_t)(ma / 20), (int16_t)(temp_c10 / 2), (int16_t)(mw / 200));
+    GUI_WaveView_Push(&g_wave, (int16_t)(mv / 100), (int16_t)(ma / 20), (int16_t)(temp_c10 / 2),
+                      (int16_t)(mw / 200));
+    GUI_WaveView_Push(&g_wave_full, (int16_t)(mv / 100), (int16_t)(ma / 20), (int16_t)(temp_c10 / 2),
+                      (int16_t)(mw / 200));
     GUI_InvalidateWidget(&g_voltage);
     GUI_InvalidateWidget(&g_current);
     GUI_InvalidateWidget(&g_power);

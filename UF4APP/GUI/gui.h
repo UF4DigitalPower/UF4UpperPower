@@ -1,3 +1,19 @@
+/**
+  ******************************************************************************
+  * @file    gui.h
+  * @author  UF4
+  * @date    26-6-20 下午6:22
+  * @brief   UF4GUI public type definitions and API declarations.
+  ******************************************************************************
+  * @attention
+  *
+  * Copyright (c) 2026 UF4.
+  * All rights reserved.
+  *
+  * This software is provided "as is", without warranty of any kind.
+  *
+  ******************************************************************************
+  */
 #ifndef UF4GUI_GUI_H
 #define UF4GUI_GUI_H
 
@@ -69,18 +85,18 @@ typedef void (*GUI_WidgetDrawFn)(GUI_Widget *widget, const GUI_Rect *clip);
 typedef void (*GUI_WidgetEventFn)(GUI_Widget *widget, const GUI_Event *event);
 
 typedef struct {
-    GUI_Rect rect;             /* Local rectangle in parent coordinate space. */
-    uint8_t visible;           /* 0 hides object and skips hit-test/draw. */
-    uint8_t enabled;           /* 0 keeps drawing but ignores input events. */
-    uint8_t invalid;           /* Set when object needs redraw. */
-    void *user_data;           /* Application-owned pointer, never allocated by GUI. */
+    GUI_Rect rect;             /* Object rectangle in parent coordinate space. */
+    uint8_t visible;           /* Visibility flag, 0 disables draw and hit-test. */
+    uint8_t enabled;           /* Input enable flag, 0 ignores input events. */
+    uint8_t invalid;           /* Redraw request flag. */
+    void *user_data;           /* Application-owned extension pointer. */
 } GUI_Object;
 
 struct GUI_Widget {
     GUI_Object obj;            /* Base geometry and common state. */
-    GUI_WidgetType type;       /* Runtime widget discriminator. */
-    GUI_WidgetDrawFn draw;     /* Widget renderer. */
-    GUI_WidgetEventFn event;   /* Optional input/update handler. */
+    GUI_WidgetType type;       /* Runtime widget type. */
+    GUI_WidgetDrawFn draw;     /* Widget draw callback. */
+    GUI_WidgetEventFn event;   /* Widget event callback. */
     GUI_Widget *children[GUI_MAX_CHILDREN];
     uint8_t child_count;
     GUI_Widget *parent;
@@ -143,7 +159,7 @@ struct GUI_Widget {
 
 typedef struct {
     uint8_t id;                /* Stable page id used by GUI_Page_Switch. */
-    const char *name;          /* Debug/readability name. */
+    const char *name;          /* Page name for diagnostics. */
     GUI_Widget *root;          /* Root widget tree. */
     void (*on_enter)(void);
     void (*on_leave)(void);

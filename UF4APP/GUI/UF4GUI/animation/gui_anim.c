@@ -1,3 +1,19 @@
+/**
+  ******************************************************************************
+  * @file    gui_anim.c
+  * @author  UF4
+  * @date    26-6-20 下午6:22
+  * @brief   UF4GUI fixed-slot animation scheduler.
+  ******************************************************************************
+  * @attention
+  *
+  * Copyright (c) 2026 UF4.
+  * All rights reserved.
+  *
+  * This software is provided "as is", without warranty of any kind.
+  *
+  ******************************************************************************
+  */
 
 #include "gui.h"
 
@@ -15,6 +31,17 @@ static int32_t gui_anim_ease(int32_t from, int32_t to, uint32_t elapsed, uint32_
     return from + (int32_t)((delta * (int32_t)t) / 1024);
 }
 
+/**
+  * @brief  Starts an animation in a free static animation slot.
+  * @param  type Animation type.
+  * @param  target Target widget pointer.
+  * @param  from Initial animation value.
+  * @param  to Final animation value.
+  * @param  duration_ms Animation duration in milliseconds.
+  * @param  on_step Optional per-frame callback.
+  * @param  on_done Optional completion callback.
+  * @retval Pointer to animation slot, or NULL if no slot is free.
+  */
 GUI_Anim *GUI_Anim_Start(GUI_AnimType type, GUI_Widget *target, int32_t from, int32_t to,
                          uint32_t duration_ms, void (*on_step)(GUI_Widget *, int32_t),
                          void (*on_done)(GUI_Widget *))
@@ -41,6 +68,11 @@ GUI_Anim *GUI_Anim_Start(GUI_AnimType type, GUI_Widget *target, int32_t from, in
     return 0;
 }
 
+/**
+  * @brief  Updates all active animation slots.
+  * @param  elapsed_ms Elapsed time in milliseconds.
+  * @retval None
+  */
 void GUI_Anim_Update(uint32_t elapsed_ms)
 {
     uint8_t i;

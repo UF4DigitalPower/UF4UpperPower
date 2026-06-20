@@ -1,9 +1,9 @@
 /**
   ******************************************************************************
-  * @file    gui_theme.c
+  * @file    demo.c
   * @author  UF4
   * @date    26-6-20 下午6:22
-  * @brief   UF4GUI theme module extension point.
+  * @brief
   ******************************************************************************
   * @attention
   *
@@ -14,7 +14,4 @@
   *
   ******************************************************************************
   */
-#include "gui.h"
-
-/* Theme storage and selection are implemented in core/gui.c.
- * This file exists as a stable module boundary for future style extensions. */
+#include "demo.h"

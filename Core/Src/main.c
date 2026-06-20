@@ -1,20 +1,20 @@
-/* USER CODE BEGIN Header */
 /**
   ******************************************************************************
-  * @file           : main.c
-  * @brief          : Main program body
+  * @file    main.c
+  * @author  UF4
+  * @date    26-6-20 下午6:22
+  * @brief   STM32H743 application entry and UF4GUI service loop.
   ******************************************************************************
   * @attention
   *
-  * Copyright (c) 2026 STMicroelectronics.
+  * Copyright (c) 2026 UF4.
   * All rights reserved.
   *
-  * This software is licensed under terms that can be found in the LICENSE file
-  * in the root directory of this software component.
-  * If no LICENSE file comes with this software, it is provided AS-IS.
+  * This software is provided "as is", without warranty of any kind.
   *
   ******************************************************************************
   */
+/* USER CODE BEGIN Header */
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
@@ -32,11 +32,9 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-// #include "app_user.h"
 #include "bsp_lcd.h"
 #include "bsp_st7701.h"
 #include "gui.h"
-// #include "gui_guider.h"
 
 /* USER CODE END Includes */
 /* Private typedef -----------------------------------------------------------*/
@@ -59,6 +57,9 @@
 /* USER CODE BEGIN PV */
 static uint32_t g_gui_last_tick;
 static uint32_t g_gui_sample_tick;
+static int32_t g_gui_demo_voltage_mv = 12000;
+static int32_t g_gui_demo_current_ma = 1500;
+static uint8_t g_gui_demo_current_dir;
 
 /* USER CODE END PV */
 
@@ -66,11 +67,74 @@ static uint32_t g_gui_sample_tick;
 void SystemClock_Config(void);
 static void MPU_Config(void);
 /* USER CODE BEGIN PFP */
+static void APP_GUI_Init(void);
+static void APP_GUI_Service(uint32_t now);
+static void APP_GUI_UpdateDemoMeasurement(void);
 
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+/**
+  * @brief  Initializes LCD panel and UF4GUI application pages.
+  * @retval None
+  */
+static void APP_GUI_Init(void)
+{
+  LCD_Init();
+  ST7701Init();
+  GUI_DemoPower_Init();
+
+  g_gui_last_tick = HAL_GetTick();
+  g_gui_sample_tick = g_gui_last_tick;
+}
+
+/**
+  * @brief  Services UF4GUI timing, measurement update and dirty refresh.
+  * @param  now Current HAL tick in milliseconds.
+  * @retval None
+  */
+static void APP_GUI_Service(uint32_t now)
+{
+  if ((now - g_gui_sample_tick) >= 50U) {
+    g_gui_sample_tick = now;
+    APP_GUI_UpdateDemoMeasurement();
+  }
+
+  if ((now - g_gui_last_tick) >= 10U) {
+    uint32_t elapsed = now - g_gui_last_tick;
+    g_gui_last_tick = now;
+    GUI_Tick(elapsed);
+    GUI_Refresh();
+  }
+}
+
+/**
+  * @brief  Updates the power UI with a replaceable simulated measurement source.
+  * @note   Replace this function with real voltage, current, power, temperature
+  *         and CC/CV state snapshots from the digital power control loop.
+  * @retval None
+  */
+static void APP_GUI_UpdateDemoMeasurement(void)
+{
+  if (g_gui_demo_current_dir == 0U) {
+    g_gui_demo_current_ma += 37;
+    if (g_gui_demo_current_ma > 2800) {
+      g_gui_demo_current_dir = 1U;
+    }
+  } else {
+    g_gui_demo_current_ma -= 29;
+    if (g_gui_demo_current_ma < 600) {
+      g_gui_demo_current_dir = 0U;
+    }
+  }
+
+  GUI_DemoPower_Update(g_gui_demo_voltage_mv,
+                       g_gui_demo_current_ma,
+                       (g_gui_demo_voltage_mv * g_gui_demo_current_ma) / 1000L,
+                       286,
+                       (uint8_t)(g_gui_demo_current_ma > 1800));
+}
 
 /* USER CODE END 0 */
 
@@ -129,14 +193,7 @@ int main(void)
   MX_TIM4_Init();
   /* USER CODE BEGIN 2 */
 
-  LCD_Init();
-  ST7701Init();
-  GUI_DemoPower_Init();
-  g_gui_last_tick = HAL_GetTick();
-  g_gui_sample_tick = g_gui_last_tick;
-
-  // setup_ui(&guider_ui);
-  // APP_Init();
+  APP_GUI_Init();
 
   /* USER CODE END 2 */
 
@@ -146,35 +203,7 @@ int main(void)
   {
     uint32_t now = HAL_GetTick();
 
-    if ((now - g_gui_sample_tick) >= 50U) {
-      static int32_t demo_mv = 12000;
-      static int32_t demo_ma = 1500;
-      static uint8_t demo_dir = 0U;
-
-      g_gui_sample_tick = now;
-      if (demo_dir == 0U) {
-        demo_ma += 37;
-        if (demo_ma > 2800) {
-          demo_dir = 1U;
-        }
-      } else {
-        demo_ma -= 29;
-        if (demo_ma < 600) {
-          demo_dir = 0U;
-        }
-      }
-      GUI_DemoPower_Update(demo_mv, demo_ma, (demo_mv * demo_ma) / 1000L, 286, (demo_ma > 1800));
-    }
-
-    if ((now - g_gui_last_tick) >= 10U) {
-      uint32_t elapsed = now - g_gui_last_tick;
-      g_gui_last_tick = now;
-      GUI_Tick(elapsed);
-      GUI_Refresh();
-    }
-
-    // APP_Tick();
-    // HAL_Delay(1);
+    APP_GUI_Service(now);
 
     /* USER CODE END WHILE */
 

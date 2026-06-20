@@ -4,7 +4,6 @@
 #include "uf4com.h"
 #include "uf4com_parser.h"
 
-#include <stddef.h>
 
 #define UF4_POWER_CLIENT_UART_TIMEOUT_MS 20U
 #define UF4_POWER_CLIENT_TV_SIZE 3U

@@ -1,3 +1,19 @@
+/**
+  ******************************************************************************
+  * @file    gui.c
+  * @author  UF4
+  * @date    26-6-20 下午6:22
+  * @brief   UF4GUI core initialization, theme, event and dirty refresh services.
+  ******************************************************************************
+  * @attention
+  *
+  * Copyright (c) 2026 UF4.
+  * All rights reserved.
+  *
+  * This software is provided "as is", without warranty of any kind.
+  *
+  ******************************************************************************
+  */
 #include "gui.h"
 #include "bsp_lcd.h"
 
@@ -52,6 +68,10 @@ static GUI_Rect gui_rect_union(const GUI_Rect *a, const GUI_Rect *b)
     return r;
 }
 
+/**
+  * @brief  Initializes UF4GUI core state, default theme and full-screen invalidation.
+  * @retval None
+  */
 void GUI_Init(void)
 {
     g_dirty_count = 0U;
@@ -61,20 +81,36 @@ void GUI_Init(void)
     GUI_InvalidateRect(&(GUI_Rect){0, 0, GUI_SCREEN_WIDTH, GUI_SCREEN_HEIGHT});
 }
 
+/**
+  * @brief  Updates animation and current page timing.
+  * @param  elapsed_ms Elapsed time in milliseconds since last GUI tick.
+  * @retval None
+  */
 void GUI_Tick(uint32_t elapsed_ms)
 {
     GUI_Anim_Update(elapsed_ms);
     GUI_Page_Update(elapsed_ms);
 }
 
+/**
+  * @brief  Dispatches an input event to the current page widget tree.
+  * @param  event Pointer to the GUI event descriptor.
+  * @retval None
+  */
 void GUI_DispatchEvent(const GUI_Event *event)
 {
     GUI_Page *page = GUI_Page_Current();
+
     if ((page != 0) && (page->root != 0)) {
         GUI_Widget_DispatchTree(page->root, event);
     }
 }
 
+/**
+  * @brief  Adds a rectangle to the dirty refresh list.
+  * @param  rect Pointer to the rectangle that needs redraw.
+  * @retval None
+  */
 void GUI_InvalidateRect(const GUI_Rect *rect)
 {
     GUI_Rect r = gui_rect_clip(*rect);
@@ -99,6 +135,11 @@ void GUI_InvalidateRect(const GUI_Rect *rect)
     g_dirty[0] = gui_rect_union(&g_dirty[0], &r);
 }
 
+/**
+  * @brief  Marks a widget rectangle as dirty.
+  * @param  widget Pointer to target widget.
+  * @retval None
+  */
 void GUI_InvalidateWidget(GUI_Widget *widget)
 {
     if (widget == 0) {
@@ -108,6 +149,10 @@ void GUI_InvalidateWidget(GUI_Widget *widget)
     GUI_InvalidateRect(&widget->obj.rect);
 }
 
+/**
+  * @brief  Redraws dirty rectangles and presents the draw buffer.
+  * @retval None
+  */
 void GUI_Refresh(void)
 {
     uint8_t i;
@@ -128,6 +173,11 @@ void GUI_Refresh(void)
     g_dirty_count = 0U;
 }
 
+/**
+  * @brief  Selects the active GUI theme.
+  * @param  id Theme identifier.
+  * @retval None
+  */
 void GUI_SetTheme(GUI_ThemeId id)
 {
     if ((uint8_t)id >= (uint8_t)(sizeof(g_themes) / sizeof(g_themes[0]))) {
@@ -137,6 +187,10 @@ void GUI_SetTheme(GUI_ThemeId id)
     GUI_InvalidateRect(&(GUI_Rect){0, 0, GUI_SCREEN_WIDTH, GUI_SCREEN_HEIGHT});
 }
 
+/**
+  * @brief  Gets the active GUI theme.
+  * @retval Pointer to the active theme.
+  */
 const GUI_Theme *GUI_GetTheme(void)
 {
     return g_theme;
