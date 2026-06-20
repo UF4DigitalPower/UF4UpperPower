@@ -1,6 +1,6 @@
-/GUI_APP/STM32H7/lvgl-simulator/
-/GUI_APP/STM32H7/ports/
-/GUI_APP/STM32H7/temp/
+/UF4APP/STM32H7/lvgl-simulator/
+/UF4APP/STM32H7/ports/
+/UF4APP/STM32H7/temp/
 /storage/
 /scripts/
 /cmake-build-debug/

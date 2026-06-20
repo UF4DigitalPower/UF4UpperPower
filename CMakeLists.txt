@@ -1,4 +1,4 @@
-#此文件从模板自动生成! 请勿更改!
+﻿#此文件从模板自动生成! 请勿更改!
 set(CMAKE_SYSTEM_NAME Generic)
 set(CMAKE_SYSTEM_VERSION 1)
 cmake_minimum_required(VERSION 3.28)
@@ -25,7 +25,7 @@ set(SIZE arm-none-eabi-size)
 set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
 
 # project settings
-project(STM32H743 C CXX ASM)
+project(UF4UpperPower C CXX ASM)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_C_STANDARD 11)
 
@@ -67,6 +67,8 @@ include_directories(Core/Inc
         Drivers/STM32H7xx_HAL_Driver/Inc/Legacy
         Drivers/CMSIS/Device/ST/STM32H7xx/Include
         Drivers/CMSIS/Include
+        UF4APP/USER
+        UF4APP/TELECOM
         UF4BSP
 
         ${UF4COM}/uf4com/protocol/Inc
@@ -80,6 +82,7 @@ file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS
         "Core/*.*"
         "Drivers/*.*"
         "UF4BSP/*.*"
+        "UF4APP/*.*"
         "${UF4COM}/uf4com/protocol/Src/*.c"
         "${UF4COM}/uf4com/register/Src/*.c"
         "${UF4COM}/uf4com/transport/uf4com_uart/Src/*.c"
@@ -97,17 +100,65 @@ add_executable(${PROJECT_NAME}.elf ${SOURCES} ${LINKER_SCRIPT})
 set(HEX_FILE ${PROJECT_BINARY_DIR}/${PROJECT_NAME}.hex)
 set(BIN_FILE ${PROJECT_BINARY_DIR}/${PROJECT_NAME}.bin)
 
+set(UF4_BANNER_TXT "${CMAKE_BINARY_DIR}/uf4_banner.txt")
+set(UF4_BANNER_SCRIPT "${CMAKE_BINARY_DIR}/uf4_generate_banner.cmake")
+file(WRITE "${UF4_BANNER_SCRIPT}" [=[
+string(TIMESTAMP UF4_BUILD_TIME "%Y-%m-%d %H:%M:%S")
+file(WRITE "${UF4_BANNER_TXT}" "
+
+  ██╗   ██╗███████╗██╗  ██╗██╗   ██╗██████╗ ██████╗ ███████╗██████╗ ██████╗  ██████╗ ██╗    ██╗███████╗██████╗
+  ██║   ██║██╔════╝██║  ██║██║   ██║██╔══██╗██╔══██╗██╔════╝██╔══██╗██╔══██╗██╔═══██╗██║    ██║██╔════╝██╔══██╗
+  ██║   ██║█████╗  ███████║██║   ██║██████╔╝██████╔╝█████╗  ██████╔╝██████╔╝██║   ██║██║ █╗ ██║█████╗  ██████╔╝
+  ██║   ██║██╔══╝  ╚════██║██║   ██║██╔═══╝ ██╔═══╝ ██╔══╝  ██╔══██╗██╔═══╝ ██║   ██║██║███╗██║██╔══╝  ██╔══██╗
+  ╚██████╔╝██║          ██║╚██████╔╝██║     ██║     ███████╗██║  ██║██║     ╚██████╔╝╚███╔███╔╝███████╗██║  ██║
+   ╚═════╝ ╚═╝          ╚═╝ ╚═════╝ ╚═╝     ╚═╝     ╚══════╝╚═╝  ╚═╝╚═╝      ╚═════╝  ╚══╝╚══╝ ╚══════╝╚═╝  ╚═╝
+
+  ██████╗ ██╗   ██╗██╗██╗     ██████╗     ███████╗██╗   ██╗ ██████╗ ██████╗███████╗███████╗███████╗
+  ██╔══██╗██║   ██║██║██║     ██╔══██╗    ██╔════╝██║   ██║██╔════╝██╔════╝██╔════╝██╔════╝██╔════╝
+  ██████╔╝██║   ██║██║██║     ██║  ██║    ███████╗██║   ██║██║     ██║     █████╗  ███████╗███████╗
+  ██╔══██╗██║   ██║██║██║     ██║  ██║    ╚════██║██║   ██║██║     ██║     ██╔══╝  ╚════██║╚════██║
+  ██████╔╝╚██████╔╝██║███████╗██████╔╝    ███████║╚██████╔╝╚██████╗╚██████╗███████╗███████║███████║
+  ╚═════╝  ╚═════╝ ╚═╝╚══════╝╚═════╝     ╚══════╝ ╚═════╝  ╚═════╝ ╚═════╝╚══════╝╚══════╝╚══════╝
+
+  ┌──────────────────────────────────────────────────────────────────────────────┐
+  │ Project      : ${UF4_PROJECT_NAME}
+  │ Build Type   : ${UF4_BUILD_TYPE}
+  │ Build Time   : ${UF4_BUILD_TIME}
+  │ Host Platform: ${UF4_HOST_SYSTEM_NAME} ${UF4_HOST_SYSTEM_PROCESSOR}
+  │ Target System: ${UF4_TARGET_SYSTEM_NAME}
+  │ MCU          : STM32H743ZITx / STM32H743xx
+  │ CPU/FPU      : Cortex-M7, hard-float, fpv4-sp-d16
+  │ Memory       : FLASH 2048 KB
+  │ RAM          : DTCMRAM 128 KB, RAM_D1 512 KB, RAM_D2 288 KB, RAM_D3 64 KB, ITCMRAM 64 KB
+  │ External RAM : SDRAM 32 MB
+  │ Linker       : ${UF4_LINKER_SCRIPT}
+  │ Compiler     : ${UF4_C_COMPILER_ID} ${UF4_C_COMPILER_VERSION}
+  │ Toolchain    : ${UF4_C_COMPILER}
+  │ Output       : ${UF4_OUTPUT_ELF}
+  └──────────────────────────────────────────────────────────────────────────────┘
+
+  UF4UpperPower firmware generated successfully.
+
+")
+]=])
+
 add_custom_command(TARGET ${PROJECT_NAME}.elf POST_BUILD
         COMMAND ${CMAKE_OBJCOPY} -Oihex $<TARGET_FILE:${PROJECT_NAME}.elf> ${HEX_FILE}
         COMMAND ${CMAKE_OBJCOPY} -Obinary $<TARGET_FILE:${PROJECT_NAME}.elf> ${BIN_FILE}
-        COMMAND ${CMAKE_COMMAND} -E echo ""
-        COMMAND ${CMAKE_COMMAND} -E echo "##################################"
-        COMMAND ${CMAKE_COMMAND} -E echo "######     ###     ######   ######"
-        COMMAND ${CMAKE_COMMAND} -E echo "##   ##   ## ##   ##       ##    "
-        COMMAND ${CMAKE_COMMAND} -E echo "######   #######   #####    #####"
-        COMMAND ${CMAKE_COMMAND} -E echo "##       ##   ##       ##       ##"
-        COMMAND ${CMAKE_COMMAND} -E echo "##       ##   ##  ######   ######"
-        COMMAND ${CMAKE_COMMAND} -E echo "########## PASS BY UF4 ##########"
-        COMMAND ${CMAKE_COMMAND} -E echo ""
-        COMMENT "Building ${HEX_FILE}
-Building ${BIN_FILE}")
+        COMMAND ${CMAKE_COMMAND}
+                -DUF4_BANNER_TXT=${UF4_BANNER_TXT}
+                -DUF4_PROJECT_NAME=${PROJECT_NAME}
+                -DUF4_BUILD_TYPE=${CMAKE_BUILD_TYPE}
+                -DUF4_HOST_SYSTEM_NAME=${CMAKE_HOST_SYSTEM_NAME}
+                -DUF4_HOST_SYSTEM_PROCESSOR=${CMAKE_HOST_SYSTEM_PROCESSOR}
+                -DUF4_TARGET_SYSTEM_NAME=${CMAKE_SYSTEM_NAME}
+                -DUF4_LINKER_SCRIPT=${LINKER_SCRIPT}
+                -DUF4_C_COMPILER_ID=${CMAKE_C_COMPILER_ID}
+                -DUF4_C_COMPILER_VERSION=${CMAKE_C_COMPILER_VERSION}
+                -DUF4_C_COMPILER=${CMAKE_C_COMPILER}
+                -DUF4_OUTPUT_ELF=$<TARGET_FILE:${PROJECT_NAME}.elf>
+                -P "${UF4_BANNER_SCRIPT}"
+        COMMAND ${CMAKE_COMMAND} -E cat "${UF4_BANNER_TXT}"
+        COMMENT "Generating firmware files"
+        VERBATIM
+)
