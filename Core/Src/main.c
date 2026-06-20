@@ -35,12 +35,9 @@
 // #include "app_user.h"
 #include "bsp_lcd.h"
 #include "bsp_st7701.h"
-#include "gui_lvgl_port.h"
 // #include "gui_guider.h"
-#include "lvgl.h"
 
 /* USER CODE END Includes */
-#include "lv_"
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
 
@@ -131,9 +128,7 @@ int main(void)
 
   LCD_Init();
   ST7701Init();
-  GUI_LVGL_PortInit();
 
-  lv_e
   // setup_ui(&guider_ui);
   // APP_Init();
 
@@ -143,9 +138,8 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-    lv_timer_handler();
     // APP_Tick();
-    HAL_Delay(1);
+    // HAL_Delay(1);
 
     /* USER CODE END WHILE */
 

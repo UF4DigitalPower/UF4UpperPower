@@ -60,21 +60,18 @@ else ()
     add_compile_options(-Og -g)
 endif ()
 
+set(UF4COM "${CMAKE_SOURCE_DIR}/UF4COM")
+
 include_directories(Core/Inc
         Drivers/STM32H7xx_HAL_Driver/Inc
         Drivers/STM32H7xx_HAL_Driver/Inc/Legacy
         Drivers/CMSIS/Device/ST/STM32H7xx/Include
         Drivers/CMSIS/Include
+        UF4BSP
 
-        BSP
-        GUI
-        GUI/src
-        GUI_APP/STM32H7/generated
-        GUI_APP/STM32H7/generated/guider_fonts
-        GUI_APP/STM32H7/generated/guider_customer_fonts
-        GUI_APP/STM32H7/generated/images
-        GUI_APP/STM32H7/custom
-        GUI_APP/STM32H7
+        ${UF4COM}/uf4com/protocol/Inc
+        ${UF4COM}/uf4com/register/Inc
+        ${UF4COM}/uf4com/transport/uf4com_uart/Inc
 )
 
 add_definitions(-DDEBUG -DUSE_PWR_LDO_SUPPLY -DUSE_HAL_DRIVER -DSTM32H743xx)
@@ -82,16 +79,12 @@ add_definitions(-DDEBUG -DUSE_PWR_LDO_SUPPLY -DUSE_HAL_DRIVER -DSTM32H743xx)
 file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS
         "Core/*.*"
         "Drivers/*.*"
-        "BSP/*.*"
-        "GUI_APP/STM32H7/generated/*.c"
-        "GUI_APP/STM32H7/generated/guider_fonts/*.c"
-        "GUI_APP/STM32H7/generated/guider_customer_fonts/*.c"
-        "GUI_APP/STM32H7/generated/images/*.c"
-        "GUI_APP/STM32H7/custom/*.c"
-        "GUI/src/*.c"
-)
+        "UF4BSP/*.*"
+        "${UF4COM}/uf4com/protocol/Src/*.c"
+        "${UF4COM}/uf4com/register/Src/*.c"
+        "${UF4COM}/uf4com/transport/uf4com_uart/Src/*.c"
 
-list(FILTER SOURCES EXCLUDE REGEX ".*/GUI/src/extra/widgets/video/lv_video\\.c$")
+)
 
 set(LINKER_SCRIPT ${CMAKE_SOURCE_DIR}/STM32H743ZITX_FLASH.ld)
 
@@ -107,5 +100,14 @@ set(BIN_FILE ${PROJECT_BINARY_DIR}/${PROJECT_NAME}.bin)
 add_custom_command(TARGET ${PROJECT_NAME}.elf POST_BUILD
         COMMAND ${CMAKE_OBJCOPY} -Oihex $<TARGET_FILE:${PROJECT_NAME}.elf> ${HEX_FILE}
         COMMAND ${CMAKE_OBJCOPY} -Obinary $<TARGET_FILE:${PROJECT_NAME}.elf> ${BIN_FILE}
+        COMMAND ${CMAKE_COMMAND} -E echo ""
+        COMMAND ${CMAKE_COMMAND} -E echo "##################################"
+        COMMAND ${CMAKE_COMMAND} -E echo "######     ###     ######   ######"
+        COMMAND ${CMAKE_COMMAND} -E echo "##   ##   ## ##   ##       ##    "
+        COMMAND ${CMAKE_COMMAND} -E echo "######   #######   #####    #####"
+        COMMAND ${CMAKE_COMMAND} -E echo "##       ##   ##       ##       ##"
+        COMMAND ${CMAKE_COMMAND} -E echo "##       ##   ##  ######   ######"
+        COMMAND ${CMAKE_COMMAND} -E echo "########## PASS BY UF4 ##########"
+        COMMAND ${CMAKE_COMMAND} -E echo ""
         COMMENT "Building ${HEX_FILE}
 Building ${BIN_FILE}")
