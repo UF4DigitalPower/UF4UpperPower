@@ -35,6 +35,7 @@
 // #include "app_user.h"
 #include "bsp_lcd.h"
 #include "bsp_st7701.h"
+#include "gui.h"
 // #include "gui_guider.h"
 
 /* USER CODE END Includes */
@@ -56,6 +57,8 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
+static uint32_t g_gui_last_tick;
+static uint32_t g_gui_sample_tick;
 
 /* USER CODE END PV */
 
@@ -128,6 +131,9 @@ int main(void)
 
   LCD_Init();
   ST7701Init();
+  GUI_DemoPower_Init();
+  g_gui_last_tick = HAL_GetTick();
+  g_gui_sample_tick = g_gui_last_tick;
 
   // setup_ui(&guider_ui);
   // APP_Init();
@@ -138,6 +144,35 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+    uint32_t now = HAL_GetTick();
+
+    if ((now - g_gui_sample_tick) >= 50U) {
+      static int32_t demo_mv = 12000;
+      static int32_t demo_ma = 1500;
+      static uint8_t demo_dir = 0U;
+
+      g_gui_sample_tick = now;
+      if (demo_dir == 0U) {
+        demo_ma += 37;
+        if (demo_ma > 2800) {
+          demo_dir = 1U;
+        }
+      } else {
+        demo_ma -= 29;
+        if (demo_ma < 600) {
+          demo_dir = 0U;
+        }
+      }
+      GUI_DemoPower_Update(demo_mv, demo_ma, (demo_mv * demo_ma) / 1000L, 286, (demo_ma > 1800));
+    }
+
+    if ((now - g_gui_last_tick) >= 10U) {
+      uint32_t elapsed = now - g_gui_last_tick;
+      g_gui_last_tick = now;
+      GUI_Tick(elapsed);
+      GUI_Refresh();
+    }
+
     // APP_Tick();
     // HAL_Delay(1);
 
