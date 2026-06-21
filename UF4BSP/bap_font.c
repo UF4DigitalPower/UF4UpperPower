@@ -17,6 +17,8 @@
 #include "bap_font.h"
 #include "bsp_lcd.h"
 
+static uint16_t g_font_dma_buffer[540U * 176U] __attribute__((section(".sdram"), aligned(32)));
+
 static inline uint8_t LCD_FontBytesPerRow(
         uint16_t size)
 {
@@ -175,6 +177,97 @@ void LCD_RenderFontStringToBuffer(
     }
 }
 
+void LCD_RenderFontStringFixedToBuffer(
+        uint16_t *buffer,
+        uint16_t width,
+        uint16_t height,
+        uint16_t x,
+        uint16_t y,
+        const char *str,
+        uint16_t size,
+        uint16_t cell_width,
+        uint32_t color)
+{
+    uint16_t cell_x = x;
+    uint16_t fg = LCD_EncodeColor((uint16_t)color);
+
+    if (!buffer || !str || cell_width == 0U)
+    {
+        return;
+    }
+
+    while (*str)
+    {
+        const LCD_FontGlyph *glyph;
+        uint16_t row;
+        uint16_t col;
+        uint16_t glyph_x;
+
+        if (*str == '\n')
+        {
+            cell_x = x;
+            y += size;
+            str++;
+            continue;
+        }
+
+        glyph =
+            Teko_SemiBold_FindGlyph(
+                *str,
+                size);
+
+        if (glyph)
+        {
+            glyph_x = cell_x;
+            if (glyph->width < cell_width)
+            {
+                glyph_x = (uint16_t)(cell_x + (cell_width - glyph->width) / 2U);
+            }
+
+            for (row = glyph->min_row;
+                 row < glyph->min_row + glyph->height;
+                 row++)
+            {
+                uint16_t dst_y =
+                    y + row -
+                    glyph->min_row;
+
+                if (dst_y >= height)
+                {
+                    continue;
+                }
+
+                for (col = glyph->min_col;
+                     col < glyph->min_col + glyph->width;
+                     col++)
+                {
+                    uint16_t dst_x =
+                        glyph_x + col -
+                        glyph->min_col;
+
+                    if (dst_x >= width)
+                    {
+                        continue;
+                    }
+
+                    if (LCD_GlyphPixelIsSet(
+                            glyph->bitmap,
+                            size,
+                            row,
+                            col))
+                    {
+                        buffer[(uint32_t)dst_y * width + dst_x] =
+                            fg;
+                    }
+                }
+            }
+        }
+
+        cell_x = (uint16_t)(cell_x + cell_width);
+        str++;
+    }
+}
+
 void LCD_DrawFontStringDMA(
         uint16_t x,
         uint16_t y,
@@ -187,13 +280,12 @@ void LCD_DrawFontStringDMA(
 {
     uint32_t i;
     uint16_t bg;
-    static uint16_t font_dma_buffer[540U * 176U] __attribute__((section(".sdram"), aligned(32)));
 
     if (!str || w == 0U || h == 0U)
     {
         return;
     }
-    if ((uint32_t)w * h > (uint32_t)(sizeof(font_dma_buffer) / sizeof(font_dma_buffer[0])))
+    if ((uint32_t)w * h > (uint32_t)(sizeof(g_font_dma_buffer) / sizeof(g_font_dma_buffer[0])))
     {
         return;
     }
@@ -204,11 +296,11 @@ void LCD_DrawFontStringDMA(
 
     for (i = 0U; i < (uint32_t)w * h; ++i)
     {
-        font_dma_buffer[i] = bg;
+        g_font_dma_buffer[i] = bg;
     }
 
     LCD_RenderFontStringToBuffer(
-        font_dma_buffer,
+        g_font_dma_buffer,
         w,
         h,
         0U,
@@ -222,7 +314,58 @@ void LCD_DrawFontStringDMA(
         y,
         w,
         h,
-        font_dma_buffer);
+        g_font_dma_buffer);
+}
+
+void LCD_DrawFontStringFixedDMA(
+        uint16_t x,
+        uint16_t y,
+        uint16_t w,
+        uint16_t h,
+        const char *str,
+        uint16_t size,
+        uint16_t cell_width,
+        uint32_t color,
+        uint32_t bg_color)
+{
+    uint32_t i;
+    uint16_t bg;
+
+    if (!str || w == 0U || h == 0U || cell_width == 0U)
+    {
+        return;
+    }
+    if ((uint32_t)w * h > (uint32_t)(sizeof(g_font_dma_buffer) / sizeof(g_font_dma_buffer[0])))
+    {
+        return;
+    }
+
+    bg =
+        LCD_EncodeColor(
+            (uint16_t)(bg_color == LCD_FONT_BG_TRANSPARENT ? 0U : bg_color));
+
+    for (i = 0U; i < (uint32_t)w * h; ++i)
+    {
+        g_font_dma_buffer[i] = bg;
+    }
+
+    LCD_RenderFontStringFixedToBuffer(
+        g_font_dma_buffer,
+        w,
+        h,
+        0U,
+        0U,
+        str,
+        size,
+        cell_width,
+        color);
+
+    LCD_BlitRectRGB565(
+        x,
+        y,
+        w,
+        h,
+        g_font_dma_buffer);
 }
 
 void LCD_DrawFontChar(

@@ -29,6 +29,10 @@
 #define GUI_MUTED_COLOR     0xBDF7
 #define GUI_ACCENT_COLOR    0x07FF
 
+#define GUI_FONT_TOP_LABEL  18U
+#define GUI_FONT_TOP_VALUE  34U
+#define GUI_FONT_TILE_TITLE 18U
+#define GUI_FONT_TILE_VALUE 24U
 #define GUI_FONT_LABEL      24U
 #define GUI_FONT_VALUE      144U
 
@@ -44,6 +48,8 @@
 #define GUI_RIGHT_GAP       6U
 #define GUI_RIGHT_COL2_X    (GUI_RIGHT_X + GUI_RIGHT_COL_W + GUI_RIGHT_GAP)
 #define GUI_RIGHT_COL2_W    132U
+#define GUI_SIDE_TILE_H     42U
+#define GUI_SIDE_TILE_GAP   3U
 
 static GUI_Data_t g_last_data;
 static uint8_t g_gui_has_last;
@@ -63,9 +69,16 @@ typedef struct
     const char *unit;
 } GUI_ValueTile_t;
 
+typedef struct
+{
+    GUI_Rect_t rect;
+    const char *title;
+    const char *value;
+} GUI_TextTile_t;
+
 static const GUI_ValueTile_t g_top_tiles[] =
 {
-    {{  4, GUI_TOP_Y, 124, GUI_TOP_H}, "VIN", "%"},
+    {{  4, GUI_TOP_Y, 124, GUI_TOP_H}, "VIN", "V"},
     {{132, GUI_TOP_Y, 124, GUI_TOP_H}, "IIN", "A"},
     {{260, GUI_TOP_Y, 124, GUI_TOP_H}, "PIN", "W"},
     {{388, GUI_TOP_Y, 124, GUI_TOP_H}, "EFF", "%"},
@@ -85,50 +98,37 @@ static const GUI_ValueTile_t g_set_tiles[] =
     {{GUI_RIGHT_X, GUI_BODY_Y + 69U, GUI_RIGHT_COL_W, 63}, "ISET", "A"},
 };
 
-static const GUI_Rect_t g_status_tiles[] =
+static const GUI_TextTile_t g_status_tiles[] =
 {
-    {GUI_RIGHT_COL2_X, GUI_BODY_Y, GUI_RIGHT_COL2_W, 40},
-    {GUI_RIGHT_COL2_X, GUI_BODY_Y + 46U, GUI_RIGHT_COL2_W, 40},
-    {GUI_RIGHT_COL2_X, GUI_BODY_Y + 92U, GUI_RIGHT_COL2_W, 40},
-    {GUI_RIGHT_X, GUI_BODY_Y + GUI_ROW_H + GUI_ROW_GAP, GUI_RIGHT_COL_W, 40},
-    {GUI_RIGHT_X, GUI_BODY_Y + GUI_ROW_H + GUI_ROW_GAP + 46U, GUI_RIGHT_COL_W, 40},
-    {GUI_RIGHT_X, GUI_BODY_Y + GUI_ROW_H + GUI_ROW_GAP + 92U, GUI_RIGHT_COL_W, 40},
-    {GUI_RIGHT_COL2_X, GUI_BODY_Y + GUI_ROW_H + GUI_ROW_GAP, GUI_RIGHT_COL2_W, 40},
-    {GUI_RIGHT_COL2_X, GUI_BODY_Y + GUI_ROW_H + GUI_ROW_GAP + 46U, GUI_RIGHT_COL2_W, 40},
-    {GUI_RIGHT_COL2_X, GUI_BODY_Y + GUI_ROW_H + GUI_ROW_GAP + 92U, GUI_RIGHT_COL2_W, 40},
-    {GUI_RIGHT_COL2_X, GUI_BODY_Y + 2U * (GUI_ROW_H + GUI_ROW_GAP), GUI_RIGHT_COL2_W, GUI_ROW_H},
-};
-
-static const char * const g_status_labels[] =
-{
-    "OTP",
-    "OVP",
-    "OCP",
-    "OUT",
-    "TOPO",
-    "MODE",
-    "CMD",
-    "STATE",
-    "FAULT",
-    "BLE",
+    {{GUI_RIGHT_COL2_X, GUI_BODY_Y, GUI_RIGHT_COL2_W, GUI_SIDE_TILE_H}, "OTP", "00.00"},
+    {{GUI_RIGHT_COL2_X, GUI_BODY_Y + GUI_SIDE_TILE_H + GUI_SIDE_TILE_GAP, GUI_RIGHT_COL2_W, GUI_SIDE_TILE_H}, "OVP", "00.00"},
+    {{GUI_RIGHT_COL2_X, GUI_BODY_Y + 2U * (GUI_SIDE_TILE_H + GUI_SIDE_TILE_GAP), GUI_RIGHT_COL2_W, GUI_SIDE_TILE_H}, "OCP", "00.00"},
+    {{GUI_RIGHT_X, GUI_BODY_Y + GUI_ROW_H + GUI_ROW_GAP, GUI_RIGHT_COL_W, GUI_SIDE_TILE_H}, "OUT", "OFF"},
+    {{GUI_RIGHT_X, GUI_BODY_Y + GUI_ROW_H + GUI_ROW_GAP + GUI_SIDE_TILE_H + GUI_SIDE_TILE_GAP, GUI_RIGHT_COL_W, GUI_SIDE_TILE_H}, "TOPO", "NA"},
+    {{GUI_RIGHT_X, GUI_BODY_Y + GUI_ROW_H + GUI_ROW_GAP + 2U * (GUI_SIDE_TILE_H + GUI_SIDE_TILE_GAP), GUI_RIGHT_COL_W, GUI_SIDE_TILE_H}, "MODE", "CV"},
+    {{GUI_RIGHT_COL2_X, GUI_BODY_Y + GUI_ROW_H + GUI_ROW_GAP, GUI_RIGHT_COL2_W, GUI_SIDE_TILE_H}, "CMD", "PASS"},
+    {{GUI_RIGHT_COL2_X, GUI_BODY_Y + GUI_ROW_H + GUI_ROW_GAP + GUI_SIDE_TILE_H + GUI_SIDE_TILE_GAP, GUI_RIGHT_COL2_W, GUI_SIDE_TILE_H}, "STATE", "INIT"},
+    {{GUI_RIGHT_COL2_X, GUI_BODY_Y + GUI_ROW_H + GUI_ROW_GAP + 2U * (GUI_SIDE_TILE_H + GUI_SIDE_TILE_GAP), GUI_RIGHT_COL2_W, GUI_SIDE_TILE_H}, "FAULT", "NA"},
+    {{GUI_RIGHT_COL2_X, GUI_BODY_Y + 2U * (GUI_ROW_H + GUI_ROW_GAP), GUI_RIGHT_COL2_W, GUI_SIDE_TILE_H}, "BLE", "NA"},
 };
 
 static const GUI_ValueTile_t g_temp_tiles[] =
 {
-    {{GUI_RIGHT_X, GUI_BODY_Y + 2U * (GUI_ROW_H + GUI_ROW_GAP), GUI_RIGHT_COL_W, 40}, "CPU", "C"},
-    {{GUI_RIGHT_X, GUI_BODY_Y + 2U * (GUI_ROW_H + GUI_ROW_GAP) + 46U, GUI_RIGHT_COL_W, 40}, "BUCK", "C"},
-    {{GUI_RIGHT_X, GUI_BODY_Y + 2U * (GUI_ROW_H + GUI_ROW_GAP) + 92U, GUI_RIGHT_COL_W, 40}, "BOOST", "C"},
+    {{GUI_RIGHT_X, GUI_BODY_Y + 2U * (GUI_ROW_H + GUI_ROW_GAP), GUI_RIGHT_COL_W, GUI_SIDE_TILE_H}, "CPU", "C"},
+    {{GUI_RIGHT_X, GUI_BODY_Y + 2U * (GUI_ROW_H + GUI_ROW_GAP) + GUI_SIDE_TILE_H + GUI_SIDE_TILE_GAP, GUI_RIGHT_COL_W, GUI_SIDE_TILE_H}, "BUCK", "C"},
+    {{GUI_RIGHT_X, GUI_BODY_Y + 2U * (GUI_ROW_H + GUI_ROW_GAP) + 2U * (GUI_SIDE_TILE_H + GUI_SIDE_TILE_GAP), GUI_RIGHT_COL_W, GUI_SIDE_TILE_H}, "BOOST", "C"},
 };
 
+static void GUI_DrawBorder(const GUI_Rect_t *rect);
 static void GUI_DrawPanel(const GUI_Rect_t *rect, uint32_t color);
 static void GUI_DrawCenteredText(const GUI_Rect_t *rect, const char *text, uint16_t font, uint32_t color, uint32_t bg);
 static void GUI_DrawSmallValueTile(const GUI_ValueTile_t *tile, float value);
 static void GUI_DrawMainValueTile(const GUI_ValueTile_t *tile, float value);
 static void GUI_DrawSetValueTile(const GUI_ValueTile_t *tile, float value);
 static void GUI_DrawTempTile(const GUI_ValueTile_t *tile, float value);
-static void GUI_DrawStatusTile(const GUI_Rect_t *rect, const char *label);
+static void GUI_DrawTextTile(const GUI_TextTile_t *tile);
 static void GUI_FormatMainValue(char *buf, uint32_t size, float value);
-static void GUI_FormatFixed1(char *buf, uint32_t size, float value);
+static void GUI_FormatFixed2(char *buf, uint32_t size, float value);
 static uint8_t GUI_FloatChanged(float a, float b);
 
 void GUI_Init(void)
@@ -172,9 +172,7 @@ void GUI_DrawStatic(void)
 
     for (i = 0U; i < sizeof(g_status_tiles) / sizeof(g_status_tiles[0]); ++i)
     {
-        GUI_DrawStatusTile(
-            &g_status_tiles[i],
-            g_status_labels[i]);
+        GUI_DrawTextTile(&g_status_tiles[i]);
     }
 
     for (i = 0U; i < sizeof(g_temp_tiles) / sizeof(g_temp_tiles[0]); ++i)
@@ -309,17 +307,22 @@ void GUI_Update(
 
 static void GUI_DrawPanel(const GUI_Rect_t *rect, uint32_t color)
 {
+    LCD_Rect_Fill(
+        rect->x,
+        rect->y,
+        (uint16_t)(rect->x + rect->w - 1U),
+        (uint16_t)(rect->y + rect->h - 1U),
+        color);
+
+    GUI_DrawBorder(rect);
+}
+
+static void GUI_DrawBorder(const GUI_Rect_t *rect)
+{
     uint16_t x2 =
         (uint16_t)(rect->x + rect->w - 1U);
     uint16_t y2 =
         (uint16_t)(rect->y + rect->h - 1U);
-
-    LCD_Rect_Fill(
-        rect->x,
-        rect->y,
-        x2,
-        y2,
-        color);
 
     LCD_Rect_Fill(
         rect->x,
@@ -384,26 +387,29 @@ static void GUI_DrawSmallValueTile(const GUI_ValueTile_t *tile, float value)
     char buf[16];
     GUI_Rect_t title_rect;
     GUI_Rect_t value_rect;
+    GUI_Rect_t unit_rect;
 
-    GUI_FormatFixed1(buf, sizeof(buf), value);
+    GUI_FormatMainValue(buf, sizeof(buf), value);
 
     GUI_DrawPanel(&tile->rect, GUI_PANEL_COLOR);
 
     title_rect.x = tile->rect.x;
     title_rect.y = (uint16_t)(tile->rect.y + 2U);
     title_rect.w = tile->rect.w;
-    title_rect.h = 20U;
-    GUI_DrawCenteredText(&title_rect, tile->title, GUI_FONT_LABEL, GUI_MUTED_COLOR, GUI_PANEL_COLOR);
+    title_rect.h = 18U;
+    GUI_DrawCenteredText(&title_rect, tile->title, GUI_FONT_TOP_LABEL, GUI_MUTED_COLOR, GUI_PANEL_COLOR);
 
-    value_rect.x = (uint16_t)(tile->rect.x + 8U);
-    value_rect.y = (uint16_t)(tile->rect.y + 24U);
-    value_rect.w = (uint16_t)(tile->rect.w - 34U);
-    value_rect.h = 24U;
-    LCD_DrawFontStringDMA(value_rect.x, value_rect.y, value_rect.w, value_rect.h, buf, GUI_FONT_LABEL, GUI_TEXT_COLOR, GUI_PANEL_COLOR);
+    value_rect.x = (uint16_t)(tile->rect.x + 6U);
+    value_rect.y = (uint16_t)(tile->rect.y + 18U);
+    value_rect.w = (uint16_t)(tile->rect.w - 30U);
+    value_rect.h = 34U;
+    LCD_DrawFontStringDMA(value_rect.x, value_rect.y, value_rect.w, value_rect.h, buf, GUI_FONT_TOP_VALUE, GUI_TEXT_COLOR, GUI_PANEL_COLOR);
 
-    value_rect.x = (uint16_t)(tile->rect.x + tile->rect.w - 24U);
-    value_rect.w = 20U;
-    GUI_DrawCenteredText(&value_rect, tile->unit, GUI_FONT_LABEL, GUI_ACCENT_COLOR, GUI_PANEL_COLOR);
+    unit_rect.x = (uint16_t)(tile->rect.x + tile->rect.w - 22U);
+    unit_rect.y = (uint16_t)(tile->rect.y + 24U);
+    unit_rect.w = 18U;
+    unit_rect.h = 24U;
+    GUI_DrawCenteredText(&unit_rect, tile->unit, GUI_FONT_LABEL, GUI_ACCENT_COLOR, GUI_PANEL_COLOR);
 }
 
 static void GUI_DrawMainValueTile(const GUI_ValueTile_t *tile, float value)
@@ -415,15 +421,22 @@ static void GUI_DrawMainValueTile(const GUI_ValueTile_t *tile, float value)
     GUI_FormatMainValue(buf, sizeof(buf), value);
 
     GUI_DrawPanel(&tile->rect, GUI_PANEL_DARK);
-    LCD_DrawFontStringDMA(
-        (uint16_t)(tile->rect.x + 4U),
-        tile->rect.y,
-        318U,
-        132U,
+    LCD_DrawFontStringFixedDMA(
+        (uint16_t)(tile->rect.x + 6U),
+        (uint16_t)(tile->rect.y + 2U),
+        300U,
+        128U,
         buf,
         GUI_FONT_VALUE,
+        60U,
         GUI_TEXT_COLOR,
         GUI_PANEL_DARK);
+
+    title_rect.x = (uint16_t)(tile->rect.x + tile->rect.w - 40U);
+    title_rect.y = (uint16_t)(tile->rect.y + 42U);
+    title_rect.w = 34U;
+    title_rect.h = 24U;
+    GUI_DrawCenteredText(&title_rect, tile->title, GUI_FONT_LABEL, GUI_MUTED_COLOR, GUI_PANEL_DARK);
 
     unit_rect.x = (uint16_t)(tile->rect.x + tile->rect.w - 38U);
     unit_rect.y = (uint16_t)(tile->rect.y + 74U);
@@ -431,11 +444,7 @@ static void GUI_DrawMainValueTile(const GUI_ValueTile_t *tile, float value)
     unit_rect.h = 40U;
     GUI_DrawCenteredText(&unit_rect, tile->unit, GUI_FONT_LABEL, GUI_ACCENT_COLOR, GUI_PANEL_DARK);
 
-    title_rect.x = (uint16_t)(tile->rect.x + 12U);
-    title_rect.y = (uint16_t)(tile->rect.y + 2U);
-    title_rect.w = 58U;
-    title_rect.h = 24U;
-    LCD_DrawFontStringDMA(title_rect.x, title_rect.y, title_rect.w, title_rect.h, tile->title, GUI_FONT_LABEL, GUI_MUTED_COLOR, GUI_PANEL_DARK);
+    GUI_DrawBorder(&tile->rect);
 }
 
 static void GUI_DrawSetValueTile(const GUI_ValueTile_t *tile, float value)
@@ -445,58 +454,73 @@ static void GUI_DrawSetValueTile(const GUI_ValueTile_t *tile, float value)
     GUI_Rect_t value_rect;
     GUI_Rect_t unit_rect;
 
-    GUI_FormatFixed1(buf, sizeof(buf), value);
+    GUI_FormatFixed2(buf, sizeof(buf), value);
 
     GUI_DrawPanel(&tile->rect, GUI_PANEL_COLOR);
 
     title_rect.x = tile->rect.x;
-    title_rect.y = (uint16_t)(tile->rect.y + 4U);
+    title_rect.y = (uint16_t)(tile->rect.y + 2U);
     title_rect.w = tile->rect.w;
-    title_rect.h = 20U;
-    GUI_DrawCenteredText(&title_rect, tile->title, GUI_FONT_LABEL, GUI_MUTED_COLOR, GUI_PANEL_COLOR);
+    title_rect.h = 18U;
+    GUI_DrawCenteredText(&title_rect, tile->title, GUI_FONT_TILE_TITLE, GUI_MUTED_COLOR, GUI_PANEL_COLOR);
 
     value_rect.x = (uint16_t)(tile->rect.x + 8U);
-    value_rect.y = (uint16_t)(tile->rect.y + tile->rect.h - 30U);
+    value_rect.y = (uint16_t)(tile->rect.y + tile->rect.h - 29U);
     value_rect.w = (uint16_t)(tile->rect.w - 30U);
     value_rect.h = 24U;
-    LCD_DrawFontStringDMA(value_rect.x, value_rect.y, value_rect.w, value_rect.h, buf, GUI_FONT_LABEL, GUI_TEXT_COLOR, GUI_PANEL_COLOR);
+    LCD_DrawFontStringDMA(value_rect.x, value_rect.y, value_rect.w, value_rect.h, buf, GUI_FONT_TILE_VALUE, GUI_TEXT_COLOR, GUI_PANEL_COLOR);
 
     unit_rect.x = (uint16_t)(tile->rect.x + tile->rect.w - 18U);
     unit_rect.y = value_rect.y;
     unit_rect.w = 18U;
     unit_rect.h = 24U;
-    GUI_DrawCenteredText(&unit_rect, tile->unit, GUI_FONT_LABEL, GUI_ACCENT_COLOR, GUI_PANEL_COLOR);
+    GUI_DrawCenteredText(&unit_rect, tile->unit, GUI_FONT_TILE_VALUE, GUI_ACCENT_COLOR, GUI_PANEL_COLOR);
 }
 
 static void GUI_DrawTempTile(const GUI_ValueTile_t *tile, float value)
 {
     char buf[16];
     GUI_Rect_t title_rect;
-    GUI_Rect_t unit_rect;
+    GUI_Rect_t value_rect;
 
-    GUI_FormatFixed1(buf, sizeof(buf), value);
+    GUI_FormatFixed2(buf, sizeof(buf), value);
 
     GUI_DrawPanel(&tile->rect, GUI_PANEL_COLOR);
 
     title_rect.x = (uint16_t)(tile->rect.x + 4U);
-    title_rect.y = (uint16_t)(tile->rect.y + 4U);
-    title_rect.w = (uint16_t)(tile->rect.w - 54U);
-    title_rect.h = 24U;
-    LCD_DrawFontStringDMA(title_rect.x, title_rect.y, title_rect.w, title_rect.h, tile->title, GUI_FONT_LABEL, GUI_MUTED_COLOR, GUI_PANEL_COLOR);
+    title_rect.y = (uint16_t)(tile->rect.y + 11U);
+    title_rect.w = 52U;
+    title_rect.h = 20U;
+    GUI_DrawCenteredText(&title_rect, tile->title, GUI_FONT_TILE_TITLE, GUI_MUTED_COLOR, GUI_PANEL_COLOR);
 
-    LCD_DrawFontStringDMA((uint16_t)(tile->rect.x + tile->rect.w - 56U), (uint16_t)(tile->rect.y + 8U), 42U, 24U, buf, GUI_FONT_LABEL, GUI_TEXT_COLOR, GUI_PANEL_COLOR);
-
-    unit_rect.x = (uint16_t)(tile->rect.x + tile->rect.w - 14U);
-    unit_rect.y = (uint16_t)(tile->rect.y + 8U);
-    unit_rect.w = 12U;
-    unit_rect.h = 24U;
-    GUI_DrawCenteredText(&unit_rect, tile->unit, GUI_FONT_LABEL, GUI_ACCENT_COLOR, GUI_PANEL_COLOR);
+    value_rect.x = (uint16_t)(tile->rect.x + 56U);
+    value_rect.y = (uint16_t)(tile->rect.y + 9U);
+    value_rect.w = (uint16_t)(tile->rect.w - 60U);
+    value_rect.h = 24U;
+    GUI_DrawCenteredText(&value_rect, buf, GUI_FONT_TILE_VALUE, GUI_TEXT_COLOR, GUI_PANEL_COLOR);
 }
 
-static void GUI_DrawStatusTile(const GUI_Rect_t *rect, const char *label)
+static void GUI_DrawTextTile(const GUI_TextTile_t *tile)
 {
-    GUI_DrawPanel(rect, GUI_PANEL_COLOR);
-    GUI_DrawCenteredText(rect, label, GUI_FONT_LABEL, GUI_MUTED_COLOR, GUI_PANEL_COLOR);
+    GUI_Rect_t title_rect;
+    GUI_Rect_t value_rect;
+    uint16_t title_w;
+
+    GUI_DrawPanel(&tile->rect, GUI_PANEL_COLOR);
+
+    title_w = (tile->rect.w > 128U) ? 60U : 56U;
+
+    title_rect.x = (uint16_t)(tile->rect.x + 4U);
+    title_rect.y = (uint16_t)(tile->rect.y + 11U);
+    title_rect.w = (uint16_t)(title_w - 4U);
+    title_rect.h = 20U;
+    GUI_DrawCenteredText(&title_rect, tile->title, GUI_FONT_TILE_TITLE, GUI_MUTED_COLOR, GUI_PANEL_COLOR);
+
+    value_rect.x = (uint16_t)(tile->rect.x + title_w);
+    value_rect.y = (uint16_t)(tile->rect.y + 9U);
+    value_rect.w = (uint16_t)(tile->rect.w - title_w - 4U);
+    value_rect.h = 24U;
+    GUI_DrawCenteredText(&value_rect, tile->value, GUI_FONT_TILE_VALUE, GUI_TEXT_COLOR, GUI_PANEL_COLOR);
 }
 
 static void GUI_FormatMainValue(char *buf, uint32_t size, float value)
@@ -518,9 +542,9 @@ static void GUI_FormatMainValue(char *buf, uint32_t size, float value)
     }
 }
 
-static void GUI_FormatFixed1(char *buf, uint32_t size, float value)
+static void GUI_FormatFixed2(char *buf, uint32_t size, float value)
 {
-    snprintf(buf, size, "%05.1f", value);
+    snprintf(buf, size, "%05.2f", value);
 }
 
 static uint8_t GUI_FloatChanged(float a, float b)

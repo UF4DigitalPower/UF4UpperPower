@@ -147,11 +147,11 @@ int main(void)
     gui_data.pout = gui_data.vout * gui_data.iout;
     gui_data.power = gui_data.pout;
 
-    gui_data.vset = 24.0F;
-    gui_data.iset = 15.0F;
-    gui_data.cpu_temp = 42.0F;
-    gui_data.buck_temp = 47.0F;
-    gui_data.boost_temp = 45.0F;
+    gui_data.vset = 5.0F;
+    gui_data.iset = 1.0F;
+    gui_data.cpu_temp = 0.0F;
+    gui_data.buck_temp = 0.0F;
+    gui_data.boost_temp = 0.0F;
 
     GUI_Update(
             &gui_data);

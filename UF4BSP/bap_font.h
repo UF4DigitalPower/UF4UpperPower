@@ -38,6 +38,17 @@ extern "C" {
           uint16_t size,
           uint32_t color);
 
+  void LCD_RenderFontStringFixedToBuffer(
+          uint16_t *buffer,
+          uint16_t width,
+          uint16_t height,
+          uint16_t x,
+          uint16_t y,
+          const char *str,
+          uint16_t size,
+          uint16_t cell_width,
+          uint32_t color);
+
   void LCD_DrawFontStringDMA(
           uint16_t x,
           uint16_t y,
@@ -45,6 +56,17 @@ extern "C" {
           uint16_t h,
           const char *str,
           uint16_t size,
+          uint32_t color,
+          uint32_t bg_color);
+
+  void LCD_DrawFontStringFixedDMA(
+          uint16_t x,
+          uint16_t y,
+          uint16_t w,
+          uint16_t h,
+          const char *str,
+          uint16_t size,
+          uint16_t cell_width,
           uint32_t color,
           uint32_t bg_color);
 
