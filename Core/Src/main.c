@@ -34,6 +34,7 @@
 /* USER CODE BEGIN Includes */
 #include "bsp_lcd.h"
 #include "bsp_st7701.h"
+#include "gui.h"
 
 /* USER CODE END Includes */
 /* Private typedef -----------------------------------------------------------*/
@@ -66,7 +67,7 @@ static void MPU_Config(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-
+static uint32_t g_last_key_tick = 0U;
 
 /* USER CODE END 0 */
 
@@ -126,16 +127,36 @@ int main(void)
   /* USER CODE BEGIN 2 */
   LCD_Init();
   ST7701Init();
+  GUI_Data_t gui_data;
 
-  LCD_Clear(BLUE);
-  LCD_DrawFontString(10, 40, "23.99", LCD_FONT_TEKO_SEMIBOLD_256, WHITE, LCD_FONT_BG_TRANSPARENT);
-  LCD_Present();
+  GUI_Init();
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+    gui_data.vin = 48.0F;
+    gui_data.iin = 6.10F;
+    gui_data.pin = gui_data.vin * gui_data.iin;
+    gui_data.efficiency = 91.0F;
+    gui_data.fan = 38.0F;
+
+    gui_data.vout = 21.33F;
+    gui_data.iout = 12.21F;
+    gui_data.pout = gui_data.vout * gui_data.iout;
+    gui_data.power = gui_data.pout;
+
+    gui_data.vset = 24.0F;
+    gui_data.iset = 15.0F;
+    gui_data.cpu_temp = 42.0F;
+    gui_data.buck_temp = 47.0F;
+    gui_data.boost_temp = 45.0F;
+
+    GUI_Update(
+            &gui_data);
+
+    HAL_Delay(50);
 
     /* USER CODE END WHILE */
 
@@ -205,6 +226,9 @@ void SystemClock_Config(void)
 }
 
 /* USER CODE BEGIN 4 */
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
+{
+}
 
 /* USER CODE END 4 */
 

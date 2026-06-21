@@ -24,6 +24,7 @@ lcd_dev LCD_DEV = {
 };
 
 __attribute__((section(".sdram"), aligned(32))) uint16_t ltdc_lcd_framebuf[LTDC_HEIGHT][LTDC_WIDTH]; // LTDC framebuffer in SDRAM
+__attribute__((section(".sdram"), aligned(32))) static uint16_t lcd_blit_buffer[LCD_LOGICAL_LANDSCAPE_WIDTH * 160U];
 
 static uint32_t g_lcd_front_buffer_addr = LCD_FRAMEBUFFER_ADDR;
 static uint32_t g_lcd_draw_buffer_addr = LCD_FRAMEBUFFER_BACK_ADDR;
@@ -79,6 +80,33 @@ static void lcd_invalidate_dcache(const uint32_t addr, const uint32_t size) {
 
 static uint32_t lcd_get_rect_span_bytes(const uint32_t psx, const uint32_t psy, const uint32_t pex, const uint32_t pey) {
 	return LCD_DEV.pixsize * (LTDC_WIDTH * (pey - psy) + (pex - psx + 1U));
+}
+
+static void lcd_dma2d_copy_rgb565(const uint32_t src_addr, const uint32_t dst_addr,
+		const uint16_t width, const uint16_t height, const uint16_t dst_offline) {
+	uint32_t timeout = 0;
+
+	__HAL_DMA2D_CLEAR_FLAG(&hdma2d, DMA2D_FLAG_TC);
+	RCC->AHB1ENR |= 1 << 23;
+	DMA2D->CR &= ~(DMA2D_CR_START);
+	DMA2D->CR = DMA2D_M2M;
+	DMA2D->FGPFCCR = LTDC_PIXEL_FORMAT_RGB565;
+	DMA2D->FGOR = 0;
+	DMA2D->OOR = dst_offline;
+	DMA2D->FGMAR = src_addr;
+	DMA2D->OMAR = dst_addr;
+	DMA2D->NLR = (uint32_t) height | ((uint32_t) width << 16);
+	DMA2D->CR |= DMA2D_CR_START;
+
+	while ((DMA2D->ISR & DMA2D_ISR_TCIF) == 0U) {
+		timeout++;
+		if (timeout > 0X1FFFFFU) {
+			break;
+		}
+	}
+
+	DMA2D->IFCR = DMA2D_IFCR_CTCIF | DMA2D_IFCR_CTEIF | DMA2D_IFCR_CCEIF |
+				  DMA2D_IFCR_CCTCIF | DMA2D_IFCR_CAECIF | DMA2D_IFCR_CTWIF;
 }
 
 void LCD_DrawPixelColor(uint16_t x, uint16_t y, uint32_t color) {
@@ -162,6 +190,64 @@ void LCD_CopyRectFromFrontToDraw(uint16_t x, uint16_t y, uint16_t w, uint16_t h)
 					  (const void *) (g_lcd_front_buffer_addr + LCD_DEV.pixsize * (LTDC_WIDTH * (psy + row) + psx)),
 					  row_bytes);
 	}
+}
+
+void LCD_BlitRectRGB565(uint16_t x, uint16_t y, uint16_t w, uint16_t h, const uint16_t *pixels) {
+	uint32_t psx;
+	uint32_t psy;
+	uint32_t pex;
+	uint32_t pey;
+	uint16_t phys_w;
+	uint16_t phys_h;
+	uint16_t offline;
+	uint32_t dst_addr;
+	uint32_t dst_span_bytes;
+	const uint16_t *src = pixels;
+
+	if (pixels == NULL || w == 0U || h == 0U) {
+		return;
+	}
+	if (x >= LCD_DEV.width || y >= LCD_DEV.height) {
+		return;
+	}
+
+	if ((uint32_t) x + w > LCD_DEV.width) {
+		w = (uint16_t) (LCD_DEV.width - x);
+	}
+	if ((uint32_t) y + h > LCD_DEV.height) {
+		h = (uint16_t) (LCD_DEV.height - y);
+	}
+
+	lcd_map_rect_to_physical(x, y, (uint16_t) (x + w - 1U), (uint16_t) (y + h - 1U), &psx, &psy, &pex, &pey);
+	phys_w = (uint16_t) (pex - psx + 1U);
+	phys_h = (uint16_t) (pey - psy + 1U);
+
+	if (LCD_DEV.dir) {
+		uint32_t lx;
+		uint32_t ly;
+		uint32_t pixels_count = (uint32_t) w * h;
+
+		if (pixels_count > (uint32_t) (sizeof(lcd_blit_buffer) / sizeof(lcd_blit_buffer[0]))) {
+			return;
+		}
+
+		for (ly = 0U; ly < h; ++ly) {
+			for (lx = 0U; lx < w; ++lx) {
+				lcd_blit_buffer[(uint32_t) (w - 1U - lx) * phys_w + ly] =
+						pixels[ly * w + lx];
+			}
+		}
+
+		src = lcd_blit_buffer;
+	}
+
+	offline = (uint16_t) (LTDC_WIDTH - phys_w);
+	dst_addr = g_lcd_draw_buffer_addr + LCD_DEV.pixsize * (LTDC_WIDTH * psy + psx);
+	dst_span_bytes = lcd_get_rect_span_bytes(psx, psy, pex, pey);
+
+	lcd_clean_dcache((uint32_t) src, (uint32_t) phys_w * phys_h * LCD_DEV.pixsize);
+	lcd_dma2d_copy_rgb565((uint32_t) src, dst_addr, phys_w, phys_h, offline);
+	lcd_invalidate_dcache(dst_addr, dst_span_bytes);
 }
 
 void LCD_Present(void) {

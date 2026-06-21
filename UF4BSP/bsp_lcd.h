@@ -13,8 +13,6 @@
 #define STM32H743_BSP_LCD_H
 
 #include "main.h"
-#include "stdlib.h"
-#include "bsp_lcd_font.h"
 
 #define LTDC_WIDTH 480
 #define LTDC_HEIGHT 640
@@ -93,10 +91,6 @@ typedef struct {
     uint32_t pixsize;	//每个像素所占字节数
 } lcd_dev;
 
-#ifdef __cplusplus
-}
-#endif
-
 extern lcd_dev LCD_DEV; //管理LCD重要参数
 
 extern uint32_t POINT_COLOR; //默认红色 LCD的画笔颜色和背景色
@@ -118,8 +112,14 @@ uint32_t LCD_GetDrawBufferAddress(void);
 void LCD_SetDrawBufferAddress(uint32_t addr);
 void LCD_SetFrameBuffers(uint32_t front_addr, uint32_t draw_addr);
 void LCD_CopyRectFromFrontToDraw(uint16_t x, uint16_t y, uint16_t w, uint16_t h);
+void LCD_BlitRectRGB565(uint16_t x, uint16_t y, uint16_t w, uint16_t h, const uint16_t *pixels);
 void LCD_DrawPixelColor(uint16_t x, uint16_t y, uint32_t color);
 void LCD_Present(void);
 void LCD_PresentBuffer(uint32_t buffer_addr);
 int32_t LTDC_GetCurrentVisibleLine(void);
+
+#ifdef __cplusplus
+}
+#endif
+
 #endif /* STM32H743_BSP_LCD_H */
