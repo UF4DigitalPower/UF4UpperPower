@@ -23,7 +23,7 @@ lcd_dev LCD_DEV = {
     .pixsize = 2,
 };
 
-__attribute__((section(".sdram"), aligned(32))) uint16_t ltdc_lcd_framebuf[LTDC_HEIGHT][LTDC_WIDTH]; // LTDC framebuffer in SDRAM
+__attribute__((section(".lcd_front_framebuffer"), aligned(32))) uint16_t ltdc_lcd_framebuf[LTDC_HEIGHT][LTDC_WIDTH]; // LTDC framebuffer in SDRAM
 __attribute__((section(".sdram"), aligned(32))) static uint16_t lcd_blit_buffer[LCD_LOGICAL_LANDSCAPE_WIDTH * 160U];
 
 static uint32_t g_lcd_front_buffer_addr = LCD_FRAMEBUFFER_ADDR;
@@ -86,9 +86,19 @@ static void lcd_dma2d_copy_rgb565(const uint32_t src_addr, const uint32_t dst_ad
 		const uint16_t width, const uint16_t height, const uint16_t dst_offline) {
 	uint32_t timeout = 0;
 
+	while ((DMA2D->CR & DMA2D_CR_START) != 0U) {
+		timeout++;
+		if (timeout > 0X1FFFFFU) {
+			break;
+		}
+	}
+
+	timeout = 0U;
 	__HAL_DMA2D_CLEAR_FLAG(&hdma2d, DMA2D_FLAG_TC);
 	RCC->AHB1ENR |= 1 << 23;
 	DMA2D->CR &= ~(DMA2D_CR_START);
+	DMA2D->IFCR = DMA2D_IFCR_CTCIF | DMA2D_IFCR_CTEIF | DMA2D_IFCR_CCEIF |
+				  DMA2D_IFCR_CCTCIF | DMA2D_IFCR_CAECIF | DMA2D_IFCR_CTWIF;
 	DMA2D->CR = DMA2D_M2M;
 	DMA2D->FGPFCCR = LTDC_PIXEL_FORMAT_RGB565;
 	DMA2D->FGOR = 0;
@@ -98,7 +108,7 @@ static void lcd_dma2d_copy_rgb565(const uint32_t src_addr, const uint32_t dst_ad
 	DMA2D->NLR = (uint32_t) height | ((uint32_t) width << 16);
 	DMA2D->CR |= DMA2D_CR_START;
 
-	while ((DMA2D->ISR & DMA2D_ISR_TCIF) == 0U) {
+	while ((DMA2D->ISR & (DMA2D_ISR_TCIF | DMA2D_ISR_TEIF | DMA2D_ISR_CEIF)) == 0U) {
 		timeout++;
 		if (timeout > 0X1FFFFFU) {
 			break;
@@ -246,8 +256,8 @@ void LCD_BlitRectRGB565(uint16_t x, uint16_t y, uint16_t w, uint16_t h, const ui
 	dst_span_bytes = lcd_get_rect_span_bytes(psx, psy, pex, pey);
 
 	lcd_clean_dcache((uint32_t) src, (uint32_t) phys_w * phys_h * LCD_DEV.pixsize);
+	lcd_clean_dcache(dst_addr, dst_span_bytes);
 	lcd_dma2d_copy_rgb565((uint32_t) src, dst_addr, phys_w, phys_h, offline);
-	lcd_invalidate_dcache(dst_addr, dst_span_bytes);
 }
 
 void LCD_Present(void) {
@@ -379,7 +389,6 @@ void LCD_Rect_Fill(const uint16_t sx, const uint16_t sy, const uint16_t ex, cons
 			break; //超时退出
 	}
 	DMA2D->IFCR |= 1 << 1; //清除传输完成标志
-	lcd_invalidate_dcache(addr, span_bytes);
 }
 
 //在指定区域内填充指定颜色块
@@ -415,7 +424,6 @@ void LCD_Color_Fill(uint16_t sx, uint16_t sy, uint16_t ex, uint16_t ey, uint16_t
 			break; //超时退出
 	}
 	DMA2D->IFCR |= 1 << 1; //清除传输完成标志
-	lcd_invalidate_dcache(addr, span_bytes);
 }
 
 //画线

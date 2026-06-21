@@ -3,6 +3,9 @@
 
 #include "Teko_SemiBold_24.h"
 #include "Teko_SemiBold_72.h"
+#include "Teko_SemiBold_96.h"
+#include "Teko_SemiBold_128.h"
+#include "Teko_SemiBold_144.h"
 #include "Teko_SemiBold_196.h"
 
 static inline const LCD_FontGlyph* Teko_SemiBold_FindGlyph(char ch, uint16_t size)
@@ -93,6 +96,135 @@ static inline const LCD_FontGlyph* Teko_SemiBold_FindGlyph(char ch, uint16_t siz
                 case 'X': return &glyph_72_0058;
                 case 'Y': return &glyph_72_0059;
                 case 'Z': return &glyph_72_005A;
+                default: return 0;
+            }
+        case 96:
+            switch(ch)
+            {
+                case '0': return &glyph_96_0030;
+                case '1': return &glyph_96_0031;
+                case '2': return &glyph_96_0032;
+                case '3': return &glyph_96_0033;
+                case '4': return &glyph_96_0034;
+                case '5': return &glyph_96_0035;
+                case '6': return &glyph_96_0036;
+                case '7': return &glyph_96_0037;
+                case '8': return &glyph_96_0038;
+                case '9': return &glyph_96_0039;
+                case '.': return &glyph_96_002E;
+                case '%': return &glyph_96_0025;
+                case 'A': return &glyph_96_0041;
+                case 'B': return &glyph_96_0042;
+                case 'C': return &glyph_96_0043;
+                case 'D': return &glyph_96_0044;
+                case 'E': return &glyph_96_0045;
+                case 'F': return &glyph_96_0046;
+                case 'G': return &glyph_96_0047;
+                case 'H': return &glyph_96_0048;
+                case 'I': return &glyph_96_0049;
+                case 'J': return &glyph_96_004A;
+                case 'K': return &glyph_96_004B;
+                case 'L': return &glyph_96_004C;
+                case 'M': return &glyph_96_004D;
+                case 'N': return &glyph_96_004E;
+                case 'O': return &glyph_96_004F;
+                case 'P': return &glyph_96_0050;
+                case 'Q': return &glyph_96_0051;
+                case 'R': return &glyph_96_0052;
+                case 'S': return &glyph_96_0053;
+                case 'T': return &glyph_96_0054;
+                case 'U': return &glyph_96_0055;
+                case 'V': return &glyph_96_0056;
+                case 'W': return &glyph_96_0057;
+                case 'X': return &glyph_96_0058;
+                case 'Y': return &glyph_96_0059;
+                case 'Z': return &glyph_96_005A;
+                default: return 0;
+            }
+        case 128:
+            switch(ch)
+            {
+                case '0': return &glyph_128_0030;
+                case '1': return &glyph_128_0031;
+                case '2': return &glyph_128_0032;
+                case '3': return &glyph_128_0033;
+                case '4': return &glyph_128_0034;
+                case '5': return &glyph_128_0035;
+                case '6': return &glyph_128_0036;
+                case '7': return &glyph_128_0037;
+                case '8': return &glyph_128_0038;
+                case '9': return &glyph_128_0039;
+                case '.': return &glyph_128_002E;
+                case '%': return &glyph_128_0025;
+                case 'A': return &glyph_128_0041;
+                case 'B': return &glyph_128_0042;
+                case 'C': return &glyph_128_0043;
+                case 'D': return &glyph_128_0044;
+                case 'E': return &glyph_128_0045;
+                case 'F': return &glyph_128_0046;
+                case 'G': return &glyph_128_0047;
+                case 'H': return &glyph_128_0048;
+                case 'I': return &glyph_128_0049;
+                case 'J': return &glyph_128_004A;
+                case 'K': return &glyph_128_004B;
+                case 'L': return &glyph_128_004C;
+                case 'M': return &glyph_128_004D;
+                case 'N': return &glyph_128_004E;
+                case 'O': return &glyph_128_004F;
+                case 'P': return &glyph_128_0050;
+                case 'Q': return &glyph_128_0051;
+                case 'R': return &glyph_128_0052;
+                case 'S': return &glyph_128_0053;
+                case 'T': return &glyph_128_0054;
+                case 'U': return &glyph_128_0055;
+                case 'V': return &glyph_128_0056;
+                case 'W': return &glyph_128_0057;
+                case 'X': return &glyph_128_0058;
+                case 'Y': return &glyph_128_0059;
+                case 'Z': return &glyph_128_005A;
+                default: return 0;
+            }
+        case 144:
+            switch(ch)
+            {
+                case '0': return &glyph_144_0030;
+                case '1': return &glyph_144_0031;
+                case '2': return &glyph_144_0032;
+                case '3': return &glyph_144_0033;
+                case '4': return &glyph_144_0034;
+                case '5': return &glyph_144_0035;
+                case '6': return &glyph_144_0036;
+                case '7': return &glyph_144_0037;
+                case '8': return &glyph_144_0038;
+                case '9': return &glyph_144_0039;
+                case '.': return &glyph_144_002E;
+                case '%': return &glyph_144_0025;
+                case 'A': return &glyph_144_0041;
+                case 'B': return &glyph_144_0042;
+                case 'C': return &glyph_144_0043;
+                case 'D': return &glyph_144_0044;
+                case 'E': return &glyph_144_0045;
+                case 'F': return &glyph_144_0046;
+                case 'G': return &glyph_144_0047;
+                case 'H': return &glyph_144_0048;
+                case 'I': return &glyph_144_0049;
+                case 'J': return &glyph_144_004A;
+                case 'K': return &glyph_144_004B;
+                case 'L': return &glyph_144_004C;
+                case 'M': return &glyph_144_004D;
+                case 'N': return &glyph_144_004E;
+                case 'O': return &glyph_144_004F;
+                case 'P': return &glyph_144_0050;
+                case 'Q': return &glyph_144_0051;
+                case 'R': return &glyph_144_0052;
+                case 'S': return &glyph_144_0053;
+                case 'T': return &glyph_144_0054;
+                case 'U': return &glyph_144_0055;
+                case 'V': return &glyph_144_0056;
+                case 'W': return &glyph_144_0057;
+                case 'X': return &glyph_144_0058;
+                case 'Y': return &glyph_144_0059;
+                case 'Z': return &glyph_144_005A;
                 default: return 0;
             }
         case 196:

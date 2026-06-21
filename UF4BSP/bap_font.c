@@ -187,7 +187,7 @@ void LCD_DrawFontStringDMA(
 {
     uint32_t i;
     uint16_t bg;
-    static uint16_t font_dma_buffer[460U * 128U] __attribute__((section(".sdram"), aligned(32)));
+    static uint16_t font_dma_buffer[540U * 176U] __attribute__((section(".sdram"), aligned(32)));
 
     if (!str || w == 0U || h == 0U)
     {
