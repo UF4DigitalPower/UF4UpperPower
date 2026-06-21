@@ -71,6 +71,7 @@ include_directories(Core/Inc
         UF4APP/USER
         UF4APP/TELECOM
         UF4APP/GUI
+        UF4APP/GUI/UF4GUI/font
 
         UF4BSP
 

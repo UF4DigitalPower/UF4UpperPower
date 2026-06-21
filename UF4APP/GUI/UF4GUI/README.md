@@ -12,8 +12,7 @@ UF4GUI/
 ├── widget/      # Label, Button, Switch, Slider, ProgressBar, WaveView, Menu, Window
 ├── animation/   # fixed-slot animation engine
 ├── page/        # static page registration and switching
-├── theme/       # theme module boundary
-└── examples/    # digital power supply UI example
+└── theme/       # theme module boundary
 ```
 
 ## Core Object Model
@@ -55,12 +54,16 @@ Supported APIs:
 - `GUI_Page_Update`
 - `GUI_Page_Draw`
 
-The example implements:
+The power application interface implements:
 
 - Home page
 - Parameter setup page
 - Waveform page
 - System information page
+
+## Fonts
+
+`GUI_DrawString` uses the project `Bender_24x24` bitmap font for large scale text (`scale >= 3`) and the compact built-in 5x7 font for small labels and controls.
 
 ## Animation
 
@@ -87,10 +90,10 @@ The industrial theme uses restrained high-contrast colors inspired by Rohde & Sc
 ## Main Loop Example
 
 ```c
-GUI_DemoPower_Init();
+GUI_PowerApp_Init();
 
 while (1) {
-    GUI_DemoPower_Update(meas_mv, meas_ma, meas_mw, temp_c10, cc_mode);
+    GUI_PowerApp_Update(meas_mv, meas_ma, meas_mw, temp_c10, cc_mode);
     GUI_Tick(10);
     GUI_Refresh();
 }

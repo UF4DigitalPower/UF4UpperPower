@@ -16,6 +16,7 @@
   */
 #include "gui.h"
 #include "bsp_lcd.h"
+#include "Bender_24x24.h"
 
 static GUI_Rect g_clip = {0, 0, GUI_SCREEN_WIDTH, GUI_SCREEN_HEIGHT};
 
@@ -27,6 +28,120 @@ static const uint8_t g_font5x7[96][5] = {
     {0,1,2,4,0},{0x20,0x54,0x54,0x54,0x78},{0x7F,0x48,0x44,0x44,0x38},{0x38,0x44,0x44,0x44,0x20},{0x38,0x44,0x44,0x48,0x7F},{0x38,0x54,0x54,0x54,0x18},{8,0x7E,9,1,2},{0x0C,0x52,0x52,0x52,0x3E},{0x7F,8,4,4,0x78},{0,0x44,0x7D,0x40,0},{0x20,0x40,0x44,0x3D,0},{0x7F,0x10,0x28,0x44,0},{0,0x41,0x7F,0x40,0},{0x7C,4,0x18,4,0x78},{0x7C,8,4,4,0x78},{0x38,0x44,0x44,0x44,0x38},
     {0x7C,0x14,0x14,0x14,8},{8,0x14,0x14,0x18,0x7C},{0x7C,8,4,4,8},{0x48,0x54,0x54,0x54,0x20},{4,0x3F,0x44,0x40,0x20},{0x3C,0x40,0x40,0x20,0x7C},{0x1C,0x20,0x40,0x20,0x1C},{0x3C,0x40,0x30,0x40,0x3C},{0x44,0x28,0x10,0x28,0x44},{0x0C,0x50,0x50,0x50,0x3C},{0x44,0x64,0x54,0x4C,0x44},{0,8,0x36,0x41,0},{0,0,0x7F,0,0},{0,0x41,0x36,8,0},{0x10,8,8,0x10,8},{0}
 };
+
+static const uint8_t *gui_bender24_get_glyph(uint8_t ch)
+{
+    switch (ch) {
+    case '0': return char_0030;
+    case '1': return char_0031;
+    case '2': return char_0032;
+    case '3': return char_0033;
+    case '4': return char_0034;
+    case '5': return char_0035;
+    case '6': return char_0036;
+    case '7': return char_0037;
+    case '8': return char_0038;
+    case '9': return char_0039;
+    case 'A': return char_0041;
+    case 'B': return char_0042;
+    case 'C': return char_0043;
+    case 'D': return char_0044;
+    case 'E': return char_0045;
+    case 'F': return char_0046;
+    case 'G': return char_0047;
+    case 'H': return char_0048;
+    case 'I': return char_0049;
+    case 'J': return char_004A;
+    case 'K': return char_004B;
+    case 'L': return char_004C;
+    case 'M': return char_004D;
+    case 'N': return char_004E;
+    case 'O': return char_004F;
+    case 'P': return char_0050;
+    case 'Q': return char_0051;
+    case 'R': return char_0052;
+    case 'S': return char_0053;
+    case 'T': return char_0054;
+    case 'U': return char_0055;
+    case 'V': return char_0056;
+    case 'W': return char_0057;
+    case 'X': return char_0058;
+    case 'Y': return char_0059;
+    case 'Z': return char_005A;
+    case '_': return char_005F;
+    case 'a': return char_0061;
+    case 'b': return char_0062;
+    case 'c': return char_0063;
+    case 'd': return char_0064;
+    case 'e': return char_0065;
+    case 'f': return char_0066;
+    case 'g': return char_0067;
+    case 'h': return char_0068;
+    case 'i': return char_0069;
+    case 'j': return char_006A;
+    case 'k': return char_006B;
+    case 'l': return char_006C;
+    case 'm': return char_006D;
+    case 'n': return char_006E;
+    case 'o': return char_006F;
+    case 'p': return char_0070;
+    case 'q': return char_0071;
+    case 'r': return char_0072;
+    case 's': return char_0073;
+    case 't': return char_0074;
+    case 'u': return char_0075;
+    case 'v': return char_0076;
+    case 'w': return char_0077;
+    case 'x': return char_0078;
+    case 'y': return char_0079;
+    case 'z': return char_007A;
+    case '.': return char_002E;
+    case ':': return char_003A;
+    case '-': return char_002D;
+    case '=': return char_003D;
+    case '+': return char_002B;
+    case '%': return char_0025;
+    case '*': return char_002A;
+    case '#': return char_0023;
+    case '@': return char_0040;
+    case '!': return char_0021;
+    case '^': return char_005E;
+    case '&': return char_0026;
+    case '(': return char_0028;
+    case ')': return char_0029;
+    default: return 0;
+    }
+}
+
+static void gui_draw_bender24_char(int16_t x, int16_t y, uint8_t ch, GUI_Color color, uint8_t scale)
+{
+    const uint8_t *glyph = gui_bender24_get_glyph(ch);
+    uint8_t row;
+    uint8_t s = (scale == 0U) ? 1U : scale;
+
+    if ((glyph == 0) || (ch == ' ')) {
+        return;
+    }
+
+    for (row = 0U; row < 24U; ++row) {
+        uint8_t byte_index;
+        for (byte_index = 0U; byte_index < 3U; ++byte_index) {
+            uint8_t bits = glyph[(uint16_t)row * 3U + byte_index];
+            uint8_t bit;
+            for (bit = 0U; bit < 8U; ++bit) {
+                if ((bits & (uint8_t)(0x80U >> bit)) != 0U) {
+                    GUI_Rect p = {
+                        (int16_t)(x + ((int16_t)byte_index * 8 + bit) * s),
+                        (int16_t)(y + row * s),
+                        s,
+                        s
+                    };
+                    GUI_FillRect(&p, color);
+                }
+            }
+        }
+    }
+}
 
 /**
   * @brief  Encodes 8-bit RGB color components to RGB565.
@@ -157,12 +272,24 @@ void GUI_DrawLine(int16_t x1, int16_t y1, int16_t x2, int16_t y2, GUI_Color colo
   */
 void GUI_DrawRect(const GUI_Rect *rect, GUI_Color color)
 {
+    int16_t x1;
+    int16_t y1;
+    int16_t x2;
+    int16_t y2;
+
     if ((rect->w <= 0) || (rect->h <= 0)) {
         return;
     }
-    POINT_COLOR = color;
-    LCD_DrawRectangle((uint16_t)rect->x, (uint16_t)rect->y,
-                      (uint16_t)(rect->x + rect->w - 1), (uint16_t)(rect->y + rect->h - 1));
+
+    x1 = rect->x;
+    y1 = rect->y;
+    x2 = (int16_t)(rect->x + rect->w - 1);
+    y2 = (int16_t)(rect->y + rect->h - 1);
+
+    GUI_DrawLine(x1, y1, x2, y1, color);
+    GUI_DrawLine(x1, y1, x1, y2, color);
+    GUI_DrawLine(x1, y2, x2, y2, color);
+    GUI_DrawLine(x2, y1, x2, y2, color);
 }
 
 /**
@@ -223,6 +350,17 @@ void GUI_DrawString(int16_t x, int16_t y, const char *text, GUI_Color color, uin
 {
     int16_t cursor = x;
     uint8_t s = (scale == 0U) ? 1U : scale;
+
+    if (s >= 3U) {
+        while ((text != 0) && (*text != '\0')) {
+            uint8_t ch = (uint8_t)*text++;
+            if (ch != ' ') {
+                gui_draw_bender24_char(cursor, y, ch, color, 1U);
+            }
+            cursor = (int16_t)(cursor + 18);
+        }
+        return;
+    }
 
     while ((text != 0) && (*text != '\0')) {
         uint8_t ch = (uint8_t)*text++;

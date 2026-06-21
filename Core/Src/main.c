@@ -57,9 +57,9 @@
 /* USER CODE BEGIN PV */
 static uint32_t g_gui_last_tick;
 static uint32_t g_gui_sample_tick;
-static int32_t g_gui_demo_voltage_mv = 12000;
-static int32_t g_gui_demo_current_ma = 1500;
-static uint8_t g_gui_demo_current_dir;
+static int32_t g_gui_voltage_mv = 12000;
+static int32_t g_gui_current_ma = 1500;
+static uint8_t g_gui_current_dir;
 
 /* USER CODE END PV */
 
@@ -69,7 +69,7 @@ static void MPU_Config(void);
 /* USER CODE BEGIN PFP */
 static void APP_GUI_Init(void);
 static void APP_GUI_Service(uint32_t now);
-static void APP_GUI_UpdateDemoMeasurement(void);
+static void APP_GUI_UpdateMeasurement(void);
 
 /* USER CODE END PFP */
 
@@ -83,7 +83,7 @@ static void APP_GUI_Init(void)
 {
   LCD_Init();
   ST7701Init();
-  GUI_DemoPower_Init();
+  GUI_PowerApp_Init();
 
   g_gui_last_tick = HAL_GetTick();
   g_gui_sample_tick = g_gui_last_tick;
@@ -96,12 +96,12 @@ static void APP_GUI_Init(void)
   */
 static void APP_GUI_Service(uint32_t now)
 {
-  if ((now - g_gui_sample_tick) >= 50U) {
+  if ((now - g_gui_sample_tick) >= 10U) {
     g_gui_sample_tick = now;
-    APP_GUI_UpdateDemoMeasurement();
+    APP_GUI_UpdateMeasurement();
   }
 
-  if ((now - g_gui_last_tick) >= 10U) {
+  if ((now - g_gui_last_tick) >= 16U) {
     uint32_t elapsed = now - g_gui_last_tick;
     g_gui_last_tick = now;
     GUI_Tick(elapsed);
@@ -110,30 +110,30 @@ static void APP_GUI_Service(uint32_t now)
 }
 
 /**
-  * @brief  Updates the power UI with a replaceable simulated measurement source.
+  * @brief  Updates the power UI with a replaceable measurement source.
   * @note   Replace this function with real voltage, current, power, temperature
   *         and CC/CV state snapshots from the digital power control loop.
   * @retval None
   */
-static void APP_GUI_UpdateDemoMeasurement(void)
+static void APP_GUI_UpdateMeasurement(void)
 {
-  if (g_gui_demo_current_dir == 0U) {
-    g_gui_demo_current_ma += 37;
-    if (g_gui_demo_current_ma > 2800) {
-      g_gui_demo_current_dir = 1U;
+  if (g_gui_current_dir == 0U) {
+    g_gui_current_ma += 37;
+    if (g_gui_current_ma > 2800) {
+      g_gui_current_dir = 1U;
     }
   } else {
-    g_gui_demo_current_ma -= 29;
-    if (g_gui_demo_current_ma < 600) {
-      g_gui_demo_current_dir = 0U;
+    g_gui_current_ma -= 29;
+    if (g_gui_current_ma < 600) {
+      g_gui_current_dir = 0U;
     }
   }
 
-  GUI_DemoPower_Update(g_gui_demo_voltage_mv,
-                       g_gui_demo_current_ma,
-                       (g_gui_demo_voltage_mv * g_gui_demo_current_ma) / 1000L,
-                       286,
-                       (uint8_t)(g_gui_demo_current_ma > 1800));
+  GUI_PowerApp_Update(g_gui_voltage_mv,
+                      g_gui_current_ma,
+                      (g_gui_voltage_mv * g_gui_current_ma) / 1000L,
+                      286,
+                      (uint8_t)(g_gui_current_ma > 1800));
 }
 
 /* USER CODE END 0 */

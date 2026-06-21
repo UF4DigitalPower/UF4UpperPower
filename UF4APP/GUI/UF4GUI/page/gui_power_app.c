@@ -1,9 +1,9 @@
 /**
   ******************************************************************************
-  * @file    gui_demo_power.c
+  * @file    gui_power_app.c
   * @author  UF4
   * @date    26-6-20 下午6:22
-  * @brief   UF4GUI digital power supply reference user interface.
+  * @brief   UF4GUI digital power supply application interface.
   ******************************************************************************
   * @attention
   *
@@ -35,6 +35,8 @@ static GUI_Widget g_mode;
 static GUI_Widget g_wave;
 static GUI_Widget g_output_sw;
 static GUI_Widget g_param_btn;
+static GUI_Widget g_wave_btn;
+static GUI_Widget g_info_btn;
 
 static GUI_Widget g_param_root;
 static GUI_Widget g_param_window;
@@ -55,16 +57,59 @@ static char g_power_text[24];
 static char g_temp_text[24];
 static char g_mode_text[12];
 
+static void PowerUi_DrawPanel(const GUI_Rect *rect, const char *title, GUI_Color accent)
+{
+    const GUI_Theme *theme = GUI_GetTheme();
+    GUI_Rect title_bar = {rect->x, rect->y, rect->w, 18};
+    GUI_Rect accent_line = {rect->x, rect->y, 4, rect->h};
+
+    GUI_FillRect(rect, theme->panel);
+    GUI_FillRect(&title_bar, GUI_Blend565(theme->panel, theme->bg, 150U));
+    GUI_FillRect(&accent_line, accent);
+    GUI_DrawRect(rect, theme->border);
+    GUI_DrawString((int16_t)(rect->x + 10), (int16_t)(rect->y + 5), title, theme->muted, 1U);
+}
+
 static void PowerUi_GoParamPage(GUI_Widget *w)
 {
     (void)w;
     (void)GUI_Page_Switch(PAGE_PARAM);
 }
 
+static void PowerUi_GoWavePage(GUI_Widget *w)
+{
+    (void)w;
+    (void)GUI_Page_Switch(PAGE_WAVE);
+}
+
+static void PowerUi_GoInfoPage(GUI_Widget *w)
+{
+    (void)w;
+    (void)GUI_Page_Switch(PAGE_INFO);
+}
+
 static void PowerUi_DrawBackground(const GUI_Rect *clip)
 {
+    const GUI_Theme *theme = GUI_GetTheme();
+    GUI_Rect top_bar = {0, 0, GUI_SCREEN_WIDTH, 46};
+    GUI_Rect top_line = {0, 44, GUI_SCREEN_WIDTH, 2};
+    GUI_Rect left_rail = {0, 46, 5, (int16_t)(GUI_SCREEN_HEIGHT - 46)};
+
     (void)clip;
-    GUI_FillRect(&(GUI_Rect){0, 0, GUI_SCREEN_WIDTH, GUI_SCREEN_HEIGHT}, GUI_GetTheme()->bg);
+    GUI_FillRect(&(GUI_Rect){0, 0, GUI_SCREEN_WIDTH, GUI_SCREEN_HEIGHT}, theme->bg);
+    GUI_FillRect(&top_bar, theme->panel);
+    GUI_FillRect(&top_line, theme->accent);
+    GUI_FillRect(&left_rail, theme->accent);
+    GUI_DrawString(18, 6, "UF4 DIGITAL POWER", theme->text, 2U);
+    GUI_DrawString(490, 10, "REMOTE  SENSE", theme->muted, 1U);
+
+    PowerUi_DrawPanel(&(GUI_Rect){16, 58, 214, 88}, "OUTPUT VOLTAGE", theme->accent);
+    PowerUi_DrawPanel(&(GUI_Rect){244, 58, 214, 88}, "OUTPUT CURRENT", theme->accent2);
+    PowerUi_DrawPanel(&(GUI_Rect){472, 58, 152, 88}, "OUTPUT STATE", theme->success);
+    PowerUi_DrawPanel(&(GUI_Rect){16, 158, 214, 64}, "OUTPUT POWER", theme->warning);
+    PowerUi_DrawPanel(&(GUI_Rect){244, 158, 214, 64}, "TEMPERATURE", theme->danger);
+    PowerUi_DrawPanel(&(GUI_Rect){472, 158, 152, 64}, "CONTROL", theme->accent);
+    PowerUi_DrawPanel(&(GUI_Rect){16, 236, 608, 214}, "REALTIME WAVEFORM", theme->accent2);
 }
 
 static void PowerUi_HomeEnter(void)
@@ -77,7 +122,7 @@ static void PowerUi_HomeUpdate(uint32_t elapsed_ms)
     static uint32_t acc;
 
     acc += elapsed_ms;
-    if (acc >= 80U) {
+    if (acc >= 30U) {
         acc = 0U;
         GUI_InvalidateWidget(&g_wave);
     }
@@ -91,10 +136,10 @@ static GUI_Page g_pages[] = {
 };
 
 /**
-  * @brief  Initializes the digital power supply reference UI.
-  * @retval None
-  */
-void GUI_DemoPower_Init(void)
+ * @brief  Initializes the digital power supply application UI.
+ * @retval None
+ */
+void GUI_PowerApp_Init(void)
 {
     static const char *menu_items[] = {"Voltage", "Current", "Protection", "Back"};
 
@@ -103,22 +148,29 @@ void GUI_DemoPower_Init(void)
 
     GUI_Widget_Init(&g_home_root, GUI_WIDGET_WINDOW, &(GUI_Rect){0, 0, GUI_SCREEN_WIDTH, GUI_SCREEN_HEIGHT});
     g_home_root.draw = 0;
-    GUI_Label_Create(&g_title, &(GUI_Rect){16, 12, 220, 24}, "UF4 DIGITAL POWER");
-    g_title.data.label.scale = 2U;
-    GUI_Label_Create(&g_voltage, &(GUI_Rect){20, 64, 190, 44}, g_voltage_text);
+    GUI_Label_Create(&g_title, &(GUI_Rect){18, 30, 160, 12}, "H743 RGB565 DMA2D");
+    g_title.data.label.color = GUI_GetTheme()->muted;
+    g_title.data.label.scale = 1U;
+    GUI_Label_Create(&g_voltage, &(GUI_Rect){34, 88, 178, 34}, g_voltage_text);
     g_voltage.data.label.scale = 3U;
-    GUI_Label_Create(&g_current, &(GUI_Rect){240, 64, 190, 44}, g_current_text);
+    g_voltage.data.label.color = GUI_GetTheme()->accent;
+    GUI_Label_Create(&g_current, &(GUI_Rect){262, 88, 178, 34}, g_current_text);
     g_current.data.label.scale = 3U;
-    GUI_Label_Create(&g_power, &(GUI_Rect){20, 132, 190, 36}, g_power_text);
+    g_current.data.label.color = GUI_GetTheme()->accent2;
+    GUI_Label_Create(&g_power, &(GUI_Rect){34, 184, 172, 26}, g_power_text);
     g_power.data.label.scale = 2U;
-    GUI_Label_Create(&g_temp, &(GUI_Rect){240, 132, 190, 36}, g_temp_text);
+    g_power.data.label.color = GUI_GetTheme()->warning;
+    GUI_Label_Create(&g_temp, &(GUI_Rect){262, 184, 172, 26}, g_temp_text);
     g_temp.data.label.scale = 2U;
-    GUI_Label_Create(&g_mode, &(GUI_Rect){500, 20, 70, 22}, g_mode_text);
-    g_mode.data.label.color = GUI_GetTheme()->accent;
-    g_mode.data.label.scale = 2U;
-    GUI_WaveView_Create(&g_wave, &(GUI_Rect){20, 200, 600, 190}, 0, 500);
-    GUI_Switch_Create(&g_output_sw, &(GUI_Rect){500, 72, 92, 34}, 0U);
-    GUI_Button_Create(&g_param_btn, &(GUI_Rect){470, 126, 132, 42}, "PARAM", PowerUi_GoParamPage);
+    g_temp.data.label.color = GUI_GetTheme()->danger;
+    GUI_Label_Create(&g_mode, &(GUI_Rect){512, 90, 72, 22}, g_mode_text);
+    g_mode.data.label.color = GUI_GetTheme()->success;
+    g_mode.data.label.scale = 3U;
+    GUI_WaveView_Create(&g_wave, &(GUI_Rect){24, 262, 592, 176}, 0, 500);
+    GUI_Switch_Create(&g_output_sw, &(GUI_Rect){500, 184, 96, 28}, 0U);
+    GUI_Button_Create(&g_param_btn, &(GUI_Rect){476, 232, 70, 28}, "SET", PowerUi_GoParamPage);
+    GUI_Button_Create(&g_wave_btn, &(GUI_Rect){550, 232, 70, 28}, "WAVE", PowerUi_GoWavePage);
+    GUI_Button_Create(&g_info_btn, &(GUI_Rect){550, 12, 70, 26}, "INFO", PowerUi_GoInfoPage);
     GUI_Widget_AddChild(&g_home_root, &g_title);
     GUI_Widget_AddChild(&g_home_root, &g_voltage);
     GUI_Widget_AddChild(&g_home_root, &g_current);
@@ -128,6 +180,8 @@ void GUI_DemoPower_Init(void)
     GUI_Widget_AddChild(&g_home_root, &g_wave);
     GUI_Widget_AddChild(&g_home_root, &g_output_sw);
     GUI_Widget_AddChild(&g_home_root, &g_param_btn);
+    GUI_Widget_AddChild(&g_home_root, &g_wave_btn);
+    GUI_Widget_AddChild(&g_home_root, &g_info_btn);
 
     GUI_Widget_Init(&g_param_root, GUI_WIDGET_WINDOW, &(GUI_Rect){0, 0, GUI_SCREEN_WIDTH, GUI_SCREEN_HEIGHT});
     g_param_root.draw = 0;
@@ -175,7 +229,7 @@ void GUI_DemoPower_Init(void)
   * @param  cc_mode Constant-current state flag.
   * @retval None
   */
-void GUI_DemoPower_Update(int32_t mv, int32_t ma, int32_t mw, int32_t temp_c10, uint8_t cc_mode)
+void GUI_PowerApp_Update(int32_t mv, int32_t ma, int32_t mw, int32_t temp_c10, uint8_t cc_mode)
 {
     (void)snprintf(g_voltage_text, sizeof(g_voltage_text), "%02ld.%02ldV", mv / 1000L, (mv % 1000L) / 10L);
     (void)snprintf(g_current_text, sizeof(g_current_text), "%ld.%03ldA", ma / 1000L, ma % 1000L);

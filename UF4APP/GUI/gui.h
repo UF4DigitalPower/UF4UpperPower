@@ -256,8 +256,8 @@ GUI_Anim *GUI_Anim_Start(GUI_AnimType type, GUI_Widget *target, int32_t from, in
                          void (*on_done)(GUI_Widget *));
 void GUI_Anim_Update(uint32_t elapsed_ms);
 
-void GUI_DemoPower_Init(void);
-void GUI_DemoPower_Update(int32_t mv, int32_t ma, int32_t mw, int32_t temp_c10, uint8_t cc_mode);
+void GUI_PowerApp_Init(void);
+void GUI_PowerApp_Update(int32_t mv, int32_t ma, int32_t mw, int32_t temp_c10, uint8_t cc_mode);
 
 #ifdef __cplusplus
 }

@@ -155,19 +155,14 @@ void GUI_InvalidateWidget(GUI_Widget *widget)
   */
 void GUI_Refresh(void)
 {
-    uint8_t i;
+    GUI_Rect full = {0, 0, GUI_SCREEN_WIDTH, GUI_SCREEN_HEIGHT};
 
     if (g_dirty_count == 0U) {
         return;
     }
 
-    for (i = 0U; i < g_dirty_count; ++i) {
-        LCD_CopyRectFromFrontToDraw((uint16_t)g_dirty[i].x, (uint16_t)g_dirty[i].y,
-                                    (uint16_t)g_dirty[i].w, (uint16_t)g_dirty[i].h);
-        GUI_DrawSetClip(&g_dirty[i]);
-        GUI_Page_Draw(&g_dirty[i]);
-    }
-
+    GUI_DrawSetClip(&full);
+    GUI_Page_Draw(&full);
     GUI_DrawResetClip();
     LCD_Present();
     g_dirty_count = 0U;
