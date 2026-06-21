@@ -14,6 +14,7 @@
 
 #include "main.h"
 #include "stdlib.h"
+#include "bsp_lcd_font.h"
 
 #define LTDC_WIDTH 480
 #define LTDC_HEIGHT 640
@@ -117,6 +118,7 @@ uint32_t LCD_GetDrawBufferAddress(void);
 void LCD_SetDrawBufferAddress(uint32_t addr);
 void LCD_SetFrameBuffers(uint32_t front_addr, uint32_t draw_addr);
 void LCD_CopyRectFromFrontToDraw(uint16_t x, uint16_t y, uint16_t w, uint16_t h);
+void LCD_DrawPixelColor(uint16_t x, uint16_t y, uint32_t color);
 void LCD_Present(void);
 void LCD_PresentBuffer(uint32_t buffer_addr);
 int32_t LTDC_GetCurrentVisibleLine(void);

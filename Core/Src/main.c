@@ -3,7 +3,7 @@
   * @file    main.c
   * @author  UF4
   * @date    26-6-20 下午6:22
-  * @brief   STM32H743 application entry and UF4GUI service loop.
+  * @brief   STM32H743 application entry.
   ******************************************************************************
   * @attention
   *
@@ -34,7 +34,6 @@
 /* USER CODE BEGIN Includes */
 #include "bsp_lcd.h"
 #include "bsp_st7701.h"
-#include "gui.h"
 
 /* USER CODE END Includes */
 /* Private typedef -----------------------------------------------------------*/
@@ -55,11 +54,6 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-static uint32_t g_gui_last_tick;
-static uint32_t g_gui_sample_tick;
-static int32_t g_gui_voltage_mv = 12000;
-static int32_t g_gui_current_ma = 1500;
-static uint8_t g_gui_current_dir;
 
 /* USER CODE END PV */
 
@@ -67,74 +61,12 @@ static uint8_t g_gui_current_dir;
 void SystemClock_Config(void);
 static void MPU_Config(void);
 /* USER CODE BEGIN PFP */
-static void APP_GUI_Init(void);
-static void APP_GUI_Service(uint32_t now);
-static void APP_GUI_UpdateMeasurement(void);
 
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-/**
-  * @brief  Initializes LCD panel and UF4GUI application pages.
-  * @retval None
-  */
-static void APP_GUI_Init(void)
-{
-  LCD_Init();
-  ST7701Init();
-  GUI_PowerApp_Init();
 
-  g_gui_last_tick = HAL_GetTick();
-  g_gui_sample_tick = g_gui_last_tick;
-}
-
-/**
-  * @brief  Services UF4GUI timing, measurement update and dirty refresh.
-  * @param  now Current HAL tick in milliseconds.
-  * @retval None
-  */
-static void APP_GUI_Service(uint32_t now)
-{
-  if ((now - g_gui_sample_tick) >= 10U) {
-    g_gui_sample_tick = now;
-    APP_GUI_UpdateMeasurement();
-  }
-
-  if ((now - g_gui_last_tick) >= 16U) {
-    uint32_t elapsed = now - g_gui_last_tick;
-    g_gui_last_tick = now;
-    GUI_Tick(elapsed);
-    GUI_Refresh();
-  }
-}
-
-/**
-  * @brief  Updates the power UI with a replaceable measurement source.
-  * @note   Replace this function with real voltage, current, power, temperature
-  *         and CC/CV state snapshots from the digital power control loop.
-  * @retval None
-  */
-static void APP_GUI_UpdateMeasurement(void)
-{
-  if (g_gui_current_dir == 0U) {
-    g_gui_current_ma += 37;
-    if (g_gui_current_ma > 2800) {
-      g_gui_current_dir = 1U;
-    }
-  } else {
-    g_gui_current_ma -= 29;
-    if (g_gui_current_ma < 600) {
-      g_gui_current_dir = 0U;
-    }
-  }
-
-  GUI_PowerApp_Update(g_gui_voltage_mv,
-                      g_gui_current_ma,
-                      (g_gui_voltage_mv * g_gui_current_ma) / 1000L,
-                      286,
-                      (uint8_t)(g_gui_current_ma > 1800));
-}
 
 /* USER CODE END 0 */
 
@@ -192,18 +124,18 @@ int main(void)
   MX_TIM2_Init();
   MX_TIM4_Init();
   /* USER CODE BEGIN 2 */
+  LCD_Init();
+  ST7701Init();
 
-  APP_GUI_Init();
-
+  LCD_Clear(BLACK);
+  LCD_DrawFontString(230, 216, "23.99", LCD_FONT_BENDER_128, WHITE, LCD_FONT_BG_TRANSPARENT);
+  LCD_Present();
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-    uint32_t now = HAL_GetTick();
-
-    APP_GUI_Service(now);
 
     /* USER CODE END WHILE */
 

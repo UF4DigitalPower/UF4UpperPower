@@ -81,6 +81,13 @@ static uint32_t lcd_get_rect_span_bytes(const uint32_t psx, const uint32_t psy, 
 	return LCD_DEV.pixsize * (LTDC_WIDTH * (pey - psy) + (pex - psx + 1U));
 }
 
+void LCD_DrawPixelColor(uint16_t x, uint16_t y, uint32_t color) {
+	if (x >= LCD_DEV.width || y >= LCD_DEV.height) {
+		return;
+	}
+	*(uint16_t*) lcd_get_pixel_address(g_lcd_draw_buffer_addr, x, y) = LCD_EncodeColor((uint16_t) color);
+}
+
 uint32_t LCD_GetDrawBufferAddress(void) {
 	return g_lcd_draw_buffer_addr;
 }
@@ -379,6 +386,7 @@ void LCD_DrawRectangle(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2) {
 	LCD_DrawLine(x1, y2, x2, y2);
 	LCD_DrawLine(x2, y1, x2, y2);
 }
+
 //在指定位置画一个指定大小的圆
 //(x,y):中心点
 //r    :半径

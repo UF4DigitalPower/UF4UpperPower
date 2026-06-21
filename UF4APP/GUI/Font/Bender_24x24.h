@@ -1,12 +1,12 @@
-#ifndef FONT_DATA_H
-#define FONT_DATA_H
+#ifndef BENDER_24X24_H
+#define BENDER_24X24_H
 
 #include "stdint.h"
 // 画布尺寸: 24x24
 // 字体大小: 24
 
 // 字符: '1' (0x0031)
-const uint8_t char_0031[72] = {
+const uint8_t bender_24_char_0031[72] = {
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
@@ -34,7 +34,7 @@ const uint8_t char_0031[72] = {
 };
 
 // 字符: '2' (0x0032)
-const uint8_t char_0032[72] = {
+const uint8_t bender_24_char_0032[72] = {
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
@@ -62,7 +62,7 @@ const uint8_t char_0032[72] = {
 };
 
 // 字符: '3' (0x0033)
-const uint8_t char_0033[72] = {
+const uint8_t bender_24_char_0033[72] = {
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
@@ -90,7 +90,7 @@ const uint8_t char_0033[72] = {
 };
 
 // 字符: '4' (0x0034)
-const uint8_t char_0034[72] = {
+const uint8_t bender_24_char_0034[72] = {
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
@@ -118,7 +118,7 @@ const uint8_t char_0034[72] = {
 };
 
 // 字符: '5' (0x0035)
-const uint8_t char_0035[72] = {
+const uint8_t bender_24_char_0035[72] = {
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
@@ -146,7 +146,7 @@ const uint8_t char_0035[72] = {
 };
 
 // 字符: '6' (0x0036)
-const uint8_t char_0036[72] = {
+const uint8_t bender_24_char_0036[72] = {
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
@@ -174,7 +174,7 @@ const uint8_t char_0036[72] = {
 };
 
 // 字符: '7' (0x0037)
-const uint8_t char_0037[72] = {
+const uint8_t bender_24_char_0037[72] = {
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
@@ -202,7 +202,7 @@ const uint8_t char_0037[72] = {
 };
 
 // 字符: '8' (0x0038)
-const uint8_t char_0038[72] = {
+const uint8_t bender_24_char_0038[72] = {
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
@@ -230,7 +230,7 @@ const uint8_t char_0038[72] = {
 };
 
 // 字符: '9' (0x0039)
-const uint8_t char_0039[72] = {
+const uint8_t bender_24_char_0039[72] = {
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
@@ -258,7 +258,7 @@ const uint8_t char_0039[72] = {
 };
 
 // 字符: '0' (0x0030)
-const uint8_t char_0030[72] = {
+const uint8_t bender_24_char_0030[72] = {
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
@@ -286,7 +286,7 @@ const uint8_t char_0030[72] = {
 };
 
 // 字符: 'q' (0x0071)
-const uint8_t char_0071[72] = {
+const uint8_t bender_24_char_0071[72] = {
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
@@ -314,7 +314,7 @@ const uint8_t char_0071[72] = {
 };
 
 // 字符: 'w' (0x0077)
-const uint8_t char_0077[72] = {
+const uint8_t bender_24_char_0077[72] = {
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
@@ -342,7 +342,7 @@ const uint8_t char_0077[72] = {
 };
 
 // 字符: 'e' (0x0065)
-const uint8_t char_0065[72] = {
+const uint8_t bender_24_char_0065[72] = {
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
@@ -370,7 +370,7 @@ const uint8_t char_0065[72] = {
 };
 
 // 字符: 'r' (0x0072)
-const uint8_t char_0072[72] = {
+const uint8_t bender_24_char_0072[72] = {
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
@@ -398,7 +398,7 @@ const uint8_t char_0072[72] = {
 };
 
 // 字符: 't' (0x0074)
-const uint8_t char_0074[72] = {
+const uint8_t bender_24_char_0074[72] = {
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
@@ -426,7 +426,7 @@ const uint8_t char_0074[72] = {
 };
 
 // 字符: 'y' (0x0079)
-const uint8_t char_0079[72] = {
+const uint8_t bender_24_char_0079[72] = {
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
@@ -454,7 +454,7 @@ const uint8_t char_0079[72] = {
 };
 
 // 字符: 'u' (0x0075)
-const uint8_t char_0075[72] = {
+const uint8_t bender_24_char_0075[72] = {
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
@@ -482,7 +482,7 @@ const uint8_t char_0075[72] = {
 };
 
 // 字符: 'i' (0x0069)
-const uint8_t char_0069[72] = {
+const uint8_t bender_24_char_0069[72] = {
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
@@ -510,7 +510,7 @@ const uint8_t char_0069[72] = {
 };
 
 // 字符: 'o' (0x006F)
-const uint8_t char_006F[72] = {
+const uint8_t bender_24_char_006F[72] = {
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
@@ -538,7 +538,7 @@ const uint8_t char_006F[72] = {
 };
 
 // 字符: 'p' (0x0070)
-const uint8_t char_0070[72] = {
+const uint8_t bender_24_char_0070[72] = {
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
@@ -566,7 +566,7 @@ const uint8_t char_0070[72] = {
 };
 
 // 字符: 'a' (0x0061)
-const uint8_t char_0061[72] = {
+const uint8_t bender_24_char_0061[72] = {
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
@@ -594,7 +594,7 @@ const uint8_t char_0061[72] = {
 };
 
 // 字符: 's' (0x0073)
-const uint8_t char_0073[72] = {
+const uint8_t bender_24_char_0073[72] = {
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
@@ -622,7 +622,7 @@ const uint8_t char_0073[72] = {
 };
 
 // 字符: 'd' (0x0064)
-const uint8_t char_0064[72] = {
+const uint8_t bender_24_char_0064[72] = {
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
@@ -650,7 +650,7 @@ const uint8_t char_0064[72] = {
 };
 
 // 字符: 'f' (0x0066)
-const uint8_t char_0066[72] = {
+const uint8_t bender_24_char_0066[72] = {
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
@@ -678,7 +678,7 @@ const uint8_t char_0066[72] = {
 };
 
 // 字符: 'g' (0x0067)
-const uint8_t char_0067[72] = {
+const uint8_t bender_24_char_0067[72] = {
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
@@ -706,7 +706,7 @@ const uint8_t char_0067[72] = {
 };
 
 // 字符: 'h' (0x0068)
-const uint8_t char_0068[72] = {
+const uint8_t bender_24_char_0068[72] = {
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
@@ -734,7 +734,7 @@ const uint8_t char_0068[72] = {
 };
 
 // 字符: 'j' (0x006A)
-const uint8_t char_006A[72] = {
+const uint8_t bender_24_char_006A[72] = {
     0x00, 0x00, 0x00,
     0x00, 0x0C, 0x00,
     0x00, 0x0C, 0x00,
@@ -762,7 +762,7 @@ const uint8_t char_006A[72] = {
 };
 
 // 字符: 'k' (0x006B)
-const uint8_t char_006B[72] = {
+const uint8_t bender_24_char_006B[72] = {
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
@@ -790,7 +790,7 @@ const uint8_t char_006B[72] = {
 };
 
 // 字符: 'l' (0x006C)
-const uint8_t char_006C[72] = {
+const uint8_t bender_24_char_006C[72] = {
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
@@ -818,7 +818,7 @@ const uint8_t char_006C[72] = {
 };
 
 // 字符: 'z' (0x007A)
-const uint8_t char_007A[72] = {
+const uint8_t bender_24_char_007A[72] = {
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
@@ -846,7 +846,7 @@ const uint8_t char_007A[72] = {
 };
 
 // 字符: 'x' (0x0078)
-const uint8_t char_0078[72] = {
+const uint8_t bender_24_char_0078[72] = {
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
@@ -874,7 +874,7 @@ const uint8_t char_0078[72] = {
 };
 
 // 字符: 'c' (0x0063)
-const uint8_t char_0063[72] = {
+const uint8_t bender_24_char_0063[72] = {
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
@@ -902,7 +902,7 @@ const uint8_t char_0063[72] = {
 };
 
 // 字符: 'v' (0x0076)
-const uint8_t char_0076[72] = {
+const uint8_t bender_24_char_0076[72] = {
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
@@ -930,7 +930,7 @@ const uint8_t char_0076[72] = {
 };
 
 // 字符: 'b' (0x0062)
-const uint8_t char_0062[72] = {
+const uint8_t bender_24_char_0062[72] = {
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
@@ -958,7 +958,7 @@ const uint8_t char_0062[72] = {
 };
 
 // 字符: 'n' (0x006E)
-const uint8_t char_006E[72] = {
+const uint8_t bender_24_char_006E[72] = {
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
@@ -986,7 +986,7 @@ const uint8_t char_006E[72] = {
 };
 
 // 字符: 'm' (0x006D)
-const uint8_t char_006D[72] = {
+const uint8_t bender_24_char_006D[72] = {
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
@@ -1014,7 +1014,7 @@ const uint8_t char_006D[72] = {
 };
 
 // 字符: 'Q' (0x0051)
-const uint8_t char_0051[72] = {
+const uint8_t bender_24_char_0051[72] = {
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
     0x00, 0xFF, 0x00,
@@ -1042,7 +1042,7 @@ const uint8_t char_0051[72] = {
 };
 
 // 字符: 'W' (0x0057)
-const uint8_t char_0057[72] = {
+const uint8_t bender_24_char_0057[72] = {
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
@@ -1070,7 +1070,7 @@ const uint8_t char_0057[72] = {
 };
 
 // 字符: 'E' (0x0045)
-const uint8_t char_0045[72] = {
+const uint8_t bender_24_char_0045[72] = {
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
@@ -1098,7 +1098,7 @@ const uint8_t char_0045[72] = {
 };
 
 // 字符: 'R' (0x0052)
-const uint8_t char_0052[72] = {
+const uint8_t bender_24_char_0052[72] = {
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
@@ -1126,7 +1126,7 @@ const uint8_t char_0052[72] = {
 };
 
 // 字符: 'T' (0x0054)
-const uint8_t char_0054[72] = {
+const uint8_t bender_24_char_0054[72] = {
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
@@ -1154,7 +1154,7 @@ const uint8_t char_0054[72] = {
 };
 
 // 字符: 'Y' (0x0059)
-const uint8_t char_0059[72] = {
+const uint8_t bender_24_char_0059[72] = {
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
@@ -1182,7 +1182,7 @@ const uint8_t char_0059[72] = {
 };
 
 // 字符: 'U' (0x0055)
-const uint8_t char_0055[72] = {
+const uint8_t bender_24_char_0055[72] = {
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
@@ -1210,7 +1210,7 @@ const uint8_t char_0055[72] = {
 };
 
 // 字符: 'I' (0x0049)
-const uint8_t char_0049[72] = {
+const uint8_t bender_24_char_0049[72] = {
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
@@ -1238,7 +1238,7 @@ const uint8_t char_0049[72] = {
 };
 
 // 字符: 'O' (0x004F)
-const uint8_t char_004F[72] = {
+const uint8_t bender_24_char_004F[72] = {
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
@@ -1266,7 +1266,7 @@ const uint8_t char_004F[72] = {
 };
 
 // 字符: 'P' (0x0050)
-const uint8_t char_0050[72] = {
+const uint8_t bender_24_char_0050[72] = {
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
@@ -1294,7 +1294,7 @@ const uint8_t char_0050[72] = {
 };
 
 // 字符: 'L' (0x004C)
-const uint8_t char_004C[72] = {
+const uint8_t bender_24_char_004C[72] = {
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
@@ -1322,7 +1322,7 @@ const uint8_t char_004C[72] = {
 };
 
 // 字符: 'K' (0x004B)
-const uint8_t char_004B[72] = {
+const uint8_t bender_24_char_004B[72] = {
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
@@ -1350,7 +1350,7 @@ const uint8_t char_004B[72] = {
 };
 
 // 字符: 'J' (0x004A)
-const uint8_t char_004A[72] = {
+const uint8_t bender_24_char_004A[72] = {
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
@@ -1378,7 +1378,7 @@ const uint8_t char_004A[72] = {
 };
 
 // 字符: 'H' (0x0048)
-const uint8_t char_0048[72] = {
+const uint8_t bender_24_char_0048[72] = {
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
@@ -1406,7 +1406,7 @@ const uint8_t char_0048[72] = {
 };
 
 // 字符: 'G' (0x0047)
-const uint8_t char_0047[72] = {
+const uint8_t bender_24_char_0047[72] = {
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
@@ -1434,7 +1434,7 @@ const uint8_t char_0047[72] = {
 };
 
 // 字符: 'F' (0x0046)
-const uint8_t char_0046[72] = {
+const uint8_t bender_24_char_0046[72] = {
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
@@ -1462,7 +1462,7 @@ const uint8_t char_0046[72] = {
 };
 
 // 字符: 'D' (0x0044)
-const uint8_t char_0044[72] = {
+const uint8_t bender_24_char_0044[72] = {
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
@@ -1490,7 +1490,7 @@ const uint8_t char_0044[72] = {
 };
 
 // 字符: 'S' (0x0053)
-const uint8_t char_0053[72] = {
+const uint8_t bender_24_char_0053[72] = {
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
@@ -1518,7 +1518,7 @@ const uint8_t char_0053[72] = {
 };
 
 // 字符: 'A' (0x0041)
-const uint8_t char_0041[72] = {
+const uint8_t bender_24_char_0041[72] = {
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
@@ -1546,7 +1546,7 @@ const uint8_t char_0041[72] = {
 };
 
 // 字符: 'Z' (0x005A)
-const uint8_t char_005A[72] = {
+const uint8_t bender_24_char_005A[72] = {
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
@@ -1574,7 +1574,7 @@ const uint8_t char_005A[72] = {
 };
 
 // 字符: 'X' (0x0058)
-const uint8_t char_0058[72] = {
+const uint8_t bender_24_char_0058[72] = {
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
@@ -1602,7 +1602,7 @@ const uint8_t char_0058[72] = {
 };
 
 // 字符: 'C' (0x0043)
-const uint8_t char_0043[72] = {
+const uint8_t bender_24_char_0043[72] = {
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
@@ -1630,7 +1630,7 @@ const uint8_t char_0043[72] = {
 };
 
 // 字符: 'V' (0x0056)
-const uint8_t char_0056[72] = {
+const uint8_t bender_24_char_0056[72] = {
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
@@ -1658,7 +1658,7 @@ const uint8_t char_0056[72] = {
 };
 
 // 字符: 'B' (0x0042)
-const uint8_t char_0042[72] = {
+const uint8_t bender_24_char_0042[72] = {
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
@@ -1686,7 +1686,7 @@ const uint8_t char_0042[72] = {
 };
 
 // 字符: 'N' (0x004E)
-const uint8_t char_004E[72] = {
+const uint8_t bender_24_char_004E[72] = {
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
@@ -1714,7 +1714,7 @@ const uint8_t char_004E[72] = {
 };
 
 // 字符: 'M' (0x004D)
-const uint8_t char_004D[72] = {
+const uint8_t bender_24_char_004D[72] = {
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
@@ -1742,7 +1742,7 @@ const uint8_t char_004D[72] = {
 };
 
 // 字符: '.' (0x002E)
-const uint8_t char_002E[72] = {
+const uint8_t bender_24_char_002E[72] = {
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
@@ -1770,7 +1770,7 @@ const uint8_t char_002E[72] = {
 };
 
 // 字符: ':' (0x003A)
-const uint8_t char_003A[72] = {
+const uint8_t bender_24_char_003A[72] = {
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
@@ -1798,7 +1798,7 @@ const uint8_t char_003A[72] = {
 };
 
 // 字符: '-' (0x002D)
-const uint8_t char_002D[72] = {
+const uint8_t bender_24_char_002D[72] = {
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
@@ -1826,7 +1826,7 @@ const uint8_t char_002D[72] = {
 };
 
 // 字符: '=' (0x003D)
-const uint8_t char_003D[72] = {
+const uint8_t bender_24_char_003D[72] = {
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
@@ -1854,7 +1854,7 @@ const uint8_t char_003D[72] = {
 };
 
 // 字符: '+' (0x002B)
-const uint8_t char_002B[72] = {
+const uint8_t bender_24_char_002B[72] = {
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
@@ -1882,7 +1882,7 @@ const uint8_t char_002B[72] = {
 };
 
 // 字符: '_' (0x005F)
-const uint8_t char_005F[72] = {
+const uint8_t bender_24_char_005F[72] = {
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
@@ -1910,7 +1910,7 @@ const uint8_t char_005F[72] = {
 };
 
 // 字符: '%' (0x0025)
-const uint8_t char_0025[72] = {
+const uint8_t bender_24_char_0025[72] = {
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
@@ -1938,7 +1938,7 @@ const uint8_t char_0025[72] = {
 };
 
 // 字符: '*' (0x002A)
-const uint8_t char_002A[72] = {
+const uint8_t bender_24_char_002A[72] = {
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
@@ -1966,7 +1966,7 @@ const uint8_t char_002A[72] = {
 };
 
 // 字符: '#' (0x0023)
-const uint8_t char_0023[72] = {
+const uint8_t bender_24_char_0023[72] = {
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
@@ -1994,7 +1994,7 @@ const uint8_t char_0023[72] = {
 };
 
 // 字符: '@' (0x0040)
-const uint8_t char_0040[72] = {
+const uint8_t bender_24_char_0040[72] = {
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
     0x07, 0xFF, 0xC0,
@@ -2022,7 +2022,7 @@ const uint8_t char_0040[72] = {
 };
 
 // 字符: '!' (0x0021)
-const uint8_t char_0021[72] = {
+const uint8_t bender_24_char_0021[72] = {
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
@@ -2050,7 +2050,7 @@ const uint8_t char_0021[72] = {
 };
 
 // 字符: '^' (0x005E)
-const uint8_t char_005E[72] = {
+const uint8_t bender_24_char_005E[72] = {
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
@@ -2078,7 +2078,7 @@ const uint8_t char_005E[72] = {
 };
 
 // 字符: '&' (0x0026)
-const uint8_t char_0026[72] = {
+const uint8_t bender_24_char_0026[72] = {
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
@@ -2106,7 +2106,7 @@ const uint8_t char_0026[72] = {
 };
 
 // 字符: '(' (0x0028)
-const uint8_t char_0028[72] = {
+const uint8_t bender_24_char_0028[72] = {
     0x00, 0x00, 0x00,
     0x00, 0x06, 0x00,
     0x00, 0x1E, 0x00,
@@ -2134,7 +2134,7 @@ const uint8_t char_0028[72] = {
 };
 
 // 字符: ')' (0x0029)
-const uint8_t char_0029[72] = {
+const uint8_t bender_24_char_0029[72] = {
     0x00, 0x00, 0x00,
     0x00, 0x60, 0x00,
     0x00, 0x78, 0x00,
@@ -2161,4 +2161,4 @@ const uint8_t char_0029[72] = {
     0x00, 0x00, 0x00,
 };
 
-#endif
+#endif /* BENDER_24X24_H */
