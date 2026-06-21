@@ -35,6 +35,7 @@
 #include "bsp_lcd.h"
 #include "bsp_st7701.h"
 #include "gui.h"
+#include "setpoint_input.h"
 
 /* USER CODE END Includes */
 /* Private typedef -----------------------------------------------------------*/
@@ -129,6 +130,7 @@ int main(void)
   ST7701Init();
   GUI_Data_t gui_data;
 
+  SetpointInput_Init();
   GUI_Init();
   /* USER CODE END 2 */
 
@@ -136,6 +138,8 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+    SetpointInput_Update();
+
     gui_data.vin = 48.0F;
     gui_data.iin = 6.10F;
     gui_data.pin = gui_data.vin * gui_data.iin;
@@ -147,8 +151,10 @@ int main(void)
     gui_data.pout = gui_data.vout * gui_data.iout;
     gui_data.power = gui_data.pout;
 
-    gui_data.vset = 5.0F;
-    gui_data.iset = 1.0F;
+    gui_data.vset = SetpointInput_GetVset();
+    gui_data.iset = SetpointInput_GetIset();
+    gui_data.vset_digit = SetpointInput_GetVsetDigit();
+    gui_data.iset_digit = SetpointInput_GetIsetDigit();
     gui_data.cpu_temp = 0.0F;
     gui_data.buck_temp = 0.0F;
     gui_data.boost_temp = 0.0F;

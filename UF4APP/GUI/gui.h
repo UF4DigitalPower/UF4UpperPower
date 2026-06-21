@@ -17,6 +17,8 @@
 #ifndef GUI_H
 #define GUI_H
 
+#include <stdint.h>
+
 typedef struct
 {
         float vin;
@@ -31,6 +33,8 @@ typedef struct
 
         float vset;
         float iset;
+        uint8_t vset_digit;
+        uint8_t iset_digit;
 
         float cpu_temp;
         float buck_temp;

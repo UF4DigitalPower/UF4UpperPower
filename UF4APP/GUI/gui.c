@@ -33,8 +33,10 @@
 #define GUI_FONT_TOP_VALUE  34U
 #define GUI_FONT_TILE_TITLE 18U
 #define GUI_FONT_TILE_VALUE 24U
+#define GUI_FONT_SET_VALUE  34U
 #define GUI_FONT_LABEL      24U
 #define GUI_FONT_VALUE      144U
+#define GUI_SET_CELL_W      18U
 
 #define GUI_TOP_Y           4U
 #define GUI_TOP_H           54U
@@ -124,7 +126,7 @@ static void GUI_DrawPanel(const GUI_Rect_t *rect, uint32_t color);
 static void GUI_DrawCenteredText(const GUI_Rect_t *rect, const char *text, uint16_t font, uint32_t color, uint32_t bg);
 static void GUI_DrawSmallValueTile(const GUI_ValueTile_t *tile, float value);
 static void GUI_DrawMainValueTile(const GUI_ValueTile_t *tile, float value);
-static void GUI_DrawSetValueTile(const GUI_ValueTile_t *tile, float value);
+static void GUI_DrawSetValueTile(const GUI_ValueTile_t *tile, float value, uint8_t digit);
 static void GUI_DrawTempTile(const GUI_ValueTile_t *tile, float value);
 static void GUI_DrawTextTile(const GUI_TextTile_t *tile);
 static void GUI_FormatMainValue(char *buf, uint32_t size, float value);
@@ -197,6 +199,8 @@ void GUI_Update(
     uint8_t pout_dirty;
     uint8_t vset_dirty;
     uint8_t iset_dirty;
+    uint8_t vset_digit_dirty;
+    uint8_t iset_digit_dirty;
     uint8_t cpu_temp_dirty;
     uint8_t buck_temp_dirty;
     uint8_t boost_temp_dirty;
@@ -216,12 +220,15 @@ void GUI_Update(
     pout_dirty = (uint8_t)(!g_gui_has_last || GUI_FloatChanged(data->pout, g_last_data.pout));
     vset_dirty = (uint8_t)(!g_gui_has_last || GUI_FloatChanged(data->vset, g_last_data.vset));
     iset_dirty = (uint8_t)(!g_gui_has_last || GUI_FloatChanged(data->iset, g_last_data.iset));
+    vset_digit_dirty = (uint8_t)(!g_gui_has_last || data->vset_digit != g_last_data.vset_digit);
+    iset_digit_dirty = (uint8_t)(!g_gui_has_last || data->iset_digit != g_last_data.iset_digit);
     cpu_temp_dirty = (uint8_t)(!g_gui_has_last || GUI_FloatChanged(data->cpu_temp, g_last_data.cpu_temp));
     buck_temp_dirty = (uint8_t)(!g_gui_has_last || GUI_FloatChanged(data->buck_temp, g_last_data.buck_temp));
     boost_temp_dirty = (uint8_t)(!g_gui_has_last || GUI_FloatChanged(data->boost_temp, g_last_data.boost_temp));
 
     dirty = (uint8_t)(vin_dirty || iin_dirty || pin_dirty || efficiency_dirty || fan_dirty ||
                       vout_dirty || iout_dirty || pout_dirty || vset_dirty || iset_dirty ||
+                      vset_digit_dirty || iset_digit_dirty ||
                       cpu_temp_dirty || buck_temp_dirty || boost_temp_dirty);
 
     if (!dirty)
@@ -275,14 +282,14 @@ void GUI_Update(
         GUI_DrawMainValueTile(&g_main_tiles[2], data->pout);
     }
 
-    if(vset_dirty)
+    if(vset_dirty || vset_digit_dirty)
     {
-        GUI_DrawSetValueTile(&g_set_tiles[0], data->vset);
+        GUI_DrawSetValueTile(&g_set_tiles[0], data->vset, data->vset_digit);
     }
 
-    if(iset_dirty)
+    if(iset_dirty || iset_digit_dirty)
     {
-        GUI_DrawSetValueTile(&g_set_tiles[1], data->iset);
+        GUI_DrawSetValueTile(&g_set_tiles[1], data->iset, data->iset_digit);
     }
 
     if(cpu_temp_dirty)
@@ -423,9 +430,9 @@ static void GUI_DrawMainValueTile(const GUI_ValueTile_t *tile, float value)
     GUI_DrawPanel(&tile->rect, GUI_PANEL_DARK);
     LCD_DrawFontStringFixedDMA(
         (uint16_t)(tile->rect.x + 6U),
-        (uint16_t)(tile->rect.y + 2U),
+        (uint16_t)(tile->rect.y + 20U),
         300U,
-        128U,
+        120U,
         buf,
         GUI_FONT_VALUE,
         60U,
@@ -447,12 +454,13 @@ static void GUI_DrawMainValueTile(const GUI_ValueTile_t *tile, float value)
     GUI_DrawBorder(&tile->rect);
 }
 
-static void GUI_DrawSetValueTile(const GUI_ValueTile_t *tile, float value)
+static void GUI_DrawSetValueTile(const GUI_ValueTile_t *tile, float value, uint8_t digit)
 {
     char buf[16];
     GUI_Rect_t title_rect;
     GUI_Rect_t value_rect;
     GUI_Rect_t unit_rect;
+    uint16_t mark_x;
 
     GUI_FormatFixed2(buf, sizeof(buf), value);
 
@@ -465,16 +473,27 @@ static void GUI_DrawSetValueTile(const GUI_ValueTile_t *tile, float value)
     GUI_DrawCenteredText(&title_rect, tile->title, GUI_FONT_TILE_TITLE, GUI_MUTED_COLOR, GUI_PANEL_COLOR);
 
     value_rect.x = (uint16_t)(tile->rect.x + 8U);
-    value_rect.y = (uint16_t)(tile->rect.y + tile->rect.h - 29U);
-    value_rect.w = (uint16_t)(tile->rect.w - 30U);
-    value_rect.h = 24U;
-    LCD_DrawFontStringDMA(value_rect.x, value_rect.y, value_rect.w, value_rect.h, buf, GUI_FONT_TILE_VALUE, GUI_TEXT_COLOR, GUI_PANEL_COLOR);
+    value_rect.y = (uint16_t)(tile->rect.y + tile->rect.h - 39U);
+    value_rect.w = (uint16_t)(tile->rect.w - 34U);
+    value_rect.h = 34U;
+    LCD_DrawFontStringDMA(value_rect.x, value_rect.y, value_rect.w, value_rect.h, buf, GUI_FONT_SET_VALUE, GUI_TEXT_COLOR, GUI_PANEL_COLOR);
 
-    unit_rect.x = (uint16_t)(tile->rect.x + tile->rect.w - 18U);
-    unit_rect.y = value_rect.y;
-    unit_rect.w = 18U;
+    unit_rect.x = (uint16_t)(tile->rect.x + tile->rect.w - 24U);
+    unit_rect.y = (uint16_t)(value_rect.y + 5U);
+    unit_rect.w = 22U;
     unit_rect.h = 24U;
     GUI_DrawCenteredText(&unit_rect, tile->unit, GUI_FONT_TILE_VALUE, GUI_ACCENT_COLOR, GUI_PANEL_COLOR);
+
+    if (digit < 4U)
+    {
+        mark_x = (uint16_t)(value_rect.x + (digit * GUI_SET_CELL_W));
+        LCD_Rect_Fill(
+            mark_x,
+            (uint16_t)(tile->rect.y + tile->rect.h - 4U),
+            (uint16_t)(mark_x + GUI_SET_CELL_W - 3U),
+            (uint16_t)(tile->rect.y + tile->rect.h - 3U),
+            GUI_ACCENT_COLOR);
+    }
 }
 
 static void GUI_DrawTempTile(const GUI_ValueTile_t *tile, float value)
