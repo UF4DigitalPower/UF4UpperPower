@@ -123,23 +123,6 @@ file(WRITE "${UF4_BANNER_TXT}" "
   ██████╔╝╚██████╔╝██║███████╗██████╔╝    ███████║╚██████╔╝╚██████╗╚██████╗███████╗███████║███████║
   ╚═════╝  ╚═════╝ ╚═╝╚══════╝╚═════╝     ╚══════╝ ╚═════╝  ╚═════╝ ╚═════╝╚══════╝╚══════╝╚══════╝
 
-  ┌──────────────────────────────────────────────────────────────────────────────┐
-  │ Project      : ${UF4_PROJECT_NAME}
-  │ Build Type   : ${UF4_BUILD_TYPE}
-  │ Build Time   : ${UF4_BUILD_TIME}
-  │ Host Platform: ${UF4_HOST_SYSTEM_NAME} ${UF4_HOST_SYSTEM_PROCESSOR}
-  │ Target System: ${UF4_TARGET_SYSTEM_NAME}
-  │ MCU          : STM32H743ZITx / STM32H743xx
-  │ CPU/FPU      : Cortex-M7, hard-float, fpv4-sp-d16
-  │ Memory       : FLASH 2048 KB
-  │ RAM          : DTCMRAM 128 KB, RAM_D1 512 KB, RAM_D2 288 KB, RAM_D3 64 KB, ITCMRAM 64 KB
-  │ External RAM : SDRAM 32 MB
-  │ Linker       : ${UF4_LINKER_SCRIPT}
-  │ Compiler     : ${UF4_C_COMPILER_ID} ${UF4_C_COMPILER_VERSION}
-  │ Toolchain    : ${UF4_C_COMPILER}
-  │ Output       : ${UF4_OUTPUT_ELF}
-  └──────────────────────────────────────────────────────────────────────────────┘
-
   UF4UpperPower firmware generated successfully.
 
 ")

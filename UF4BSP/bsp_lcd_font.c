@@ -5,10 +5,8 @@
 
 #include "bsp_lcd.h"
 #include "bsp_lcd_font.h"
-#include "Bender_Index.h"
-#include "SAIBA_Index.h"
+#include "Teko_SemiBold_Index.h"
 
-#include <stddef.h>
 
 typedef struct {
 	const uint8_t *bitmap;
@@ -39,7 +37,7 @@ static LCD_GlyphInfo LCD_GetGlyphInfo(uint8_t ch, LCD_FontSize size) {
 	int16_t min_col = (int16_t) size;
 	int16_t max_col = -1;
 
-	glyph.bitmap = Bender_FindBitmap((char) ch, size);
+	glyph.bitmap = Teko_SemiBold_FindBitmap((char) ch, size);
 	if (glyph.bitmap == NULL) {
 		return glyph;
 	}

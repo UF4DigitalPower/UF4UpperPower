@@ -128,7 +128,7 @@ int main(void)
   ST7701Init();
 
   LCD_Clear(BLUE);
-  LCD_DrawFontString(230, 216, "23.99", LCD_FONT_SAIBA_128, WHITE, LCD_FONT_BG_TRANSPARENT);
+  LCD_DrawFontString(10, 40, "23.99", LCD_FONT_TEKO_SEMIBOLD_256, WHITE, LCD_FONT_BG_TRANSPARENT);
   LCD_Present();
   /* USER CODE END 2 */
 

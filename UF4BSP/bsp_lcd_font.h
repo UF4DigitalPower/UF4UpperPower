@@ -6,9 +6,7 @@
 #ifndef STM32H743_BSP_LCD_FONT_H
 #define STM32H743_BSP_LCD_FONT_H
 
-#include "main.h"
-#include "Bender_Config.h"
-#include "SAIBA_Config.h"
+#include "Teko_SemiBold_Config.h"
 
 #define LCD_FONT_BG_TRANSPARENT 0xFFFFFFFFUL
 
