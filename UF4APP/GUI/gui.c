@@ -39,6 +39,23 @@
 #define GUI_SET_CELL_W      16U
 #define GUI_SET_TEXT_W      (5U * GUI_SET_CELL_W)
 
+#define GUI_DIRTY_VIN       (1UL << 0)
+#define GUI_DIRTY_IIN       (1UL << 1)
+#define GUI_DIRTY_PIN       (1UL << 2)
+#define GUI_DIRTY_EFF       (1UL << 3)
+#define GUI_DIRTY_FAN       (1UL << 4)
+#define GUI_DIRTY_VOUT      (1UL << 5)
+#define GUI_DIRTY_IOUT      (1UL << 6)
+#define GUI_DIRTY_POUT      (1UL << 7)
+#define GUI_DIRTY_VSET      (1UL << 8)
+#define GUI_DIRTY_ISET      (1UL << 9)
+#define GUI_DIRTY_VSET_DIG  (1UL << 10)
+#define GUI_DIRTY_ISET_DIG  (1UL << 11)
+#define GUI_DIRTY_CPU_TEMP  (1UL << 12)
+#define GUI_DIRTY_BUCK_TEMP (1UL << 13)
+#define GUI_DIRTY_BOOST_TEMP (1UL << 14)
+#define GUI_DIRTY_PERF      (1UL << 15)
+
 #define GUI_TOP_Y           4U
 #define GUI_TOP_H           54U
 #define GUI_BODY_Y          66U
@@ -53,6 +70,8 @@
 #define GUI_RIGHT_COL2_W    132U
 #define GUI_SIDE_TILE_H     42U
 #define GUI_SIDE_TILE_GAP   3U
+#define GUI_PERF_Y          (GUI_BODY_Y + 2U * (GUI_ROW_H + GUI_ROW_GAP) + GUI_SIDE_TILE_H + GUI_SIDE_TILE_GAP)
+#define GUI_PERF_H          (2U * GUI_SIDE_TILE_H + GUI_SIDE_TILE_GAP)
 
 static GUI_Data_t g_last_data;
 static uint8_t g_gui_has_last;
@@ -122,6 +141,14 @@ static const GUI_ValueTile_t g_temp_tiles[] =
     {{GUI_RIGHT_X, GUI_BODY_Y + 2U * (GUI_ROW_H + GUI_ROW_GAP) + 2U * (GUI_SIDE_TILE_H + GUI_SIDE_TILE_GAP), GUI_RIGHT_COL_W, GUI_SIDE_TILE_H}, "BOOST", "C"},
 };
 
+static const GUI_Rect_t g_perf_rect =
+{
+    GUI_RIGHT_COL2_X,
+    GUI_PERF_Y,
+    GUI_RIGHT_COL2_W,
+    GUI_PERF_H
+};
+
 static void GUI_DrawBorder(const GUI_Rect_t *rect);
 static void GUI_DrawPanel(const GUI_Rect_t *rect, uint32_t color);
 static void GUI_DrawCenteredText(const GUI_Rect_t *rect, const char *text, uint16_t font, uint32_t color, uint32_t bg);
@@ -130,6 +157,8 @@ static void GUI_DrawMainValueTile(const GUI_ValueTile_t *tile, float value);
 static void GUI_DrawSetValueTile(const GUI_ValueTile_t *tile, float value, uint8_t digit);
 static void GUI_DrawTempTile(const GUI_ValueTile_t *tile, float value);
 static void GUI_DrawTextTile(const GUI_TextTile_t *tile);
+static void GUI_DrawPerfTile(uint16_t fps, uint8_t cpu_usage);
+static void GUI_DrawDirtyTiles(const GUI_Data_t *data, uint32_t dirty_mask);
 static void GUI_FormatMainValue(char *buf, uint32_t size, float value);
 static void GUI_FormatFixed2(char *buf, uint32_t size, float value);
 static uint8_t GUI_FloatChanged(float a, float b);
@@ -140,6 +169,8 @@ void GUI_Init(void)
 
     GUI_DrawStatic();
     LCD_Present();
+    GUI_Clear();
+    GUI_DrawStatic();
     g_gui_has_last = 0U;
 }
 
@@ -189,7 +220,7 @@ void GUI_DrawStatic(void)
 void GUI_Update(
         const GUI_Data_t *data)
 {
-    uint8_t dirty = 0U;
+    uint32_t dirty_mask = 0U;
     uint8_t vin_dirty;
     uint8_t iin_dirty;
     uint8_t pin_dirty;
@@ -205,6 +236,7 @@ void GUI_Update(
     uint8_t cpu_temp_dirty;
     uint8_t buck_temp_dirty;
     uint8_t boost_temp_dirty;
+    uint8_t perf_dirty;
 
     if(data == NULL)
     {
@@ -226,91 +258,38 @@ void GUI_Update(
     cpu_temp_dirty = (uint8_t)(!g_gui_has_last || GUI_FloatChanged(data->cpu_temp, g_last_data.cpu_temp));
     buck_temp_dirty = (uint8_t)(!g_gui_has_last || GUI_FloatChanged(data->buck_temp, g_last_data.buck_temp));
     boost_temp_dirty = (uint8_t)(!g_gui_has_last || GUI_FloatChanged(data->boost_temp, g_last_data.boost_temp));
+    perf_dirty = (uint8_t)(!g_gui_has_last ||
+                           data->fps != g_last_data.fps ||
+                           data->cpu_usage != g_last_data.cpu_usage);
 
-    dirty = (uint8_t)(vin_dirty || iin_dirty || pin_dirty || efficiency_dirty || fan_dirty ||
-                      vout_dirty || iout_dirty || pout_dirty || vset_dirty || iset_dirty ||
-                      vset_digit_dirty || iset_digit_dirty ||
-                      cpu_temp_dirty || buck_temp_dirty || boost_temp_dirty);
+    if (vin_dirty) { dirty_mask |= GUI_DIRTY_VIN; }
+    if (iin_dirty) { dirty_mask |= GUI_DIRTY_IIN; }
+    if (pin_dirty) { dirty_mask |= GUI_DIRTY_PIN; }
+    if (efficiency_dirty) { dirty_mask |= GUI_DIRTY_EFF; }
+    if (fan_dirty) { dirty_mask |= GUI_DIRTY_FAN; }
+    if (vout_dirty) { dirty_mask |= GUI_DIRTY_VOUT; }
+    if (iout_dirty) { dirty_mask |= GUI_DIRTY_IOUT; }
+    if (pout_dirty) { dirty_mask |= GUI_DIRTY_POUT; }
+    if (vset_dirty) { dirty_mask |= GUI_DIRTY_VSET; }
+    if (iset_dirty) { dirty_mask |= GUI_DIRTY_ISET; }
+    if (vset_digit_dirty) { dirty_mask |= GUI_DIRTY_VSET_DIG; }
+    if (iset_digit_dirty) { dirty_mask |= GUI_DIRTY_ISET_DIG; }
+    if (cpu_temp_dirty) { dirty_mask |= GUI_DIRTY_CPU_TEMP; }
+    if (buck_temp_dirty) { dirty_mask |= GUI_DIRTY_BUCK_TEMP; }
+    if (boost_temp_dirty) { dirty_mask |= GUI_DIRTY_BOOST_TEMP; }
+    if (perf_dirty) { dirty_mask |= GUI_DIRTY_PERF; }
 
-    if (!dirty)
+    if (dirty_mask == 0U)
     {
         return;
     }
 
-    LCD_CopyRectFromFrontToDraw(
-        0U,
-        0U,
-        LCD_DEV.width,
-        LCD_DEV.height);
-
-    if(vin_dirty)
-    {
-        GUI_DrawSmallValueTile(&g_top_tiles[0], data->vin);
-    }
-
-    if(iin_dirty)
-    {
-        GUI_DrawSmallValueTile(&g_top_tiles[1], data->iin);
-    }
-
-    if(pin_dirty)
-    {
-        GUI_DrawSmallValueTile(&g_top_tiles[2], data->pin);
-    }
-
-    if(efficiency_dirty)
-    {
-        GUI_DrawSmallValueTile(&g_top_tiles[3], data->efficiency);
-    }
-
-    if(fan_dirty)
-    {
-        GUI_DrawSmallValueTile(&g_top_tiles[4], data->fan);
-    }
-
-    if(vout_dirty)
-    {
-        GUI_DrawMainValueTile(&g_main_tiles[0], data->vout);
-    }
-
-    if(iout_dirty)
-    {
-        GUI_DrawMainValueTile(&g_main_tiles[1], data->iout);
-    }
-
-    if(pout_dirty)
-    {
-        GUI_DrawMainValueTile(&g_main_tiles[2], data->pout);
-    }
-
-    if(vset_dirty || vset_digit_dirty)
-    {
-        GUI_DrawSetValueTile(&g_set_tiles[0], data->vset, data->vset_digit);
-    }
-
-    if(iset_dirty || iset_digit_dirty)
-    {
-        GUI_DrawSetValueTile(&g_set_tiles[1], data->iset, data->iset_digit);
-    }
-
-    if(cpu_temp_dirty)
-    {
-        GUI_DrawTempTile(&g_temp_tiles[0], data->cpu_temp);
-    }
-
-    if(buck_temp_dirty)
-    {
-        GUI_DrawTempTile(&g_temp_tiles[1], data->buck_temp);
-    }
-
-    if(boost_temp_dirty)
-    {
-        GUI_DrawTempTile(&g_temp_tiles[2], data->boost_temp);
-    }
+    GUI_DrawDirtyTiles(data, dirty_mask);
 
     g_last_data = *data;
     g_gui_has_last = 1U;
     LCD_Present();
+    GUI_DrawDirtyTiles(data, dirty_mask);
 }
 
 static void GUI_DrawPanel(const GUI_Rect_t *rect, uint32_t color)
@@ -552,6 +531,123 @@ static void GUI_DrawTextTile(const GUI_TextTile_t *tile)
     value_rect.w = (uint16_t)(tile->rect.w - title_w - 4U);
     value_rect.h = 24U;
     GUI_DrawCenteredText(&value_rect, tile->value, GUI_FONT_TILE_VALUE, GUI_TEXT_COLOR, GUI_PANEL_COLOR);
+}
+
+static void GUI_DrawPerfTile(uint16_t fps, uint8_t cpu_usage)
+{
+    char fps_buf[16];
+    char cpu_buf[16];
+    GUI_Rect_t fps_label_rect;
+    GUI_Rect_t fps_value_rect;
+    GUI_Rect_t cpu_label_rect;
+    GUI_Rect_t cpu_value_rect;
+
+    if (cpu_usage > 100U)
+    {
+        cpu_usage = 100U;
+    }
+
+    snprintf(fps_buf, sizeof(fps_buf), "%03u", (unsigned int)fps);
+    snprintf(cpu_buf, sizeof(cpu_buf), "%03u%%", (unsigned int)cpu_usage);
+
+    GUI_DrawPanel(&g_perf_rect, GUI_PANEL_COLOR);
+
+    fps_label_rect.x = (uint16_t)(g_perf_rect.x + 6U);
+    fps_label_rect.y = (uint16_t)(g_perf_rect.y + 10U);
+    fps_label_rect.w = 48U;
+    fps_label_rect.h = 20U;
+    GUI_DrawCenteredText(&fps_label_rect, "FPS", GUI_FONT_TILE_TITLE, GUI_MUTED_COLOR, GUI_PANEL_COLOR);
+
+    fps_value_rect.x = (uint16_t)(g_perf_rect.x + 56U);
+    fps_value_rect.y = (uint16_t)(g_perf_rect.y + 8U);
+    fps_value_rect.w = (uint16_t)(g_perf_rect.w - 62U);
+    fps_value_rect.h = 24U;
+    GUI_DrawCenteredText(&fps_value_rect, fps_buf, GUI_FONT_TILE_VALUE, GUI_TEXT_COLOR, GUI_PANEL_COLOR);
+
+    cpu_label_rect.x = (uint16_t)(g_perf_rect.x + 6U);
+    cpu_label_rect.y = (uint16_t)(g_perf_rect.y + GUI_SIDE_TILE_H + GUI_SIDE_TILE_GAP + 10U);
+    cpu_label_rect.w = 48U;
+    cpu_label_rect.h = 20U;
+    GUI_DrawCenteredText(&cpu_label_rect, "CPU", GUI_FONT_TILE_TITLE, GUI_MUTED_COLOR, GUI_PANEL_COLOR);
+
+    cpu_value_rect.x = (uint16_t)(g_perf_rect.x + 56U);
+    cpu_value_rect.y = (uint16_t)(g_perf_rect.y + GUI_SIDE_TILE_H + GUI_SIDE_TILE_GAP + 8U);
+    cpu_value_rect.w = (uint16_t)(g_perf_rect.w - 62U);
+    cpu_value_rect.h = 24U;
+    GUI_DrawCenteredText(&cpu_value_rect, cpu_buf, GUI_FONT_TILE_VALUE, GUI_TEXT_COLOR, GUI_PANEL_COLOR);
+}
+
+static void GUI_DrawDirtyTiles(const GUI_Data_t *data, uint32_t dirty_mask)
+{
+    if ((dirty_mask & GUI_DIRTY_VIN) != 0U)
+    {
+        GUI_DrawSmallValueTile(&g_top_tiles[0], data->vin);
+    }
+
+    if ((dirty_mask & GUI_DIRTY_IIN) != 0U)
+    {
+        GUI_DrawSmallValueTile(&g_top_tiles[1], data->iin);
+    }
+
+    if ((dirty_mask & GUI_DIRTY_PIN) != 0U)
+    {
+        GUI_DrawSmallValueTile(&g_top_tiles[2], data->pin);
+    }
+
+    if ((dirty_mask & GUI_DIRTY_EFF) != 0U)
+    {
+        GUI_DrawSmallValueTile(&g_top_tiles[3], data->efficiency);
+    }
+
+    if ((dirty_mask & GUI_DIRTY_FAN) != 0U)
+    {
+        GUI_DrawSmallValueTile(&g_top_tiles[4], data->fan);
+    }
+
+    if ((dirty_mask & GUI_DIRTY_VOUT) != 0U)
+    {
+        GUI_DrawMainValueTile(&g_main_tiles[0], data->vout);
+    }
+
+    if ((dirty_mask & GUI_DIRTY_IOUT) != 0U)
+    {
+        GUI_DrawMainValueTile(&g_main_tiles[1], data->iout);
+    }
+
+    if ((dirty_mask & GUI_DIRTY_POUT) != 0U)
+    {
+        GUI_DrawMainValueTile(&g_main_tiles[2], data->pout);
+    }
+
+    if ((dirty_mask & (GUI_DIRTY_VSET | GUI_DIRTY_VSET_DIG)) != 0U)
+    {
+        GUI_DrawSetValueTile(&g_set_tiles[0], data->vset, data->vset_digit);
+    }
+
+    if ((dirty_mask & (GUI_DIRTY_ISET | GUI_DIRTY_ISET_DIG)) != 0U)
+    {
+        GUI_DrawSetValueTile(&g_set_tiles[1], data->iset, data->iset_digit);
+    }
+
+    if ((dirty_mask & GUI_DIRTY_CPU_TEMP) != 0U)
+    {
+        GUI_DrawTempTile(&g_temp_tiles[0], data->cpu_temp);
+    }
+
+    if ((dirty_mask & GUI_DIRTY_BUCK_TEMP) != 0U)
+    {
+        GUI_DrawTempTile(&g_temp_tiles[1], data->buck_temp);
+    }
+
+    if ((dirty_mask & GUI_DIRTY_BOOST_TEMP) != 0U)
+    {
+        GUI_DrawTempTile(&g_temp_tiles[2], data->boost_temp);
+    }
+
+    if ((dirty_mask & GUI_DIRTY_PERF) != 0U)
+    {
+        GUI_DrawPerfTile(data->fps, data->cpu_usage);
+    }
 }
 
 static void GUI_FormatMainValue(char *buf, uint32_t size, float value)

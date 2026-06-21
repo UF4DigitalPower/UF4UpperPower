@@ -12,6 +12,8 @@
 
 void SetpointInput_Init(void);
 void SetpointInput_Update(void);
+void SetpointInput_UpdateButtons(void);
+void SetpointInput_UpdateEncoders(void);
 
 float SetpointInput_GetVset(void);
 float SetpointInput_GetIset(void);

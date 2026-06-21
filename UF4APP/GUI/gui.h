@@ -41,6 +41,8 @@ typedef struct
         float boost_temp;
 
         float power;
+        uint16_t fps;
+        uint8_t cpu_usage;
 
 } GUI_Data_t;
 

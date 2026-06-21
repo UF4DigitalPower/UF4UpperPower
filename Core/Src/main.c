@@ -69,6 +69,11 @@ static void MPU_Config(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 static uint32_t g_last_key_tick = 0U;
+static uint16_t g_perf_fps = 0U;
+static uint8_t g_perf_cpu_usage = 0U;
+static uint32_t g_perf_window_tick = 0U;
+static uint32_t g_perf_frame_count = 0U;
+static uint32_t g_perf_busy_ticks = 0U;
 
 /* USER CODE END 0 */
 
@@ -129,8 +134,10 @@ int main(void)
   LCD_Init();
   ST7701Init();
   GUI_Data_t gui_data;
+  g_perf_window_tick = HAL_GetTick();
 
   SetpointInput_Init();
+  HAL_TIM_Base_Start_IT(&htim6);
   GUI_Init();
   /* USER CODE END 2 */
 
@@ -138,7 +145,7 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-    SetpointInput_Update();
+    uint32_t loop_start_tick = HAL_GetTick();
 
     gui_data.vin = 48.0F;
     gui_data.iin = 6.10F;
@@ -158,11 +165,30 @@ int main(void)
     gui_data.cpu_temp = 0.0F;
     gui_data.buck_temp = 0.0F;
     gui_data.boost_temp = 0.0F;
+    gui_data.fps = g_perf_fps;
+    gui_data.cpu_usage = g_perf_cpu_usage;
 
     GUI_Update(
             &gui_data);
 
-    HAL_Delay(10);
+    g_perf_busy_ticks += HAL_GetTick() - loop_start_tick;
+    ++g_perf_frame_count;
+
+    if (HAL_GetTick() - g_perf_window_tick >= 1000U)
+    {
+      uint32_t window_ticks = HAL_GetTick() - g_perf_window_tick;
+      g_perf_fps = (uint16_t)((g_perf_frame_count * 1000U + (window_ticks / 2U)) / window_ticks);
+      g_perf_cpu_usage = (uint8_t)((g_perf_busy_ticks * 100U + (window_ticks / 2U)) / window_ticks);
+      if (g_perf_cpu_usage > 100U)
+      {
+        g_perf_cpu_usage = 100U;
+      }
+      g_perf_frame_count = 0U;
+      g_perf_busy_ticks = 0U;
+      g_perf_window_tick = HAL_GetTick();
+    }
+
+    HAL_Delay(2);
 
     /* USER CODE END WHILE */
 
@@ -234,6 +260,14 @@ void SystemClock_Config(void)
 /* USER CODE BEGIN 4 */
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
+}
+
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
+{
+  if (htim->Instance == TIM6)
+  {
+    SetpointInput_Update();
+  }
 }
 
 /* USER CODE END 4 */
