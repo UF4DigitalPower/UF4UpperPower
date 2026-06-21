@@ -162,7 +162,7 @@ int main(void)
     GUI_Update(
             &gui_data);
 
-    HAL_Delay(50);
+    HAL_Delay(10);
 
     /* USER CODE END WHILE */
 

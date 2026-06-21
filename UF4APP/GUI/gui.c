@@ -36,7 +36,8 @@
 #define GUI_FONT_SET_VALUE  34U
 #define GUI_FONT_LABEL      24U
 #define GUI_FONT_VALUE      144U
-#define GUI_SET_CELL_W      18U
+#define GUI_SET_CELL_W      16U
+#define GUI_SET_TEXT_W      (5U * GUI_SET_CELL_W)
 
 #define GUI_TOP_Y           4U
 #define GUI_TOP_H           54U
@@ -461,6 +462,7 @@ static void GUI_DrawSetValueTile(const GUI_ValueTile_t *tile, float value, uint8
     GUI_Rect_t value_rect;
     GUI_Rect_t unit_rect;
     uint16_t mark_x;
+    uint8_t char_index;
 
     GUI_FormatFixed2(buf, sizeof(buf), value);
 
@@ -472,11 +474,20 @@ static void GUI_DrawSetValueTile(const GUI_ValueTile_t *tile, float value, uint8
     title_rect.h = 18U;
     GUI_DrawCenteredText(&title_rect, tile->title, GUI_FONT_TILE_TITLE, GUI_MUTED_COLOR, GUI_PANEL_COLOR);
 
-    value_rect.x = (uint16_t)(tile->rect.x + 8U);
+    value_rect.x = (uint16_t)(tile->rect.x + 10U);
     value_rect.y = (uint16_t)(tile->rect.y + tile->rect.h - 39U);
-    value_rect.w = (uint16_t)(tile->rect.w - 34U);
+    value_rect.w = GUI_SET_TEXT_W;
     value_rect.h = 34U;
-    LCD_DrawFontStringDMA(value_rect.x, value_rect.y, value_rect.w, value_rect.h, buf, GUI_FONT_SET_VALUE, GUI_TEXT_COLOR, GUI_PANEL_COLOR);
+    LCD_DrawFontStringFixedDMA(
+        value_rect.x,
+        value_rect.y,
+        value_rect.w,
+        value_rect.h,
+        buf,
+        GUI_FONT_SET_VALUE,
+        GUI_SET_CELL_W,
+        GUI_TEXT_COLOR,
+        GUI_PANEL_COLOR);
 
     unit_rect.x = (uint16_t)(tile->rect.x + tile->rect.w - 24U);
     unit_rect.y = (uint16_t)(value_rect.y + 5U);
@@ -486,11 +497,12 @@ static void GUI_DrawSetValueTile(const GUI_ValueTile_t *tile, float value, uint8
 
     if (digit < 4U)
     {
-        mark_x = (uint16_t)(value_rect.x + (digit * GUI_SET_CELL_W));
+        char_index = (digit < 2U) ? digit : (uint8_t)(digit + 1U);
+        mark_x = (uint16_t)(value_rect.x + (char_index * GUI_SET_CELL_W));
         LCD_Rect_Fill(
             mark_x,
             (uint16_t)(tile->rect.y + tile->rect.h - 4U),
-            (uint16_t)(mark_x + GUI_SET_CELL_W - 3U),
+            (uint16_t)(mark_x + GUI_SET_CELL_W - 2U),
             (uint16_t)(tile->rect.y + tile->rect.h - 3U),
             GUI_ACCENT_COLOR);
     }

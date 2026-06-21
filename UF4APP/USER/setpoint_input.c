@@ -22,6 +22,7 @@ typedef struct
     uint32_t last_count;
     float value;
     uint8_t digit;
+    GPIO_PinState idle_push_state;
 } SetpointInput_Channel_t;
 
 static SetpointInput_Channel_t g_vset_input =
@@ -31,7 +32,8 @@ static SetpointInput_Channel_t g_vset_input =
     KEY_V_PUSH_Pin,
     0U,
     5.0F,
-    3U
+    3U,
+    GPIO_PIN_RESET
 };
 
 static SetpointInput_Channel_t g_iset_input =
@@ -41,7 +43,8 @@ static SetpointInput_Channel_t g_iset_input =
     KEY_I_PUSH_Pin,
     0U,
     1.0F,
-    3U
+    3U,
+    GPIO_PIN_RESET
 };
 
 static void SetpointInput_UpdateChannel(SetpointInput_Channel_t *channel);
@@ -62,6 +65,10 @@ void SetpointInput_Init(void)
 
     g_vset_input.last_count = 0U;
     g_iset_input.last_count = 0U;
+    g_vset_input.idle_push_state =
+        HAL_GPIO_ReadPin(g_vset_input.push_port, g_vset_input.push_pin);
+    g_iset_input.idle_push_state =
+        HAL_GPIO_ReadPin(g_iset_input.push_port, g_iset_input.push_pin);
 }
 
 void SetpointInput_Update(void)
@@ -94,16 +101,13 @@ static void SetpointInput_UpdateChannel(SetpointInput_Channel_t *channel)
 {
     int32_t delta = SetpointInput_GetDelta(channel);
 
-    while (delta >= 1)
+    if (delta > 0)
     {
         SetpointInput_HandleStep(channel, 1);
-        --delta;
     }
-
-    while (delta <= -1)
+    else if (delta < 0)
     {
         SetpointInput_HandleStep(channel, -1);
-        ++delta;
     }
 }
 
@@ -174,7 +178,7 @@ static float SetpointInput_GetDigitStep(uint8_t digit)
 
 static uint8_t SetpointInput_IsPushPressed(const SetpointInput_Channel_t *channel)
 {
-    return (uint8_t)(HAL_GPIO_ReadPin(channel->push_port, channel->push_pin) == GPIO_PIN_RESET);
+    return (uint8_t)(HAL_GPIO_ReadPin(channel->push_port, channel->push_pin) != channel->idle_push_state);
 }
 
 static float SetpointInput_Clamp(float value)
