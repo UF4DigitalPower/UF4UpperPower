@@ -112,6 +112,7 @@ void LCD_SetFrameBuffers(uint32_t front_addr, uint32_t draw_addr);
 void LCD_CopyRectFromFrontToDraw(uint16_t x, uint16_t y, uint16_t w, uint16_t h);
 void LCD_BlitRectRGB565(uint16_t x, uint16_t y, uint16_t w, uint16_t h, const uint16_t *pixels);
 void LCD_BlitRotatedRectRGB565(uint16_t x, uint16_t y, uint16_t w, uint16_t h, const uint16_t *pixels);
+void LCD_BlitRotatedRectRGB565Clean(uint16_t x, uint16_t y, uint16_t w, uint16_t h, const uint16_t *pixels);
 void LCD_DrawPixelColor(uint16_t x, uint16_t y, uint32_t color);
 void LCD_Present(void);
 void LCD_PresentBuffer(uint32_t buffer_addr);

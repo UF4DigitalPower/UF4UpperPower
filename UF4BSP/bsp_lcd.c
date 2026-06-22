@@ -451,7 +451,8 @@ void LCD_BlitRectRGB565(uint16_t x, uint16_t y, uint16_t w, uint16_t h, const ui
 	lcd_dma2d_copy_rgb565((uint32_t) src, dst_addr, phys_w, phys_h, offline);
 }
 
-void LCD_BlitRotatedRectRGB565(uint16_t x, uint16_t y, uint16_t w, uint16_t h, const uint16_t *pixels) {
+static void LCD_BlitRotatedRectRGB565Ex(uint16_t x, uint16_t y, uint16_t w, uint16_t h,
+		const uint16_t *pixels, uint8_t source_is_clean) {
 	uint32_t psx;
 	uint32_t psy;
 	uint32_t pex;
@@ -483,9 +484,19 @@ void LCD_BlitRotatedRectRGB565(uint16_t x, uint16_t y, uint16_t w, uint16_t h, c
 	dst_addr = g_lcd_draw_buffer_addr + LCD_DEV.pixsize * (LTDC_WIDTH * psy + psx);
 	dst_span_bytes = lcd_get_rect_span_bytes(psx, psy, pex, pey);
 
-	lcd_clean_dcache((uint32_t) pixels, (uint32_t) phys_w * phys_h * LCD_DEV.pixsize);
+	if (source_is_clean == 0U) {
+		lcd_clean_dcache((uint32_t) pixels, (uint32_t) phys_w * phys_h * LCD_DEV.pixsize);
+	}
 	lcd_clean_dcache(dst_addr, dst_span_bytes);
 	lcd_dma2d_copy_rgb565((uint32_t) pixels, dst_addr, phys_w, phys_h, offline);
+}
+
+void LCD_BlitRotatedRectRGB565(uint16_t x, uint16_t y, uint16_t w, uint16_t h, const uint16_t *pixels) {
+	LCD_BlitRotatedRectRGB565Ex(x, y, w, h, pixels, 0U);
+}
+
+void LCD_BlitRotatedRectRGB565Clean(uint16_t x, uint16_t y, uint16_t w, uint16_t h, const uint16_t *pixels) {
+	LCD_BlitRotatedRectRGB565Ex(x, y, w, h, pixels, 1U);
 }
 
 void LCD_Present(void) {

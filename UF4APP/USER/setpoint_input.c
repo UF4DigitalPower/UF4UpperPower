@@ -16,6 +16,7 @@
 #define SETPOINT_PUSH_DEBOUNCE_TICKS 3U
 #define SETPOINT_TIM4_CENTER         0x8000U
 #define SETPOINT_TIM2_CENTER         0x80000000UL
+#define SETPOINT_ENCODER_COUNTS_PER_STEP 2
 
 typedef struct
 {
@@ -23,6 +24,7 @@ typedef struct
     GPIO_TypeDef *push_port;
     uint16_t push_pin;
     uint32_t center_count;
+    int32_t encoder_accum;
     float value;
     uint8_t digit;
     GPIO_PinState idle_push_state;
@@ -38,6 +40,7 @@ static volatile SetpointInput_Channel_t g_vset_input =
     KEY_V_PUSH_GPIO_Port,
     KEY_V_PUSH_Pin,
     SETPOINT_TIM4_CENTER,
+    0,
     5.0F,
     3U,
     GPIO_PIN_SET,
@@ -53,6 +56,7 @@ static volatile SetpointInput_Channel_t g_iset_input =
     KEY_I_PUSH_GPIO_Port,
     KEY_I_PUSH_Pin,
     SETPOINT_TIM2_CENTER,
+    0,
     1.0F,
     3U,
     GPIO_PIN_SET,
@@ -172,10 +176,15 @@ static void SetpointInput_UpdateEncoder(volatile SetpointInput_Channel_t *channe
 {
     int32_t delta =
         SetpointInput_ReadAndResetDelta(channel);
+    int32_t step;
 
-    if (delta != 0)
+    channel->encoder_accum += delta;
+    step = channel->encoder_accum / SETPOINT_ENCODER_COUNTS_PER_STEP;
+
+    if (step != 0)
     {
-        SetpointInput_AdjustValue(channel, delta);
+        channel->encoder_accum -= step * SETPOINT_ENCODER_COUNTS_PER_STEP;
+        SetpointInput_AdjustValue(channel, step);
     }
 }
 

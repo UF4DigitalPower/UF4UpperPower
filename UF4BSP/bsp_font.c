@@ -16,8 +16,12 @@
   */
 #include "bsp_font.h"
 #include "bsp_lcd.h"
+#include "mdma.h"
 
 static uint16_t g_font_dma_buffer[540U * 176U] __attribute__((section(".sdram"), aligned(32)));
+#define LCD_FONT_CACHE_MAX_CELL_H     104U
+static MDMA_LinkNodeTypeDef g_font_mdma_nodes[LCD_FONT_CACHE_MAX_CELL_H - 1U]
+        __attribute__((section(".sdram"), aligned(32)));
 
 #define LCD_FONT_CACHE_SIZE_VALUE   144U
 #define LCD_FONT_CACHE_CELL_W       60U
@@ -26,11 +30,20 @@ static uint16_t g_font_dma_buffer[540U * 176U] __attribute__((section(".sdram"),
 #define LCD_FONT_CACHE_PHYS_H       LCD_FONT_CACHE_CELL_W
 #define LCD_FONT_CACHE_GLYPHS       13U
 
+#define LCD_FONT_CACHE_SIZE_SET     34U
+#define LCD_FONT_CACHE_SET_CELL_W   16U
+#define LCD_FONT_CACHE_SET_CELL_H   34U
+#define LCD_FONT_CACHE_SET_PHYS_W   LCD_FONT_CACHE_SET_CELL_H
+#define LCD_FONT_CACHE_SET_PHYS_H   LCD_FONT_CACHE_SET_CELL_W
+
 static uint16_t g_font_value_cache[LCD_FONT_CACHE_GLYPHS][LCD_FONT_CACHE_PHYS_W * LCD_FONT_CACHE_PHYS_H]
         __attribute__((section(".sdram"), aligned(32)));
+static uint16_t g_font_set_cache[LCD_FONT_CACHE_GLYPHS][LCD_FONT_CACHE_SET_PHYS_W * LCD_FONT_CACHE_SET_PHYS_H]
+        __attribute__((section(".sdram"), aligned(32)));
 static uint8_t g_font_value_cache_ready;
+static uint8_t g_font_set_cache_ready;
 
-static int32_t LCD_FontValueCacheIndex(char ch)
+static int32_t LCD_FontCacheIndex(char ch)
 {
     if (ch >= '0' && ch <= '9')
     {
@@ -51,14 +64,194 @@ static int32_t LCD_FontValueCacheIndex(char ch)
     return -1;
 }
 
-static void LCD_FontValueCacheBuildGlyph(char ch, uint16_t *dst)
+static void LCD_FontCacheMaintainDCache(
+        uint32_t addr,
+        uint32_t bytes,
+        uint8_t clean,
+        uint8_t invalidate)
 {
-    uint32_t i;
+    uint32_t aligned_addr = addr & ~31UL;
+    uint32_t end_addr = (addr + bytes + 31UL) & ~31UL;
+    int32_t aligned_bytes = (int32_t)(end_addr - aligned_addr);
+
+    if (bytes == 0U)
+    {
+        return;
+    }
+
+    if (clean != 0U && invalidate != 0U)
+    {
+        SCB_CleanInvalidateDCache_by_Addr((uint32_t *)aligned_addr, aligned_bytes);
+    }
+    else if (clean != 0U)
+    {
+        SCB_CleanDCache_by_Addr((uint32_t *)aligned_addr, aligned_bytes);
+    }
+    else if (invalidate != 0U)
+    {
+        SCB_InvalidateDCache_by_Addr((uint32_t *)aligned_addr, aligned_bytes);
+    }
+}
+
+static void LCD_FontCacheRotateCpu(
+        const uint16_t *src,
+        uint16_t *dst,
+        uint16_t cell_w,
+        uint16_t cell_h)
+{
     uint32_t lx;
     uint32_t ly;
-    uint16_t bg = LCD_EncodeColor((uint16_t)0x0841);
 
-    for (i = 0U; i < LCD_FONT_CACHE_CELL_W * LCD_FONT_CACHE_CELL_H; ++i)
+    for (ly = 0U; ly < cell_h; ++ly)
+    {
+        for (lx = 0U; lx < cell_w; ++lx)
+        {
+            dst[(uint32_t)(cell_w - 1U - lx) * cell_h + ly] =
+                src[ly * cell_w + lx];
+        }
+    }
+}
+
+static uint8_t LCD_FontCacheRotateMdma(
+        const uint16_t *src,
+        uint16_t *dst,
+        uint16_t cell_w,
+        uint16_t cell_h)
+{
+    uint32_t row;
+    uint32_t node_ctcr;
+    uint32_t node_cbndtr;
+    uint32_t node_cbrur;
+    uint32_t pixel_bytes = sizeof(uint16_t);
+    uint32_t src_bytes = (uint32_t)cell_w * cell_h * pixel_bytes;
+    uint32_t dst_bytes = src_bytes;
+
+    if (cell_w == 0U || cell_h == 0U ||
+        cell_h > LCD_FONT_CACHE_MAX_CELL_H)
+    {
+        return 0U;
+    }
+
+    __HAL_RCC_MDMA_CLK_ENABLE();
+
+    hmdma_mdma_channel0_sw_0.Instance = MDMA_Channel0;
+    (void)HAL_MDMA_Abort(&hmdma_mdma_channel0_sw_0);
+
+    hmdma_mdma_channel0_sw_0.Init.Request = MDMA_REQUEST_SW;
+    hmdma_mdma_channel0_sw_0.Init.TransferTriggerMode = MDMA_FULL_TRANSFER;
+    hmdma_mdma_channel0_sw_0.Init.Priority = MDMA_PRIORITY_HIGH;
+    hmdma_mdma_channel0_sw_0.Init.Endianness = MDMA_LITTLE_ENDIANNESS_PRESERVE;
+    hmdma_mdma_channel0_sw_0.Init.SourceInc = MDMA_SRC_INC_HALFWORD;
+    hmdma_mdma_channel0_sw_0.Init.DestinationInc = MDMA_DEST_INC_DISABLE;
+    hmdma_mdma_channel0_sw_0.Init.SourceDataSize = MDMA_SRC_DATASIZE_HALFWORD;
+    hmdma_mdma_channel0_sw_0.Init.DestDataSize = MDMA_DEST_DATASIZE_HALFWORD;
+    hmdma_mdma_channel0_sw_0.Init.DataAlignment = MDMA_DATAALIGN_RIGHT;
+    hmdma_mdma_channel0_sw_0.Init.SourceBurst = MDMA_SOURCE_BURST_SINGLE;
+    hmdma_mdma_channel0_sw_0.Init.DestBurst = MDMA_DEST_BURST_SINGLE;
+    hmdma_mdma_channel0_sw_0.Init.BufferTransferLength = pixel_bytes;
+    hmdma_mdma_channel0_sw_0.Init.SourceBlockAddressOffset = 0;
+    hmdma_mdma_channel0_sw_0.Init.DestBlockAddressOffset =
+        -((int32_t)cell_h * (int32_t)pixel_bytes);
+
+    if (HAL_MDMA_Init(&hmdma_mdma_channel0_sw_0) != HAL_OK)
+    {
+        return 0U;
+    }
+
+    hmdma_mdma_channel0_sw_0.FirstLinkedListNodeAddress = NULL;
+    hmdma_mdma_channel0_sw_0.LastLinkedListNodeAddress = NULL;
+    hmdma_mdma_channel0_sw_0.LinkedListNodeCounter = 0U;
+    hmdma_mdma_channel0_sw_0.Instance->CLAR = 0U;
+
+    node_ctcr =
+        hmdma_mdma_channel0_sw_0.Init.SourceInc |
+        hmdma_mdma_channel0_sw_0.Init.DestinationInc |
+        hmdma_mdma_channel0_sw_0.Init.SourceDataSize |
+        hmdma_mdma_channel0_sw_0.Init.DestDataSize |
+        hmdma_mdma_channel0_sw_0.Init.DataAlignment |
+        hmdma_mdma_channel0_sw_0.Init.SourceBurst |
+        hmdma_mdma_channel0_sw_0.Init.DestBurst |
+        ((hmdma_mdma_channel0_sw_0.Init.BufferTransferLength - 1U) << MDMA_CTCR_TLEN_Pos) |
+        hmdma_mdma_channel0_sw_0.Init.TransferTriggerMode |
+        MDMA_CTCR_SWRM |
+        MDMA_CTCR_BWM;
+    node_cbndtr =
+        (((uint32_t)cell_w - 1U) << MDMA_CBNDTR_BRC_Pos) |
+        MDMA_CBNDTR_BRDUM |
+        pixel_bytes;
+    node_cbrur =
+        ((uint32_t)cell_h * pixel_bytes) << MDMA_CBRUR_DUV_Pos;
+
+    for (row = 1U; row < cell_h; ++row)
+    {
+        MDMA_LinkNodeTypeDef *node = &g_font_mdma_nodes[row - 1U];
+
+        node->CTCR = node_ctcr;
+        node->CBNDTR = node_cbndtr;
+        node->CSAR = (uint32_t)&src[row * cell_w];
+        node->CDAR = (uint32_t)&dst[(uint32_t)(cell_w - 1U) * cell_h + row];
+        node->CBRUR = node_cbrur;
+        node->CLAR = (row + 1U < cell_h) ? (uint32_t)&g_font_mdma_nodes[row] : 0U;
+        node->CTBR = 0U;
+        node->Reserved = 0U;
+        node->CMAR = 0U;
+        node->CMDR = 0U;
+    }
+
+    if (cell_h > 1U)
+    {
+        hmdma_mdma_channel0_sw_0.Instance->CLAR = (uint32_t)&g_font_mdma_nodes[0];
+        hmdma_mdma_channel0_sw_0.FirstLinkedListNodeAddress = &g_font_mdma_nodes[0];
+        hmdma_mdma_channel0_sw_0.LastLinkedListNodeAddress = &g_font_mdma_nodes[cell_h - 2U];
+        hmdma_mdma_channel0_sw_0.LinkedListNodeCounter = cell_h - 1U;
+
+        LCD_FontCacheMaintainDCache(
+            (uint32_t)g_font_mdma_nodes,
+            (uint32_t)(cell_h - 1U) * sizeof(g_font_mdma_nodes[0]),
+            1U,
+            0U);
+    }
+
+    LCD_FontCacheMaintainDCache((uint32_t)src, src_bytes, 1U, 0U);
+    LCD_FontCacheMaintainDCache((uint32_t)dst, dst_bytes, 1U, 1U);
+
+    if (HAL_MDMA_Start(
+            &hmdma_mdma_channel0_sw_0,
+            (uint32_t)src,
+            (uint32_t)&dst[(uint32_t)(cell_w - 1U) * cell_h],
+            pixel_bytes,
+            cell_w) != HAL_OK)
+    {
+        (void)HAL_MDMA_Abort(&hmdma_mdma_channel0_sw_0);
+        return 0U;
+    }
+
+    if (HAL_MDMA_PollForTransfer(
+            &hmdma_mdma_channel0_sw_0,
+            HAL_MDMA_FULL_TRANSFER,
+            10U) != HAL_OK)
+    {
+        (void)HAL_MDMA_Abort(&hmdma_mdma_channel0_sw_0);
+        return 0U;
+    }
+
+    LCD_FontCacheMaintainDCache((uint32_t)dst, dst_bytes, 0U, 1U);
+    return 1U;
+}
+
+static void LCD_FontCacheBuildGlyph(
+        char ch,
+        uint16_t *dst,
+        uint16_t size,
+        uint16_t cell_w,
+        uint16_t cell_h,
+        uint32_t color,
+        uint32_t bg_color)
+{
+    uint32_t i;
+    uint16_t bg = LCD_EncodeColor((uint16_t)bg_color);
+
+    for (i = 0U; i < (uint32_t)cell_w * cell_h; ++i)
     {
         g_font_dma_buffer[i] = bg;
     }
@@ -71,23 +264,27 @@ static void LCD_FontValueCacheBuildGlyph(char ch, uint16_t *dst)
         text[1] = '\0';
         LCD_RenderFontStringFixedToBuffer(
             g_font_dma_buffer,
-            LCD_FONT_CACHE_CELL_W,
-            LCD_FONT_CACHE_CELL_H,
+            cell_w,
+            cell_h,
             0U,
             0U,
             text,
-            LCD_FONT_CACHE_SIZE_VALUE,
-            LCD_FONT_CACHE_CELL_W,
-            0xFFFF);
+            size,
+            cell_w,
+            color);
     }
 
-    for (ly = 0U; ly < LCD_FONT_CACHE_CELL_H; ++ly)
+    if (LCD_FontCacheRotateMdma(
+            g_font_dma_buffer,
+            dst,
+            cell_w,
+            cell_h) == 0U)
     {
-        for (lx = 0U; lx < LCD_FONT_CACHE_CELL_W; ++lx)
-        {
-            dst[(uint32_t)(LCD_FONT_CACHE_CELL_W - 1U - lx) * LCD_FONT_CACHE_PHYS_W + ly] =
-                g_font_dma_buffer[ly * LCD_FONT_CACHE_CELL_W + lx];
-        }
+        LCD_FontCacheRotateCpu(
+            g_font_dma_buffer,
+            dst,
+            cell_w,
+            cell_h);
     }
 }
 
@@ -106,10 +303,86 @@ static void LCD_FontValueCacheEnsure(void)
 
     for (i = 0U; i < LCD_FONT_CACHE_GLYPHS; ++i)
     {
-        LCD_FontValueCacheBuildGlyph(glyphs[i], g_font_value_cache[i]);
+        LCD_FontCacheBuildGlyph(
+            glyphs[i],
+            g_font_value_cache[i],
+            LCD_FONT_CACHE_SIZE_VALUE,
+            LCD_FONT_CACHE_CELL_W,
+            LCD_FONT_CACHE_CELL_H,
+            0xFFFF,
+            0x0841);
     }
 
+    SCB_CleanDCache_by_Addr(
+        (uint32_t *)g_font_value_cache,
+        (int32_t)sizeof(g_font_value_cache));
     g_font_value_cache_ready = 1U;
+}
+
+static void LCD_FontSetCacheEnsure(void)
+{
+    static const char glyphs[LCD_FONT_CACHE_GLYPHS] =
+    {
+        '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '.', '-', ' '
+    };
+    uint32_t i;
+
+    if (g_font_set_cache_ready != 0U)
+    {
+        return;
+    }
+
+    for (i = 0U; i < LCD_FONT_CACHE_GLYPHS; ++i)
+    {
+        LCD_FontCacheBuildGlyph(
+            glyphs[i],
+            g_font_set_cache[i],
+            LCD_FONT_CACHE_SIZE_SET,
+            LCD_FONT_CACHE_SET_CELL_W,
+            LCD_FONT_CACHE_SET_CELL_H,
+            0xFFFF,
+            0x1082);
+    }
+
+    SCB_CleanDCache_by_Addr(
+        (uint32_t *)g_font_set_cache,
+        (int32_t)sizeof(g_font_set_cache));
+    g_font_set_cache_ready = 1U;
+}
+
+static uint8_t LCD_DrawFontCachedFixed(
+        uint16_t x,
+        uint16_t y,
+        uint16_t w,
+        const char *str,
+        uint16_t cell_w,
+        uint16_t cell_h,
+        uint16_t phys_w,
+        const uint16_t cache[][phys_w * cell_w])
+{
+    uint16_t cell_x = x;
+    const char *p = str;
+
+    while (*p != '\0' && (uint32_t)(cell_x - x) < w)
+    {
+        int32_t cache_index = LCD_FontCacheIndex(*p);
+
+        if (cache_index < 0)
+        {
+            return 0U;
+        }
+
+        LCD_BlitRotatedRectRGB565Clean(
+            cell_x,
+            y,
+            cell_w,
+            cell_h,
+            cache[cache_index]);
+        cell_x = (uint16_t)(cell_x + cell_w);
+        p++;
+    }
+
+    return (uint8_t)(*p == '\0');
 }
 
 static inline uint8_t LCD_FontBytesPerRow(
@@ -439,30 +712,37 @@ void LCD_DrawFontStringFixedDMA(
         bg_color == 0x0841 &&
         color == 0xFFFF)
     {
-        uint16_t cell_x = x;
-        const char *p = str;
-
         LCD_FontValueCacheEnsure();
-        while (*p != '\0' && (uint32_t)(cell_x - x) < w)
-        {
-            int32_t cache_index = LCD_FontValueCacheIndex(*p);
-
-            if (cache_index < 0)
-            {
-                break;
-            }
-
-            LCD_BlitRotatedRectRGB565(
-                cell_x,
+        if (LCD_DrawFontCachedFixed(
+                x,
                 y,
+                w,
+                str,
                 LCD_FONT_CACHE_CELL_W,
                 LCD_FONT_CACHE_CELL_H,
-                g_font_value_cache[cache_index]);
-            cell_x = (uint16_t)(cell_x + cell_width);
-            p++;
+                LCD_FONT_CACHE_PHYS_W,
+                g_font_value_cache) != 0U)
+        {
+            return;
         }
+    }
 
-        if (*p == '\0')
+    if (size == LCD_FONT_CACHE_SIZE_SET &&
+        cell_width == LCD_FONT_CACHE_SET_CELL_W &&
+        h == LCD_FONT_CACHE_SET_CELL_H &&
+        bg_color == 0x1082 &&
+        color == 0xFFFF)
+    {
+        LCD_FontSetCacheEnsure();
+        if (LCD_DrawFontCachedFixed(
+                x,
+                y,
+                w,
+                str,
+                LCD_FONT_CACHE_SET_CELL_W,
+                LCD_FONT_CACHE_SET_CELL_H,
+                LCD_FONT_CACHE_SET_PHYS_W,
+                g_font_set_cache) != 0U)
         {
             return;
         }
