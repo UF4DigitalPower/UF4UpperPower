@@ -12,7 +12,8 @@
 
 #define SETPOINT_DIGIT_COUNT         4U
 #define SETPOINT_MIN_VALUE           0.0F
-#define SETPOINT_MAX_VALUE           99.99F
+#define SETPOINT_VSET_MAX_VALUE      45.0F
+#define SETPOINT_ISET_MAX_VALUE      11.0F
 #define SETPOINT_PUSH_DEBOUNCE_TICKS 3U
 #define SETPOINT_TIM4_CENTER         0x8000U
 #define SETPOINT_TIM2_CENTER         0x80000000UL
@@ -71,7 +72,7 @@ static void SetpointInput_UpdateEncoder(volatile SetpointInput_Channel_t *channe
 static void SetpointInput_AdjustValue(volatile SetpointInput_Channel_t *channel, int32_t step);
 static int32_t SetpointInput_ReadAndResetDelta(volatile SetpointInput_Channel_t *channel);
 static float SetpointInput_GetDigitStep(uint8_t digit);
-static float SetpointInput_Clamp(float value);
+static float SetpointInput_Clamp(const volatile SetpointInput_Channel_t *channel, float value);
 
 void SetpointInput_Init(void)
 {
@@ -124,6 +125,16 @@ float SetpointInput_GetVset(void)
 float SetpointInput_GetIset(void)
 {
     return g_iset_input.value;
+}
+
+void SetpointInput_SetVset(float value)
+{
+    g_vset_input.value = SetpointInput_Clamp(&g_vset_input, value);
+}
+
+void SetpointInput_SetIset(float value)
+{
+    g_iset_input.value = SetpointInput_Clamp(&g_iset_input, value);
 }
 
 uint8_t SetpointInput_GetVsetDigit(void)
@@ -195,7 +206,7 @@ static void SetpointInput_AdjustValue(volatile SetpointInput_Channel_t *channel,
     float value_step = SetpointInput_GetDigitStep(channel->digit);
 
     channel->value =
-        SetpointInput_Clamp(channel->value + ((float)step * value_step));
+        SetpointInput_Clamp(channel, channel->value + ((float)step * value_step));
 }
 
 static int32_t SetpointInput_ReadAndResetDelta(volatile SetpointInput_Channel_t *channel)
@@ -236,16 +247,23 @@ static float SetpointInput_GetDigitStep(uint8_t digit)
     return steps[digit];
 }
 
-static float SetpointInput_Clamp(float value)
+static float SetpointInput_Clamp(const volatile SetpointInput_Channel_t *channel, float value)
 {
+    float max_value = SETPOINT_ISET_MAX_VALUE;
+
+    if (channel == &g_vset_input)
+    {
+        max_value = SETPOINT_VSET_MAX_VALUE;
+    }
+
     if (value < SETPOINT_MIN_VALUE)
     {
         return SETPOINT_MIN_VALUE;
     }
 
-    if (value > SETPOINT_MAX_VALUE)
+    if (value > max_value)
     {
-        return SETPOINT_MAX_VALUE;
+        return max_value;
     }
 
     return value;

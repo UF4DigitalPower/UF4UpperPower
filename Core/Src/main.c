@@ -24,6 +24,7 @@
 #include "setpoint_input.h"
 #include "uf4_power_client.h"
 #include "uf4com.h"
+#include <string.h>
 
 /* USER CODE END Includes */
 
@@ -78,12 +79,15 @@ static uint32_t g_comm_control_sync_tick = 0U;
 static uint32_t g_comm_start_tick = 0U;
 static uint32_t g_comm_start_rx_frame_count = 0U;
 static AppCommStartState_t g_comm_start_state = APP_COMM_START_IDLE;
+static uint8_t g_remote_controls_seeded = 0U;
 static float g_comm_last_vset = -1.0F;
 static float g_comm_last_iset = -1.0F;
 static float g_comm_last_ovp = -1.0F;
 static float g_comm_last_ocp = -1.0F;
 static float g_comm_last_otp = -1.0F;
 static uint8_t g_comm_last_output_enabled = 0xFFU;
+
+static void App_InitUf4ControlBaseline(void);
 
 static uint16_t App_FloatToMilliU16(float value)
 {
@@ -159,6 +163,18 @@ static uint8_t App_ReadUf4Bool(uint8_t id, uint8_t fallback)
   return fallback;
 }
 
+static uint16_t App_ReadUf4U16(uint8_t id, uint16_t fallback)
+{
+  uint16_t raw;
+
+  if (UF4PowerClient_GetU16(id, &raw))
+  {
+    return raw;
+  }
+
+  return fallback;
+}
+
 static uint8_t App_FloatChanged(float a, float b, float threshold)
 {
   float diff = a - b;
@@ -169,6 +185,44 @@ static uint8_t App_FloatChanged(float a, float b, float threshold)
   }
 
   return (uint8_t)(diff >= threshold);
+}
+
+static void App_TrySeedControlsFromUf4(void)
+{
+  uint16_t raw_vset;
+  uint16_t raw_iset;
+  uint16_t raw_ovp;
+  uint16_t raw_ocp;
+  uint16_t raw_otp;
+  uint16_t raw_power;
+
+  if (g_remote_controls_seeded != 0U)
+  {
+    return;
+  }
+
+  if (!UF4PowerClient_GetU16(UF4_ID_SET_VOLTAGE_LIMIT, &raw_vset) ||
+      !UF4PowerClient_GetU16(UF4_ID_SET_CURRENT_LIMIT, &raw_iset) ||
+      !UF4PowerClient_GetU16(UF4_ID_OVP_SET_VALUE, &raw_ovp) ||
+      !UF4PowerClient_GetU16(UF4_ID_OCP_SET_VALUE, &raw_ocp) ||
+      !UF4PowerClient_GetU16(UF4_ID_OTP_SET_VALUE, &raw_otp) ||
+      !UF4PowerClient_GetU16(UF4_ID_POWER_STATE, &raw_power))
+  {
+    return;
+  }
+
+  SetpointInput_SetVset((float)raw_vset / 1000.0F);
+  SetpointInput_SetIset((float)raw_iset / 1000.0F);
+  PanelKeys_SetProtectionState(
+      (float)raw_ovp / 1000.0F,
+      (float)raw_ocp / 1000.0F,
+      (float)raw_otp / 100.0F,
+      (uint8_t)(raw_ovp != 0U ? 1U : 0U),
+      (uint8_t)(raw_ocp != 0U ? 1U : 0U),
+      (uint8_t)(raw_otp != 0U ? 1U : 0U));
+  PanelKeys_SetOutputEnabled((uint8_t)(raw_power != 0U ? 1U : 0U));
+  App_InitUf4ControlBaseline();
+  g_remote_controls_seeded = 1U;
 }
 
 static bool App_RequestInitialStatusRead(void)
@@ -353,6 +407,8 @@ static void App_SyncUf4Controls(uint32_t now_tick)
 
 static void App_FillGuiFromUf4(GUI_Data_t *gui_data)
 {
+  memset(gui_data, 0, sizeof(*gui_data));
+
   gui_data->vin = App_ReadUf4Milli(UF4_ID_INPUT_VOLTAGE);
   gui_data->iin = App_ReadUf4Milli(UF4_ID_INPUT_CURRENT);
   gui_data->pin = gui_data->vin * gui_data->iin;
@@ -384,6 +440,7 @@ static void App_FillGuiFromUf4(GUI_Data_t *gui_data)
   gui_data->otp_enabled = PanelKeys_GetOtpEnabled();
   gui_data->output_enabled = App_ReadUf4Bool(UF4_ID_POWER_STATE, PanelKeys_GetOutputEnabled());
   gui_data->ble_state = (uint8_t)PanelKeys_GetBleState();
+  gui_data->page = (uint8_t)PanelKeys_GetPage();
   gui_data->panel_field = (uint8_t)PanelKeys_GetSelectedField();
   gui_data->comm_state = (uint8_t)g_comm_start_state;
   gui_data->comm_stream_enabled = (uint8_t)(UF4PowerClient_IsStreamEnabled() ? 1U : 0U);
@@ -393,6 +450,13 @@ static void App_FillGuiFromUf4(GUI_Data_t *gui_data)
   gui_data->comm_tx_fail_count = UF4PowerClient_TxFailCount();
   gui_data->comm_rx_frame_count = UF4PowerClient_RxFrameCount();
   gui_data->comm_rx_error_count = UF4PowerClient_RxErrorCount();
+  gui_data->regulation_mode = (uint8_t)App_ReadUf4U16(UF4_ID_CC_CV_MODE, 0U);
+  gui_data->fault_state = (uint8_t)App_ReadUf4U16(UF4_ID_FAULT_STATE, 0U);
+  gui_data->state_machine_flags = App_ReadUf4U16(UF4_ID_STATE_MACHINE_FLAG_BITS, 0U);
+  gui_data->state_machine_state = (uint8_t)App_ReadUf4U16(UF4_ID_STATE_MACHINE_STATE, 0U);
+  gui_data->duty_cmd = App_ReadUf4U16(UF4_ID_DUTY_CMD, 0U);
+  gui_data->pwm_a_compare = App_ReadUf4U16(UF4_ID_PWM_A_COMPARE, 0U);
+  gui_data->pwm_d_compare = App_ReadUf4U16(UF4_ID_PWM_D_COMPARE, 0U);
   gui_data->cpu_temp = App_ReadUf4Centi(UF4_ID_CORE_TEMPERATURE);
   gui_data->buck_temp = App_ReadUf4Centi(UF4_ID_TEMP1_TEMPERATURE);
   gui_data->boost_temp = App_ReadUf4Centi(UF4_ID_TEMP2_TEMPERATURE);
@@ -487,6 +551,7 @@ int main(void)
     uint32_t now_tick;
 
     UF4PowerClient_Tick();
+    App_TrySeedControlsFromUf4();
     App_HandlePanelApplyEvent();
     App_RunCommStartTask(loop_start_tick);
     App_SyncUf4Controls(loop_start_tick);

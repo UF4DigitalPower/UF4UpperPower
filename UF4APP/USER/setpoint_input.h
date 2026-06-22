@@ -17,6 +17,8 @@ void SetpointInput_UpdateEncoders(void);
 
 float SetpointInput_GetVset(void);
 float SetpointInput_GetIset(void);
+void SetpointInput_SetVset(float value);
+void SetpointInput_SetIset(float value);
 
 uint8_t SetpointInput_GetVsetDigit(void);
 uint8_t SetpointInput_GetIsetDigit(void);

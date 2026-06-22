@@ -1,0 +1,431 @@
+#include "gui_internal.h"
+
+#include <stdio.h>
+#include <string.h>
+
+#include "bsp_font.h"
+#include "bsp_lcd.h"
+
+static GUI_Data_t g_last_data;
+static uint8_t g_has_last;
+
+static uint8_t GUI_DataEqual(const GUI_Data_t *a, const GUI_Data_t *b);
+
+void GUI_Init(void)
+{
+    g_has_last = 0U;
+    memset(&g_last_data, 0, sizeof(g_last_data));
+    GUI_Clear();
+    GUI_DrawMainPage(&g_last_data, NULL);
+    LCD_Present();
+    GUI_Clear();
+    GUI_DrawMainPage(&g_last_data, NULL);
+}
+
+void GUI_Clear(void)
+{
+    LCD_Clear(GUI_BG_COLOR);
+}
+
+void GUI_DrawStatic(void)
+{
+    if (g_last_data.page != 0U)
+    {
+        GUI_DrawWavePage();
+    }
+    else
+    {
+        GUI_DrawMainPage(&g_last_data, g_has_last != 0U ? &g_last_data : NULL);
+    }
+}
+
+void GUI_Update(const GUI_Data_t *data)
+{
+    uint8_t scope_page;
+
+    if (data == NULL)
+    {
+        return;
+    }
+
+    if (g_has_last != 0U && GUI_DataEqual(&g_last_data, data) != 0U)
+    {
+        return;
+    }
+
+    scope_page = (uint8_t)(data->page != 0U);
+
+    if (g_has_last == 0U || data->page != g_last_data.page || scope_page != 0U)
+    {
+        GUI_Clear();
+    }
+
+    if (scope_page != 0U)
+    {
+        GUI_DrawWavePage();
+    }
+    else
+    {
+        GUI_DrawMainPage(data, g_has_last != 0U ? &g_last_data : NULL);
+    }
+    LCD_Present();
+
+    if (g_has_last == 0U || data->page != g_last_data.page || scope_page != 0U)
+    {
+        GUI_Clear();
+    }
+
+    if (scope_page != 0U)
+    {
+        GUI_DrawWavePage();
+    }
+    else
+    {
+        GUI_DrawMainPage(data, g_has_last != 0U ? &g_last_data : NULL);
+    }
+
+    g_last_data = *data;
+    g_has_last = 1U;
+}
+
+void GUI_DrawPanel(const GUI_Rect_t *rect, uint16_t color)
+{
+    LCD_Rect_Fill(
+        rect->x,
+        rect->y,
+        (uint16_t)(rect->x + rect->w - 1U),
+        (uint16_t)(rect->y + rect->h - 1U),
+        color);
+    GUI_DrawPanelBorder(rect, GUI_BORDER_COLOR);
+}
+
+void GUI_DrawPanelBorder(const GUI_Rect_t *rect, uint16_t color)
+{
+    uint16_t x2 = (uint16_t)(rect->x + rect->w - 1U);
+    uint16_t y2 = (uint16_t)(rect->y + rect->h - 1U);
+
+    LCD_Rect_Fill(rect->x, rect->y, x2, rect->y, color);
+    LCD_Rect_Fill(rect->x, y2, x2, y2, color);
+    LCD_Rect_Fill(rect->x, rect->y, rect->x, y2, color);
+    LCD_Rect_Fill(x2, rect->y, x2, y2, color);
+}
+
+void GUI_DrawCenteredText(const GUI_Rect_t *rect, const char *text, uint16_t font, uint16_t color, uint16_t bg)
+{
+    uint16_t text_w;
+    uint16_t text_min_row = 0U;
+    uint16_t text_h = font;
+    uint16_t x;
+    uint16_t y;
+
+    if (rect == NULL || text == NULL)
+    {
+        return;
+    }
+
+    text_w = LCD_MeasureFontString(text, font);
+    x = rect->x;
+    y = (uint16_t)(rect->y + (rect->h > font ? (rect->h - font) / 2U : 0U));
+
+    if (text_w < rect->w)
+    {
+        x = (uint16_t)(rect->x + (rect->w - text_w) / 2U);
+    }
+
+    if (LCD_GetFontStringBBox(text, font, &text_min_row, &text_h) != 0U && rect->h > text_h)
+    {
+        y = (uint16_t)(rect->y + (rect->h - text_h) / 2U - text_min_row);
+    }
+
+    LCD_DrawFontStringDMATight(
+        x,
+        y,
+        (uint16_t)(rect->x + rect->w - x),
+        rect->h,
+        text,
+        font,
+        color,
+        bg);
+}
+
+void GUI_DrawFixedSlotText(const GUI_Rect_t *rect, const char *text, uint16_t font, uint16_t cell_w, uint16_t color, uint16_t bg)
+{
+    uint16_t text_len;
+    uint16_t slot_w;
+    uint16_t start_x;
+    uint16_t y;
+    uint16_t text_min_row = 0U;
+    uint16_t text_h = font;
+    uint32_t i;
+
+    if (rect == NULL || text == NULL || cell_w == 0U)
+    {
+        return;
+    }
+
+    text_len = (uint16_t)strlen(text);
+    slot_w = (uint16_t)(text_len * cell_w);
+    start_x = rect->x;
+    if (slot_w < rect->w)
+    {
+        start_x = (uint16_t)(rect->x + (rect->w - slot_w) / 2U);
+    }
+
+    y = (uint16_t)(rect->y + (rect->h > font ? (rect->h - font) / 2U : 0U));
+    if (LCD_GetFontStringBBox(text, font, &text_min_row, &text_h) != 0U && rect->h > text_h)
+    {
+        y = (uint16_t)(rect->y + (rect->h - text_h) / 2U - text_min_row);
+    }
+
+    for (i = 0U; i < text_len; ++i)
+    {
+        char cell_text[2];
+        uint16_t glyph_w;
+        uint16_t glyph_x_offset = 0U;
+
+        cell_text[0] = text[i];
+        cell_text[1] = '\0';
+        glyph_w = LCD_MeasureFontString(cell_text, font);
+        if (glyph_w < cell_w)
+        {
+            glyph_x_offset = (uint16_t)((cell_w - glyph_w) / 2U);
+        }
+
+        LCD_DrawFontStringDMATight(
+            (uint16_t)(start_x + i * cell_w + glyph_x_offset),
+            y,
+            (uint16_t)(cell_w - glyph_x_offset),
+            rect->h,
+            cell_text,
+            font,
+            color,
+            bg);
+    }
+}
+
+void GUI_FormatMainValue(char *buf, uint32_t size, float value)
+{
+    float abs_value = value;
+
+    if (abs_value < 0.0F)
+    {
+        abs_value = -abs_value;
+    }
+
+    if (abs_value >= 100.0F)
+    {
+        snprintf(buf, size, "%05.1f", value);
+    }
+    else
+    {
+        snprintf(buf, size, "%05.2f", value);
+    }
+}
+
+void GUI_FormatFixed2(char *buf, uint32_t size, float value)
+{
+    snprintf(buf, size, "%05.2f", value);
+}
+
+void GUI_DrawTopTile(const GUI_ValueTile_t *tile, float value)
+{
+    char buf[16];
+    GUI_Rect_t title_rect;
+    GUI_Rect_t value_rect;
+    GUI_Rect_t unit_rect;
+
+    GUI_FormatMainValue(buf, sizeof(buf), value);
+    GUI_DrawPanel(&tile->rect, GUI_PANEL_COLOR);
+
+    title_rect = (GUI_Rect_t){tile->rect.x, (uint16_t)(tile->rect.y + 2U), tile->rect.w, 18U};
+    value_rect = (GUI_Rect_t){(uint16_t)(tile->rect.x + 8U), (uint16_t)(tile->rect.y + 15U), (uint16_t)(tile->rect.w - 30U), 34U};
+    unit_rect = (GUI_Rect_t){(uint16_t)(tile->rect.x + tile->rect.w - 22U), (uint16_t)(tile->rect.y + 24U), 18U, 24U};
+
+    GUI_DrawCenteredText(&title_rect, tile->title, GUI_FONT_TOP_LABEL, GUI_MUTED_COLOR, GUI_PANEL_COLOR);
+    LCD_Rect_Fill(value_rect.x, value_rect.y, (uint16_t)(value_rect.x + value_rect.w - 1U), (uint16_t)(value_rect.y + value_rect.h - 1U), GUI_PANEL_COLOR);
+    GUI_DrawFixedSlotText(&value_rect, buf, GUI_FONT_TOP_VALUE, GUI_TOP_VALUE_CELL_W, GUI_TEXT_COLOR, GUI_PANEL_COLOR);
+    GUI_DrawCenteredText(&unit_rect, tile->unit, GUI_FONT_LABEL, GUI_ACCENT_COLOR, GUI_PANEL_COLOR);
+}
+
+void GUI_DrawMainTile(const GUI_ValueTile_t *tile, float value)
+{
+    char buf[16];
+    GUI_Rect_t title_rect;
+    GUI_Rect_t unit_rect;
+
+    GUI_FormatMainValue(buf, sizeof(buf), value);
+    GUI_DrawPanel(&tile->rect, GUI_PANEL_DARK);
+
+    LCD_DrawFontStringFixedDMA(
+        (uint16_t)(tile->rect.x + GUI_MAIN_VALUE_X_OFFSET),
+        (uint16_t)(tile->rect.y + GUI_MAIN_VALUE_Y_OFFSET),
+        GUI_MAIN_VALUE_W,
+        GUI_MAIN_VALUE_H,
+        buf,
+        GUI_FONT_VALUE,
+        GUI_MAIN_VALUE_CELL_W,
+        GUI_TEXT_COLOR,
+        GUI_PANEL_DARK);
+
+    title_rect = (GUI_Rect_t){(uint16_t)(tile->rect.x + tile->rect.w - 40U), (uint16_t)(tile->rect.y + 42U), 34U, 24U};
+    unit_rect = (GUI_Rect_t){(uint16_t)(tile->rect.x + tile->rect.w - 38U), (uint16_t)(tile->rect.y + 74U), 32U, 40U};
+    GUI_DrawCenteredText(&title_rect, tile->title, GUI_FONT_LABEL, GUI_MUTED_COLOR, GUI_PANEL_DARK);
+    GUI_DrawCenteredText(&unit_rect, tile->unit, GUI_FONT_LABEL, GUI_ACCENT_COLOR, GUI_PANEL_DARK);
+}
+
+void GUI_DrawSetTile(const GUI_ValueTile_t *tile, float value, uint8_t digit)
+{
+    char buf[16];
+    GUI_Rect_t title_rect;
+    GUI_Rect_t value_rect;
+    GUI_Rect_t unit_rect;
+    uint16_t mark_x;
+    uint8_t char_index;
+
+    GUI_FormatFixed2(buf, sizeof(buf), value);
+    GUI_DrawPanel(&tile->rect, GUI_PANEL_COLOR);
+
+    title_rect = (GUI_Rect_t){tile->rect.x, (uint16_t)(tile->rect.y + 2U), tile->rect.w, 18U};
+    value_rect = (GUI_Rect_t){(uint16_t)(tile->rect.x + 10U), (uint16_t)(tile->rect.y + tile->rect.h - 39U), GUI_SET_TEXT_W, 34U};
+    unit_rect = (GUI_Rect_t){(uint16_t)(tile->rect.x + tile->rect.w - 24U), (uint16_t)(value_rect.y + 5U), 22U, 24U};
+
+    GUI_DrawCenteredText(&title_rect, tile->title, GUI_FONT_TILE_TITLE, GUI_MUTED_COLOR, GUI_PANEL_COLOR);
+    LCD_DrawFontStringFixedDMA(
+        value_rect.x,
+        value_rect.y,
+        value_rect.w,
+        value_rect.h,
+        buf,
+        GUI_FONT_SET_VALUE,
+        GUI_SET_CELL_W,
+        GUI_TEXT_COLOR,
+        GUI_PANEL_COLOR);
+    GUI_DrawCenteredText(&unit_rect, tile->unit, GUI_FONT_TILE_VALUE, GUI_ACCENT_COLOR, GUI_PANEL_COLOR);
+
+    if (digit < 4U)
+    {
+        char_index = (digit < 2U) ? digit : (uint8_t)(digit + 1U);
+        mark_x = (uint16_t)(value_rect.x + char_index * GUI_SET_CELL_W);
+        LCD_Rect_Fill(
+            mark_x,
+            (uint16_t)(tile->rect.y + tile->rect.h - 4U),
+            (uint16_t)(mark_x + GUI_SET_CELL_W - 2U),
+            (uint16_t)(tile->rect.y + tile->rect.h - 3U),
+            GUI_ACCENT_COLOR);
+    }
+}
+
+void GUI_DrawProtectTile(const GUI_LabelTile_t *tile, float value, const char *unit, uint8_t enabled, uint8_t selected)
+{
+    char buf[16];
+    char value_buf[20];
+    GUI_Rect_t title_rect;
+    GUI_Rect_t value_rect;
+
+    if (enabled != 0U)
+    {
+        GUI_FormatFixed2(buf, sizeof(buf), value);
+        snprintf(value_buf, sizeof(value_buf), "%s%s", buf, unit);
+    }
+    else
+    {
+        snprintf(value_buf, sizeof(value_buf), "OFF");
+    }
+
+    GUI_DrawPanel(&tile->rect, GUI_PANEL_COLOR);
+    title_rect = (GUI_Rect_t){(uint16_t)(tile->rect.x + 4U), (uint16_t)(tile->rect.y + 11U), 52U, 20U};
+    value_rect = (GUI_Rect_t){(uint16_t)(tile->rect.x + 58U), (uint16_t)(tile->rect.y + 9U), (uint16_t)(tile->rect.w - 62U), 24U};
+    GUI_DrawCenteredText(&title_rect, tile->title, GUI_FONT_TILE_TITLE, GUI_MUTED_COLOR, GUI_PANEL_COLOR);
+    GUI_DrawFixedSlotText(&value_rect, value_buf, GUI_FONT_TILE_VALUE, GUI_TILE_VALUE_CELL_W, GUI_TEXT_COLOR, GUI_PANEL_COLOR);
+    if (selected != 0U)
+    {
+        GUI_DrawPanelBorder(&tile->rect, GUI_ACCENT_COLOR);
+    }
+}
+
+void GUI_DrawStateTile(const GUI_LabelTile_t *tile, const char *value, uint16_t fill_color, uint8_t selected)
+{
+    GUI_Rect_t title_rect;
+    GUI_Rect_t value_rect;
+
+    GUI_DrawPanel(&tile->rect, fill_color);
+    title_rect = (GUI_Rect_t){(uint16_t)(tile->rect.x + 4U), (uint16_t)(tile->rect.y + 11U), 52U, 20U};
+    value_rect = (GUI_Rect_t){(uint16_t)(tile->rect.x + 58U), (uint16_t)(tile->rect.y + 9U), (uint16_t)(tile->rect.w - 62U), 24U};
+    GUI_DrawCenteredText(&title_rect, tile->title, GUI_FONT_TILE_TITLE, GUI_MUTED_COLOR, fill_color);
+    GUI_DrawCenteredText(&value_rect, value, GUI_FONT_TILE_VALUE, GUI_TEXT_COLOR, fill_color);
+    if (selected != 0U)
+    {
+        GUI_DrawPanelBorder(&tile->rect, GUI_ACCENT_COLOR);
+    }
+}
+
+void GUI_DrawTempTile(const GUI_ValueTile_t *tile, float value)
+{
+    char buf[16];
+    GUI_Rect_t title_rect;
+    GUI_Rect_t value_rect;
+
+    GUI_FormatFixed2(buf, sizeof(buf), value);
+    GUI_DrawPanel(&tile->rect, GUI_PANEL_COLOR);
+    title_rect = (GUI_Rect_t){(uint16_t)(tile->rect.x + 4U), (uint16_t)(tile->rect.y + 11U), 52U, 20U};
+    value_rect = (GUI_Rect_t){(uint16_t)(tile->rect.x + 56U), (uint16_t)(tile->rect.y + 9U), (uint16_t)(tile->rect.w - 60U), 24U};
+    GUI_DrawCenteredText(&title_rect, tile->title, GUI_FONT_TILE_TITLE, GUI_MUTED_COLOR, GUI_PANEL_COLOR);
+    GUI_DrawFixedSlotText(&value_rect, buf, GUI_FONT_TILE_VALUE, GUI_TILE_VALUE_CELL_W, GUI_TEXT_COLOR, GUI_PANEL_COLOR);
+}
+
+const char *GUI_ModeText(uint8_t mode)
+{
+    return (mode != 0U) ? "CC" : "CV";
+}
+
+const char *GUI_StateText(uint8_t state)
+{
+    switch (state)
+    {
+        case 0U: return "INIT";
+        case 1U: return "WAIT";
+        case 2U: return "RISE";
+        case 3U: return "RUN";
+        case 4U: return "ERR";
+        default: return "NA";
+    }
+}
+
+const char *GUI_FaultText(uint8_t fault)
+{
+    switch (fault)
+    {
+        case 1U: return "OVP";
+        case 2U: return "OCP";
+        case 3U: return "OTP";
+        case 0U: return "NA";
+        default: return "ERR";
+    }
+}
+
+const char *GUI_TopoText(const GUI_Data_t *data)
+{
+    if (data == NULL)
+    {
+        return "NA";
+    }
+
+    if (data->pwm_a_compare != 0U && data->pwm_d_compare != 0U)
+    {
+        return "MIX";
+    }
+    if (data->pwm_a_compare != 0U)
+    {
+        return "BUCK";
+    }
+    if (data->pwm_d_compare != 0U)
+    {
+        return "BOOST";
+    }
+    return "NA";
+}
+
+static uint8_t GUI_DataEqual(const GUI_Data_t *a, const GUI_Data_t *b)
+{
+    return (uint8_t)(memcmp(a, b, sizeof(GUI_Data_t)) == 0);
+}

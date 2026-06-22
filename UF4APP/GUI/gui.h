@@ -44,6 +44,7 @@ typedef struct
         uint8_t otp_enabled;
         uint8_t output_enabled;
         uint8_t ble_state;
+        uint8_t page;
         uint8_t panel_field;
         uint8_t comm_state;
         uint8_t comm_stream_enabled;
@@ -53,6 +54,13 @@ typedef struct
         uint32_t comm_tx_fail_count;
         uint32_t comm_rx_frame_count;
         uint32_t comm_rx_error_count;
+        uint8_t regulation_mode;
+        uint8_t fault_state;
+        uint16_t state_machine_flags;
+        uint8_t state_machine_state;
+        uint16_t duty_cmd;
+        uint16_t pwm_a_compare;
+        uint16_t pwm_d_compare;
 
         float cpu_temp;
         float buck_temp;
