@@ -37,7 +37,7 @@ extern uint16_t ltdc_lcd_framebuf[LTDC_HEIGHT][LTDC_WIDTH];
 #define LCD_ADDRESS_START (0xC0000000)		  //LCD区的首地址
 #define LCD_REGION_SIZE MPU_REGION_SIZE_32MB //LCD区大小
 
-//画笔颜色
+
 #define WHITE 0xFFFF
 #define BLACK 0x0000
 #define BLUE 0x001F
@@ -52,15 +52,13 @@ extern uint16_t ltdc_lcd_framebuf[LTDC_HEIGHT][LTDC_WIDTH];
 #define BROWN 0XBC40 //棕色
 #define BRRED 0XFC07 //棕红色
 #define GRAY 0X8430	 //灰色
-//GUI颜色
 
 #define DARKBLUE 0X01CF	 //深蓝色
 #define LIGHTBLUE 0X7D7C //浅蓝色
 #define GRAYBLUE 0X5458	 //灰蓝色
-//以上三色为PANEL的颜色
 
 #define LIGHTGREEN 0X841F //浅绿色
-//#define LIGHTGRAY        0XEF5B //浅灰色(PANNEL)
+#define LIGHTGRAY        0XEF5B //浅灰色(PANNEL)
 #define LGRAY 0XC618 //浅灰色(PANNEL),窗体背景色
 
 #define LGRAYBLUE 0XA651 //浅灰蓝色(中间层颜色)
@@ -113,6 +111,7 @@ void LCD_SetDrawBufferAddress(uint32_t addr);
 void LCD_SetFrameBuffers(uint32_t front_addr, uint32_t draw_addr);
 void LCD_CopyRectFromFrontToDraw(uint16_t x, uint16_t y, uint16_t w, uint16_t h);
 void LCD_BlitRectRGB565(uint16_t x, uint16_t y, uint16_t w, uint16_t h, const uint16_t *pixels);
+void LCD_BlitRotatedRectRGB565(uint16_t x, uint16_t y, uint16_t w, uint16_t h, const uint16_t *pixels);
 void LCD_DrawPixelColor(uint16_t x, uint16_t y, uint32_t color);
 void LCD_Present(void);
 void LCD_PresentBuffer(uint32_t buffer_addr);

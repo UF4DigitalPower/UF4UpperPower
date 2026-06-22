@@ -25,9 +25,15 @@ lcd_dev LCD_DEV = {
 
 __attribute__((section(".lcd_front_framebuffer"), aligned(32))) uint16_t ltdc_lcd_framebuf[LTDC_HEIGHT][LTDC_WIDTH]; // LTDC framebuffer in SDRAM
 __attribute__((section(".sdram"), aligned(32))) static uint16_t lcd_blit_buffer[LCD_LOGICAL_LANDSCAPE_WIDTH * 160U];
+__attribute__((section(".sdram"), aligned(32))) static MDMA_LinkNodeTypeDef lcd_mdma_rotate_nodes[LCD_LOGICAL_LANDSCAPE_HEIGHT - 1U];
+
+#define LCD_MDMA_ROTATE_ENABLE 0U
+#define LCD_MDMA_ROTATE_MIN_PIXELS 8192U
 
 static uint32_t g_lcd_front_buffer_addr = LCD_FRAMEBUFFER_ADDR;
 static uint32_t g_lcd_draw_buffer_addr = LCD_FRAMEBUFFER_BACK_ADDR;
+static MDMA_HandleTypeDef hmdma_lcd_rotate;
+static uint8_t g_lcd_mdma_rotate_ready = 0U;
 
 uint32_t POINT_COLOR = WHITE;
 uint32_t BACK_COLOR = BLACK;
@@ -157,6 +163,141 @@ static void lcd_dma2d_copy_rect_rgb565(const uint32_t src_addr, const uint32_t d
 				  DMA2D_IFCR_CCTCIF | DMA2D_IFCR_CAECIF | DMA2D_IFCR_CTWIF;
 }
 
+static uint8_t lcd_mdma_rotate_init(void) {
+	if (g_lcd_mdma_rotate_ready != 0U) {
+		return 1U;
+	}
+
+	__HAL_RCC_MDMA_CLK_ENABLE();
+
+	hmdma_lcd_rotate.Instance = MDMA_Channel0;
+	hmdma_lcd_rotate.Init.Request = MDMA_REQUEST_SW;
+	hmdma_lcd_rotate.Init.TransferTriggerMode = MDMA_FULL_TRANSFER;
+	hmdma_lcd_rotate.Init.Priority = MDMA_PRIORITY_HIGH;
+	hmdma_lcd_rotate.Init.Endianness = MDMA_LITTLE_ENDIANNESS_PRESERVE;
+	hmdma_lcd_rotate.Init.SourceInc = MDMA_SRC_INC_HALFWORD;
+	hmdma_lcd_rotate.Init.DestinationInc = MDMA_DEST_INC_DISABLE;
+	hmdma_lcd_rotate.Init.SourceDataSize = MDMA_SRC_DATASIZE_HALFWORD;
+	hmdma_lcd_rotate.Init.DestDataSize = MDMA_DEST_DATASIZE_HALFWORD;
+	hmdma_lcd_rotate.Init.DataAlignment = MDMA_DATAALIGN_RIGHT;
+	hmdma_lcd_rotate.Init.SourceBurst = MDMA_SOURCE_BURST_SINGLE;
+	hmdma_lcd_rotate.Init.DestBurst = MDMA_DEST_BURST_SINGLE;
+	hmdma_lcd_rotate.Init.BufferTransferLength = 2U;
+	hmdma_lcd_rotate.Init.SourceBlockAddressOffset = 0;
+	hmdma_lcd_rotate.Init.DestBlockAddressOffset = -((int32_t)(LTDC_WIDTH * LCD_DEV.pixsize));
+
+	if (HAL_MDMA_Init(&hmdma_lcd_rotate) != HAL_OK) {
+		g_lcd_mdma_rotate_ready = 0U;
+		return 0U;
+	}
+
+	g_lcd_mdma_rotate_ready = 1U;
+	return 1U;
+}
+
+static uint8_t lcd_mdma_rotate_build_nodes(const uint16_t w, const uint16_t h,
+		const uint16_t *pixels, const uint32_t psx, const uint32_t pey) {
+	uint32_t row;
+	const uint32_t node_ctcr =
+			hmdma_lcd_rotate.Init.SourceInc |
+			hmdma_lcd_rotate.Init.DestinationInc |
+			hmdma_lcd_rotate.Init.SourceDataSize |
+			hmdma_lcd_rotate.Init.DestDataSize |
+			hmdma_lcd_rotate.Init.DataAlignment |
+			hmdma_lcd_rotate.Init.SourceBurst |
+			hmdma_lcd_rotate.Init.DestBurst |
+			((hmdma_lcd_rotate.Init.BufferTransferLength - 1U) << MDMA_CTCR_TLEN_Pos) |
+			hmdma_lcd_rotate.Init.TransferTriggerMode |
+			MDMA_CTCR_SWRM |
+			MDMA_CTCR_BWM;
+	const uint32_t node_cbndtr =
+			(((uint32_t)w - 1U) << MDMA_CBNDTR_BRC_Pos) |
+			MDMA_CBNDTR_BRDUM |
+			LCD_DEV.pixsize;
+	const uint32_t node_cbrur =
+			((uint32_t)(LTDC_WIDTH * LCD_DEV.pixsize) << MDMA_CBRUR_DUV_Pos);
+
+	if (h > LCD_LOGICAL_LANDSCAPE_HEIGHT) {
+		return 0U;
+	}
+
+	hmdma_lcd_rotate.FirstLinkedListNodeAddress = NULL;
+	hmdma_lcd_rotate.LastLinkedListNodeAddress = NULL;
+	hmdma_lcd_rotate.LinkedListNodeCounter = 0U;
+	hmdma_lcd_rotate.Instance->CLAR = 0U;
+
+	if (h <= 1U) {
+		return 1U;
+	}
+
+	for (row = 1U; row < h; ++row) {
+		MDMA_LinkNodeTypeDef *node = &lcd_mdma_rotate_nodes[row - 1U];
+
+		node->CTCR = node_ctcr;
+		node->CBNDTR = node_cbndtr;
+		node->CSAR = (uint32_t)&pixels[row * w];
+		node->CDAR = g_lcd_draw_buffer_addr +
+				LCD_DEV.pixsize * (LTDC_WIDTH * pey + psx + row);
+		node->CBRUR = node_cbrur;
+		node->CLAR = (row + 1U < h) ? (uint32_t)&lcd_mdma_rotate_nodes[row] : 0U;
+		node->CTBR = 0U;
+		node->Reserved = 0U;
+		node->CMAR = 0U;
+		node->CMDR = 0U;
+	}
+
+	hmdma_lcd_rotate.Instance->CLAR = (uint32_t)&lcd_mdma_rotate_nodes[0];
+	hmdma_lcd_rotate.FirstLinkedListNodeAddress = &lcd_mdma_rotate_nodes[0];
+	hmdma_lcd_rotate.LastLinkedListNodeAddress = &lcd_mdma_rotate_nodes[h - 2U];
+	hmdma_lcd_rotate.LinkedListNodeCounter = h - 1U;
+
+	lcd_clean_dcache((uint32_t)lcd_mdma_rotate_nodes, (uint32_t)(h - 1U) * sizeof(lcd_mdma_rotate_nodes[0]));
+	return 1U;
+}
+
+static uint8_t lcd_mdma_rotate_blit_rgb565(const uint16_t x, const uint16_t y,
+		const uint16_t w, const uint16_t h, const uint16_t *pixels) {
+	uint32_t psx;
+	uint32_t psy;
+	uint32_t pex;
+	uint32_t pey;
+	uint32_t src_bytes;
+	uint32_t dst_span_bytes;
+	uint32_t src_addr;
+	uint32_t dst_addr;
+
+	if (lcd_mdma_rotate_init() == 0U) {
+		return 0U;
+	}
+
+	lcd_map_rect_to_physical(x, y, (uint16_t) (x + w - 1U), (uint16_t) (y + h - 1U), &psx, &psy, &pex, &pey);
+	src_bytes = (uint32_t) w * h * LCD_DEV.pixsize;
+	dst_span_bytes = lcd_get_rect_span_bytes(psx, psy, pex, pey);
+
+	lcd_clean_dcache((uint32_t) pixels, src_bytes);
+	lcd_clean_dcache(g_lcd_draw_buffer_addr + LCD_DEV.pixsize * (LTDC_WIDTH * psy + psx), dst_span_bytes);
+
+	if (lcd_mdma_rotate_build_nodes(w, h, pixels, psx, pey) == 0U) {
+		return 0U;
+	}
+
+	src_addr = (uint32_t)pixels;
+	dst_addr = g_lcd_draw_buffer_addr + LCD_DEV.pixsize * (LTDC_WIDTH * pey + psx);
+
+	if (HAL_MDMA_Start(&hmdma_lcd_rotate, src_addr, dst_addr, LCD_DEV.pixsize, w) != HAL_OK) {
+		(void) HAL_MDMA_Abort(&hmdma_lcd_rotate);
+		return 0U;
+	}
+
+	if (HAL_MDMA_PollForTransfer(&hmdma_lcd_rotate, HAL_MDMA_FULL_TRANSFER, 10U) != HAL_OK) {
+		(void) HAL_MDMA_Abort(&hmdma_lcd_rotate);
+		return 0U;
+	}
+
+	lcd_invalidate_dcache(g_lcd_draw_buffer_addr + LCD_DEV.pixsize * (LTDC_WIDTH * psy + psx), dst_span_bytes);
+	return 1U;
+}
+
 void LCD_DrawPixelColor(uint16_t x, uint16_t y, uint32_t color) {
 	if (x >= LCD_DEV.width || y >= LCD_DEV.height) {
 		return;
@@ -281,6 +422,12 @@ void LCD_BlitRectRGB565(uint16_t x, uint16_t y, uint16_t w, uint16_t h, const ui
 		uint32_t ly;
 		uint32_t pixels_count = (uint32_t) w * h;
 
+		if (LCD_MDMA_ROTATE_ENABLE != 0U &&
+				pixels_count >= LCD_MDMA_ROTATE_MIN_PIXELS &&
+				lcd_mdma_rotate_blit_rgb565(x, y, w, h, pixels) != 0U) {
+			return;
+		}
+
 		if (pixels_count > (uint32_t) (sizeof(lcd_blit_buffer) / sizeof(lcd_blit_buffer[0]))) {
 			return;
 		}
@@ -302,6 +449,43 @@ void LCD_BlitRectRGB565(uint16_t x, uint16_t y, uint16_t w, uint16_t h, const ui
 	lcd_clean_dcache((uint32_t) src, (uint32_t) phys_w * phys_h * LCD_DEV.pixsize);
 	lcd_clean_dcache(dst_addr, dst_span_bytes);
 	lcd_dma2d_copy_rgb565((uint32_t) src, dst_addr, phys_w, phys_h, offline);
+}
+
+void LCD_BlitRotatedRectRGB565(uint16_t x, uint16_t y, uint16_t w, uint16_t h, const uint16_t *pixels) {
+	uint32_t psx;
+	uint32_t psy;
+	uint32_t pex;
+	uint32_t pey;
+	uint16_t phys_w;
+	uint16_t phys_h;
+	uint16_t offline;
+	uint32_t dst_addr;
+	uint32_t dst_span_bytes;
+
+	if (pixels == NULL || w == 0U || h == 0U) {
+		return;
+	}
+	if (x >= LCD_DEV.width || y >= LCD_DEV.height) {
+		return;
+	}
+
+	if ((uint32_t) x + w > LCD_DEV.width) {
+		w = (uint16_t) (LCD_DEV.width - x);
+	}
+	if ((uint32_t) y + h > LCD_DEV.height) {
+		h = (uint16_t) (LCD_DEV.height - y);
+	}
+
+	lcd_map_rect_to_physical(x, y, (uint16_t) (x + w - 1U), (uint16_t) (y + h - 1U), &psx, &psy, &pex, &pey);
+	phys_w = (uint16_t) (pex - psx + 1U);
+	phys_h = (uint16_t) (pey - psy + 1U);
+	offline = (uint16_t) (LTDC_WIDTH - phys_w);
+	dst_addr = g_lcd_draw_buffer_addr + LCD_DEV.pixsize * (LTDC_WIDTH * psy + psx);
+	dst_span_bytes = lcd_get_rect_span_bytes(psx, psy, pex, pey);
+
+	lcd_clean_dcache((uint32_t) pixels, (uint32_t) phys_w * phys_h * LCD_DEV.pixsize);
+	lcd_clean_dcache(dst_addr, dst_span_bytes);
+	lcd_dma2d_copy_rgb565((uint32_t) pixels, dst_addr, phys_w, phys_h, offline);
 }
 
 void LCD_Present(void) {

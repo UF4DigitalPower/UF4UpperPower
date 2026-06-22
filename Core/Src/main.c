@@ -1,19 +1,3 @@
-/**
-  ******************************************************************************
-  * @file    main.c
-  * @author  UF4
-  * @date    26-6-20 下午6:22
-  * @brief   STM32H743 application entry.
-  ******************************************************************************
-  * @attention
-  *
-  * Copyright (c) 2026 UF4.
-  * All rights reserved.
-  *
-  * This software is provided "as is", without warranty of any kind.
-  *
-  ******************************************************************************
-  */
 /* USER CODE BEGIN Header */
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
@@ -22,6 +6,7 @@
 #include "dma2d.h"
 #include "i2c.h"
 #include "ltdc.h"
+#include "mdma.h"
 #include "memorymap.h"
 #include "quadspi.h"
 #include "spi.h"
@@ -38,6 +23,7 @@
 #include "setpoint_input.h"
 
 /* USER CODE END Includes */
+
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
 
@@ -87,8 +73,8 @@ static float g_sim_cpu_temp = 45.0F;
 static float g_sim_buck_temp = 52.0F;
 static float g_sim_boost_temp = 49.0F;
 
-#define APP_GUI_UPDATE_PERIOD_MS 33U
-#define APP_TELEMETRY_UPDATE_PERIOD_MS 200U
+#define APP_GUI_UPDATE_PERIOD_MS 20U
+#define APP_TELEMETRY_UPDATE_PERIOD_MS 50U
 
 static uint32_t App_NextRandom(void)
 {
@@ -167,6 +153,7 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_DMA_Init();
+  MX_MDMA_Init();
   MX_DMA2D_Init();
   MX_FMC_Init();
   MX_I2C3_Init();
@@ -356,22 +343,8 @@ void MPU_Config(void)
   MPU_InitStruct.TypeExtField = MPU_TEX_LEVEL0;
   MPU_InitStruct.AccessPermission = MPU_REGION_FULL_ACCESS;
   MPU_InitStruct.DisableExec = MPU_INSTRUCTION_ACCESS_DISABLE;
-  MPU_InitStruct.IsShareable = MPU_ACCESS_NOT_SHAREABLE;
-  MPU_InitStruct.IsCacheable = MPU_ACCESS_CACHEABLE;
-  MPU_InitStruct.IsBufferable = MPU_ACCESS_NOT_BUFFERABLE;
-
-  HAL_MPU_ConfigRegion(&MPU_InitStruct);
-
-  MPU_InitStruct.Enable = MPU_REGION_ENABLE;
-  MPU_InitStruct.Number = MPU_REGION_NUMBER1;
-  MPU_InitStruct.BaseAddress = 0xC0000000;
-  MPU_InitStruct.Size = MPU_REGION_SIZE_4MB;
-  MPU_InitStruct.SubRegionDisable = 0x0;
-  MPU_InitStruct.TypeExtField = MPU_TEX_LEVEL0;
-  MPU_InitStruct.AccessPermission = MPU_REGION_FULL_ACCESS;
-  MPU_InitStruct.DisableExec = MPU_INSTRUCTION_ACCESS_DISABLE;
   MPU_InitStruct.IsShareable = MPU_ACCESS_SHAREABLE;
-  MPU_InitStruct.IsCacheable = MPU_ACCESS_NOT_CACHEABLE;
+  MPU_InitStruct.IsCacheable = MPU_ACCESS_CACHEABLE;
   MPU_InitStruct.IsBufferable = MPU_ACCESS_NOT_BUFFERABLE;
 
   HAL_MPU_ConfigRegion(&MPU_InitStruct);

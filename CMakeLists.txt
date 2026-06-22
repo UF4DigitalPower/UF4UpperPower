@@ -34,7 +34,7 @@ add_compile_definitions(ARM_MATH_CM4;ARM_MATH_MATRIX_CHECK;ARM_MATH_ROUNDING)
 add_compile_options(-mfloat-abi=hard -mfpu=fpv4-sp-d16)
 add_link_options(-mfloat-abi=hard -mfpu=fpv4-sp-d16)
 
-#关于软件浮点数的评论取消
+#Uncomment for software floating point
 #add_compile_options(-mfloat-abi=soft)
 
 add_compile_options(-mcpu=cortex-m7 -mthumb -mthumb-interwork)
@@ -134,16 +134,6 @@ add_custom_command(TARGET ${PROJECT_NAME}.elf POST_BUILD
         COMMAND ${CMAKE_OBJCOPY} -Obinary $<TARGET_FILE:${PROJECT_NAME}.elf> ${BIN_FILE}
         COMMAND ${CMAKE_COMMAND}
                 -DUF4_BANNER_TXT=${UF4_BANNER_TXT}
-                -DUF4_PROJECT_NAME=${PROJECT_NAME}
-                -DUF4_BUILD_TYPE=${CMAKE_BUILD_TYPE}
-                -DUF4_HOST_SYSTEM_NAME=${CMAKE_HOST_SYSTEM_NAME}
-                -DUF4_HOST_SYSTEM_PROCESSOR=${CMAKE_HOST_SYSTEM_PROCESSOR}
-                -DUF4_TARGET_SYSTEM_NAME=${CMAKE_SYSTEM_NAME}
-                -DUF4_LINKER_SCRIPT=${LINKER_SCRIPT}
-                -DUF4_C_COMPILER_ID=${CMAKE_C_COMPILER_ID}
-                -DUF4_C_COMPILER_VERSION=${CMAKE_C_COMPILER_VERSION}
-                -DUF4_C_COMPILER=${CMAKE_C_COMPILER}
-                -DUF4_OUTPUT_ELF=$<TARGET_FILE:${PROJECT_NAME}.elf>
                 -P "${UF4_BANNER_SCRIPT}"
         COMMAND ${CMAKE_COMMAND} -E cat "${UF4_BANNER_TXT}"
         COMMENT "Generating firmware files"

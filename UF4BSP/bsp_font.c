@@ -1,6 +1,6 @@
 /**
   ******************************************************************************
-  * @file    bap_font.c
+  * @file    bsp_font.c
   * @author  UF4
   * @date    26-6-21 下午9:52
   * @brief
@@ -14,10 +14,103 @@
   *
   ******************************************************************************
   */
-#include "bap_font.h"
+#include "bsp_font.h"
 #include "bsp_lcd.h"
 
 static uint16_t g_font_dma_buffer[540U * 176U] __attribute__((section(".sdram"), aligned(32)));
+
+#define LCD_FONT_CACHE_SIZE_VALUE   144U
+#define LCD_FONT_CACHE_CELL_W       60U
+#define LCD_FONT_CACHE_CELL_H       104U
+#define LCD_FONT_CACHE_PHYS_W       LCD_FONT_CACHE_CELL_H
+#define LCD_FONT_CACHE_PHYS_H       LCD_FONT_CACHE_CELL_W
+#define LCD_FONT_CACHE_GLYPHS       13U
+
+static uint16_t g_font_value_cache[LCD_FONT_CACHE_GLYPHS][LCD_FONT_CACHE_PHYS_W * LCD_FONT_CACHE_PHYS_H]
+        __attribute__((section(".sdram"), aligned(32)));
+static uint8_t g_font_value_cache_ready;
+
+static int32_t LCD_FontValueCacheIndex(char ch)
+{
+    if (ch >= '0' && ch <= '9')
+    {
+        return ch - '0';
+    }
+    if (ch == '.')
+    {
+        return 10;
+    }
+    if (ch == '-')
+    {
+        return 11;
+    }
+    if (ch == ' ')
+    {
+        return 12;
+    }
+    return -1;
+}
+
+static void LCD_FontValueCacheBuildGlyph(char ch, uint16_t *dst)
+{
+    uint32_t i;
+    uint32_t lx;
+    uint32_t ly;
+    uint16_t bg = LCD_EncodeColor((uint16_t)0x0841);
+
+    for (i = 0U; i < LCD_FONT_CACHE_CELL_W * LCD_FONT_CACHE_CELL_H; ++i)
+    {
+        g_font_dma_buffer[i] = bg;
+    }
+
+    if (ch != ' ')
+    {
+        char text[2];
+
+        text[0] = ch;
+        text[1] = '\0';
+        LCD_RenderFontStringFixedToBuffer(
+            g_font_dma_buffer,
+            LCD_FONT_CACHE_CELL_W,
+            LCD_FONT_CACHE_CELL_H,
+            0U,
+            0U,
+            text,
+            LCD_FONT_CACHE_SIZE_VALUE,
+            LCD_FONT_CACHE_CELL_W,
+            0xFFFF);
+    }
+
+    for (ly = 0U; ly < LCD_FONT_CACHE_CELL_H; ++ly)
+    {
+        for (lx = 0U; lx < LCD_FONT_CACHE_CELL_W; ++lx)
+        {
+            dst[(uint32_t)(LCD_FONT_CACHE_CELL_W - 1U - lx) * LCD_FONT_CACHE_PHYS_W + ly] =
+                g_font_dma_buffer[ly * LCD_FONT_CACHE_CELL_W + lx];
+        }
+    }
+}
+
+static void LCD_FontValueCacheEnsure(void)
+{
+    static const char glyphs[LCD_FONT_CACHE_GLYPHS] =
+    {
+        '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '.', '-', ' '
+    };
+    uint32_t i;
+
+    if (g_font_value_cache_ready != 0U)
+    {
+        return;
+    }
+
+    for (i = 0U; i < LCD_FONT_CACHE_GLYPHS; ++i)
+    {
+        LCD_FontValueCacheBuildGlyph(glyphs[i], g_font_value_cache[i]);
+    }
+
+    g_font_value_cache_ready = 1U;
+}
 
 static inline uint8_t LCD_FontBytesPerRow(
         uint16_t size)
@@ -338,6 +431,41 @@ void LCD_DrawFontStringFixedDMA(
     if ((uint32_t)w * h > (uint32_t)(sizeof(g_font_dma_buffer) / sizeof(g_font_dma_buffer[0])))
     {
         return;
+    }
+
+    if (size == LCD_FONT_CACHE_SIZE_VALUE &&
+        cell_width == LCD_FONT_CACHE_CELL_W &&
+        h == LCD_FONT_CACHE_CELL_H &&
+        bg_color == 0x0841 &&
+        color == 0xFFFF)
+    {
+        uint16_t cell_x = x;
+        const char *p = str;
+
+        LCD_FontValueCacheEnsure();
+        while (*p != '\0' && (uint32_t)(cell_x - x) < w)
+        {
+            int32_t cache_index = LCD_FontValueCacheIndex(*p);
+
+            if (cache_index < 0)
+            {
+                break;
+            }
+
+            LCD_BlitRotatedRectRGB565(
+                cell_x,
+                y,
+                LCD_FONT_CACHE_CELL_W,
+                LCD_FONT_CACHE_CELL_H,
+                g_font_value_cache[cache_index]);
+            cell_x = (uint16_t)(cell_x + cell_width);
+            p++;
+        }
+
+        if (*p == '\0')
+        {
+            return;
+        }
     }
 
     bg =
