@@ -19,6 +19,14 @@
 
 #include <stdint.h>
 
+#define GUI_VALID_CC_CV_MODE             (1U << 0)
+#define GUI_VALID_POWER_STATE            (1U << 1)
+#define GUI_VALID_FAULT_STATE            (1U << 2)
+#define GUI_VALID_STATE_MACHINE_STATE    (1U << 3)
+#define GUI_VALID_STATE_MACHINE_FLAGS    (1U << 4)
+#define GUI_VALID_PWM_A_COMPARE          (1U << 5)
+#define GUI_VALID_PWM_D_COMPARE          (1U << 6)
+
 typedef struct
 {
         float vin;
@@ -46,6 +54,7 @@ typedef struct
         uint8_t ble_state;
         uint8_t page;
         uint8_t panel_field;
+        uint8_t valid_flags;
         uint8_t comm_state;
         uint8_t comm_stream_enabled;
         uint8_t comm_last_tx_cmd;

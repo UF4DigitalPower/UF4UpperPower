@@ -18,8 +18,6 @@ void GUI_Init(void)
     GUI_Clear();
     GUI_DrawMainPage(&g_last_data, NULL);
     LCD_Present();
-    GUI_Clear();
-    GUI_DrawMainPage(&g_last_data, NULL);
 }
 
 void GUI_Clear(void)
@@ -41,7 +39,7 @@ void GUI_DrawStatic(void)
 
 void GUI_Update(const GUI_Data_t *data)
 {
-    uint8_t scope_page;
+    uint8_t need_full_clear;
 
     if (data == NULL)
     {
@@ -53,14 +51,14 @@ void GUI_Update(const GUI_Data_t *data)
         return;
     }
 
-    scope_page = (uint8_t)(data->page != 0U);
+    need_full_clear = (uint8_t)(g_has_last == 0U || data->page != g_last_data.page);
 
-    if (g_has_last == 0U || data->page != g_last_data.page || scope_page != 0U)
+    if (need_full_clear != 0U)
     {
         GUI_Clear();
     }
 
-    if (scope_page != 0U)
+    if (data->page != 0U)
     {
         GUI_DrawWavePage();
     }
@@ -69,20 +67,6 @@ void GUI_Update(const GUI_Data_t *data)
         GUI_DrawMainPage(data, g_has_last != 0U ? &g_last_data : NULL);
     }
     LCD_Present();
-
-    if (g_has_last == 0U || data->page != g_last_data.page || scope_page != 0U)
-    {
-        GUI_Clear();
-    }
-
-    if (scope_page != 0U)
-    {
-        GUI_DrawWavePage();
-    }
-    else
-    {
-        GUI_DrawMainPage(data, g_has_last != 0U ? &g_last_data : NULL);
-    }
 
     g_last_data = *data;
     g_has_last = 1U;
@@ -375,32 +359,45 @@ void GUI_DrawTempTile(const GUI_ValueTile_t *tile, float value)
 
 const char *GUI_ModeText(uint8_t mode)
 {
-    return (mode != 0U) ? "CC" : "CV";
+    return (mode != 0U) ? "CV" : "CC";
 }
 
 const char *GUI_StateText(uint8_t state)
 {
     switch (state)
     {
-        case 0U: return "INIT";
-        case 1U: return "WAIT";
-        case 2U: return "RISE";
-        case 3U: return "RUN";
-        case 4U: return "ERR";
+        case 0x01U: return "INIT";
+        case 0x02U: return "WAIT";
+        case 0x04U: return "RISE";
+        case 0x08U: return "RUN";
+        case 0x0FU: return "ERR";
         default: return "NA";
     }
 }
 
 const char *GUI_FaultText(uint8_t fault)
 {
-    switch (fault)
+    uint16_t fault_bits = fault;
+
+    if (fault_bits == 0x0000U)
     {
-        case 1U: return "OVP";
-        case 2U: return "OCP";
-        case 3U: return "OTP";
-        case 0U: return "NA";
-        default: return "ERR";
+        return "NA";
     }
+
+    if ((fault_bits & 0x0008U) != 0U)
+    {
+        return "OVP";
+    }
+    if ((fault_bits & 0x0010U) != 0U)
+    {
+        return "OCP";
+    }
+    if ((fault_bits & 0x0040U) != 0U)
+    {
+        return "OTP";
+    }
+
+    return "ERR";
 }
 
 const char *GUI_TopoText(const GUI_Data_t *data)
@@ -410,19 +407,19 @@ const char *GUI_TopoText(const GUI_Data_t *data)
         return "NA";
     }
 
-    if (data->pwm_a_compare != 0U && data->pwm_d_compare != 0U)
+    if ((data->valid_flags & GUI_VALID_STATE_MACHINE_STATE) == 0U)
     {
-        return "MIX";
+        return "NA";
     }
-    if (data->pwm_a_compare != 0U)
+
+    switch (data->state_machine_state)
     {
-        return "BUCK";
+        case 1U: return "BUCK";
+        case 2U: return "BOOST";
+        case 3U: return "MIX";
+        case 0U: return "NA";
+        default: return "NA";
     }
-    if (data->pwm_d_compare != 0U)
-    {
-        return "BOOST";
-    }
-    return "NA";
 }
 
 static uint8_t GUI_DataEqual(const GUI_Data_t *a, const GUI_Data_t *b)

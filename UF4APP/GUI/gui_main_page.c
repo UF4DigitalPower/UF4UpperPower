@@ -89,7 +89,7 @@ void GUI_DrawMainPage(const GUI_Data_t *data, const GUI_Data_t *last_data)
 
     GUI_DrawStateTile(&g_info_tiles[3], data->output_enabled != 0U ? "ON" : "OFF", data->output_enabled != 0U ? GUI_OK_COLOR : GUI_PANEL_COLOR, out_selected);
     GUI_DrawStateTile(&g_info_tiles[4], GUI_TopoText(data), GUI_PANEL_COLOR, 0U);
-    GUI_DrawStateTile(&g_info_tiles[5], GUI_ModeText(data->regulation_mode), GUI_PANEL_COLOR, 0U);
+    GUI_DrawStateTile(&g_info_tiles[5], (data->valid_flags & GUI_VALID_CC_CV_MODE) != 0U ? GUI_ModeText(data->regulation_mode) : "NA", GUI_PANEL_COLOR, 0U);
 
     if (last_data != NULL)
     {
@@ -100,8 +100,8 @@ void GUI_DrawMainPage(const GUI_Data_t *data, const GUI_Data_t *last_data)
     snprintf(cmd_buf, sizeof(cmd_buf), "%s", tx_flash != 0U ? "TX" : "--");
     GUI_DrawStateTile(&g_info_tiles[6], cmd_buf, tx_flash != 0U ? GUI_WARN_COLOR : GUI_PANEL_COLOR, 0U);
 
-    GUI_DrawStateTile(&g_info_tiles[7], GUI_StateText(data->state_machine_state), GUI_PANEL_COLOR, 0U);
-    GUI_DrawStateTile(&g_info_tiles[8], GUI_FaultText(data->fault_state), GUI_PANEL_COLOR, 0U);
+    GUI_DrawStateTile(&g_info_tiles[7], (data->valid_flags & GUI_VALID_STATE_MACHINE_FLAGS) != 0U ? GUI_StateText((uint8_t)data->state_machine_flags) : "NA", GUI_PANEL_COLOR, 0U);
+    GUI_DrawStateTile(&g_info_tiles[8], (data->valid_flags & GUI_VALID_FAULT_STATE) != 0U ? GUI_FaultText(data->fault_state) : "NA", GUI_PANEL_COLOR, 0U);
     GUI_DrawStateTile(&g_info_tiles[9], data->ble_state != 0U ? "ON" : "OFF", GUI_PANEL_COLOR, ble_selected);
     GUI_DrawStateTile(&g_info_tiles[10], "OPEN", GUI_PANEL_COLOR, scope_selected);
 

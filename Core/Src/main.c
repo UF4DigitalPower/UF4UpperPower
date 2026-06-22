@@ -70,7 +70,7 @@ typedef enum
 static uint32_t g_last_key_tick = 0U;
 static uint32_t g_gui_tick = 0U;
 
-#define APP_GUI_UPDATE_PERIOD_MS 10U
+#define APP_GUI_UPDATE_PERIOD_MS 20U
 #define APP_COMM_CONTROL_SYNC_PERIOD_MS 100U
 #define APP_COMM_READ_TO_STREAM_DELAY_MS 80U
 #define APP_COMM_START_TIMEOUT_MS 1000U
@@ -170,6 +170,35 @@ static uint16_t App_ReadUf4U16(uint8_t id, uint16_t fallback)
   if (UF4PowerClient_GetU16(id, &raw))
   {
     return raw;
+  }
+
+  return fallback;
+}
+
+static uint8_t App_TryReadUf4U16(uint8_t id, uint16_t *value)
+{
+  return (uint8_t)(UF4PowerClient_GetU16(id, value) ? 1U : 0U);
+}
+
+static float App_ReadUf4MilliFallback(uint8_t id, float fallback)
+{
+  uint16_t raw;
+
+  if (UF4PowerClient_GetU16(id, &raw))
+  {
+    return (float)raw / 1000.0F;
+  }
+
+  return fallback;
+}
+
+static float App_ReadUf4CentiFallback(uint8_t id, float fallback)
+{
+  uint16_t raw;
+
+  if (UF4PowerClient_GetU16(id, &raw))
+  {
+    return (float)raw / 100.0F;
   }
 
   return fallback;
@@ -407,6 +436,8 @@ static void App_SyncUf4Controls(uint32_t now_tick)
 
 static void App_FillGuiFromUf4(GUI_Data_t *gui_data)
 {
+  uint16_t raw_value;
+
   memset(gui_data, 0, sizeof(*gui_data));
 
   gui_data->vin = App_ReadUf4Milli(UF4_ID_INPUT_VOLTAGE);
@@ -428,13 +459,13 @@ static void App_FillGuiFromUf4(GUI_Data_t *gui_data)
     gui_data->efficiency = 0.0F;
   }
 
-  gui_data->vset = SetpointInput_GetVset();
-  gui_data->iset = SetpointInput_GetIset();
+  gui_data->vset = App_ReadUf4MilliFallback(UF4_ID_SET_VOLTAGE_LIMIT, SetpointInput_GetVset());
+  gui_data->iset = App_ReadUf4MilliFallback(UF4_ID_SET_CURRENT_LIMIT, SetpointInput_GetIset());
   gui_data->vset_digit = SetpointInput_GetVsetDigit();
   gui_data->iset_digit = SetpointInput_GetIsetDigit();
-  gui_data->ovp = PanelKeys_GetOvp();
-  gui_data->ocp = PanelKeys_GetOcp();
-  gui_data->otp = PanelKeys_GetOtp();
+  gui_data->ovp = App_ReadUf4MilliFallback(UF4_ID_OVP_SET_VALUE, PanelKeys_GetOvp());
+  gui_data->ocp = App_ReadUf4MilliFallback(UF4_ID_OCP_SET_VALUE, PanelKeys_GetOcp());
+  gui_data->otp = App_ReadUf4CentiFallback(UF4_ID_OTP_SET_VALUE, PanelKeys_GetOtp());
   gui_data->ovp_enabled = PanelKeys_GetOvpEnabled();
   gui_data->ocp_enabled = PanelKeys_GetOcpEnabled();
   gui_data->otp_enabled = PanelKeys_GetOtpEnabled();
@@ -451,12 +482,47 @@ static void App_FillGuiFromUf4(GUI_Data_t *gui_data)
   gui_data->comm_rx_frame_count = UF4PowerClient_RxFrameCount();
   gui_data->comm_rx_error_count = UF4PowerClient_RxErrorCount();
   gui_data->regulation_mode = (uint8_t)App_ReadUf4U16(UF4_ID_CC_CV_MODE, 0U);
+  if (App_TryReadUf4U16(UF4_ID_CC_CV_MODE, &raw_value) != 0U)
+  {
+    gui_data->valid_flags |= GUI_VALID_CC_CV_MODE;
+    gui_data->regulation_mode = (uint8_t)raw_value;
+  }
+  if (App_TryReadUf4U16(UF4_ID_POWER_STATE, &raw_value) != 0U)
+  {
+    gui_data->valid_flags |= GUI_VALID_POWER_STATE;
+    gui_data->output_enabled = (uint8_t)(raw_value != 0U ? 1U : 0U);
+  }
   gui_data->fault_state = (uint8_t)App_ReadUf4U16(UF4_ID_FAULT_STATE, 0U);
+  if (App_TryReadUf4U16(UF4_ID_FAULT_STATE, &raw_value) != 0U)
+  {
+    gui_data->valid_flags |= GUI_VALID_FAULT_STATE;
+    gui_data->fault_state = (uint8_t)raw_value;
+  }
   gui_data->state_machine_flags = App_ReadUf4U16(UF4_ID_STATE_MACHINE_FLAG_BITS, 0U);
+  if (App_TryReadUf4U16(UF4_ID_STATE_MACHINE_FLAG_BITS, &raw_value) != 0U)
+  {
+    gui_data->valid_flags |= GUI_VALID_STATE_MACHINE_FLAGS;
+    gui_data->state_machine_flags = raw_value;
+  }
   gui_data->state_machine_state = (uint8_t)App_ReadUf4U16(UF4_ID_STATE_MACHINE_STATE, 0U);
+  if (App_TryReadUf4U16(UF4_ID_STATE_MACHINE_STATE, &raw_value) != 0U)
+  {
+    gui_data->valid_flags |= GUI_VALID_STATE_MACHINE_STATE;
+    gui_data->state_machine_state = (uint8_t)raw_value;
+  }
   gui_data->duty_cmd = App_ReadUf4U16(UF4_ID_DUTY_CMD, 0U);
   gui_data->pwm_a_compare = App_ReadUf4U16(UF4_ID_PWM_A_COMPARE, 0U);
+  if (App_TryReadUf4U16(UF4_ID_PWM_A_COMPARE, &raw_value) != 0U)
+  {
+    gui_data->valid_flags |= GUI_VALID_PWM_A_COMPARE;
+    gui_data->pwm_a_compare = raw_value;
+  }
   gui_data->pwm_d_compare = App_ReadUf4U16(UF4_ID_PWM_D_COMPARE, 0U);
+  if (App_TryReadUf4U16(UF4_ID_PWM_D_COMPARE, &raw_value) != 0U)
+  {
+    gui_data->valid_flags |= GUI_VALID_PWM_D_COMPARE;
+    gui_data->pwm_d_compare = raw_value;
+  }
   gui_data->cpu_temp = App_ReadUf4Centi(UF4_ID_CORE_TEMPERATURE);
   gui_data->buck_temp = App_ReadUf4Centi(UF4_ID_TEMP1_TEMPERATURE);
   gui_data->boost_temp = App_ReadUf4Centi(UF4_ID_TEMP2_TEMPERATURE);
