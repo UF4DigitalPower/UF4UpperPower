@@ -18,10 +18,9 @@
 #include "bsp_lcd.h"
 #include "mdma.h"
 
-static uint16_t g_font_dma_buffer[540U * 176U] __attribute__((section(".sdram"), aligned(32)));
 #define LCD_FONT_CACHE_MAX_CELL_H     104U
-static MDMA_LinkNodeTypeDef g_font_mdma_nodes[LCD_FONT_CACHE_MAX_CELL_H - 1U]
-        __attribute__((section(".sdram"), aligned(32)));
+static uint16_t g_font_dma_buffer[540U * 176U] __attribute__((section(".sdram"), aligned(32)));
+static MDMA_LinkNodeTypeDef g_font_mdma_nodes[LCD_FONT_CACHE_MAX_CELL_H - 1U] __attribute__((section(".sdram"), aligned(32)));
 
 #define LCD_FONT_CACHE_SIZE_VALUE   144U
 #define LCD_FONT_CACHE_CELL_W       60U

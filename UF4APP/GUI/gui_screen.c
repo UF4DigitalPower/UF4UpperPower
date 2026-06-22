@@ -1,23 +1,32 @@
 #include "gui_internal.h"
+#include "logo_image.h"
 
 #include <stdio.h>
 #include <string.h>
 
 #include "bsp_font.h"
 #include "bsp_lcd.h"
+#include "main.h"
 
 static GUI_Data_t g_last_data;
 static uint8_t g_has_last;
 
 static uint8_t GUI_DataEqual(const GUI_Data_t *a, const GUI_Data_t *b);
+static void GUI_DrawBootLogo(void);
+static void GUI_BlitLogoChunked(uint16_t x, uint16_t y, uint16_t w, uint16_t h, const uint16_t *pixels);
 
 void GUI_Init(void)
 {
     g_has_last = 0U;
     memset(&g_last_data, 0, sizeof(g_last_data));
+    GUI_DrawBootLogo();
+    LCD_Present();
+    HAL_Delay(700U);
     GUI_Clear();
     GUI_DrawMainPage(&g_last_data, NULL);
     LCD_Present();
+    GUI_Clear();
+    GUI_DrawMainPage(&g_last_data, NULL);
 }
 
 void GUI_Clear(void)
@@ -40,6 +49,8 @@ void GUI_DrawStatic(void)
 void GUI_Update(const GUI_Data_t *data)
 {
     uint8_t need_full_clear;
+    uint8_t page_changed;
+    uint8_t scope_page;
 
     if (data == NULL)
     {
@@ -51,7 +62,9 @@ void GUI_Update(const GUI_Data_t *data)
         return;
     }
 
-    need_full_clear = (uint8_t)(g_has_last == 0U || data->page != g_last_data.page);
+    page_changed = (uint8_t)(g_has_last == 0U || data->page != g_last_data.page);
+    scope_page = (uint8_t)(data->page != 0U);
+    need_full_clear = (uint8_t)(page_changed != 0U || scope_page != 0U);
 
     if (need_full_clear != 0U)
     {
@@ -67,6 +80,20 @@ void GUI_Update(const GUI_Data_t *data)
         GUI_DrawMainPage(data, g_has_last != 0U ? &g_last_data : NULL);
     }
     LCD_Present();
+
+    if (page_changed != 0U)
+    {
+        GUI_Clear();
+
+        if (data->page != 0U)
+        {
+            GUI_DrawWavePage();
+        }
+        else
+        {
+            GUI_DrawMainPage(data, g_has_last != 0U ? &g_last_data : NULL);
+        }
+    }
 
     g_last_data = *data;
     g_has_last = 1U;
@@ -425,4 +452,49 @@ const char *GUI_TopoText(const GUI_Data_t *data)
 static uint8_t GUI_DataEqual(const GUI_Data_t *a, const GUI_Data_t *b)
 {
     return (uint8_t)(memcmp(a, b, sizeof(GUI_Data_t)) == 0);
+}
+
+static void GUI_DrawBootLogo(void)
+{
+    uint16_t x;
+    uint16_t y;
+
+    GUI_Clear();
+
+    x = (uint16_t)((LCD_LOGICAL_LANDSCAPE_WIDTH - G_LOGO_IMAGE_DATA_W) / 2U);
+    y = (uint16_t)((LCD_LOGICAL_LANDSCAPE_HEIGHT - G_LOGO_IMAGE_DATA_H) / 2U);
+
+    GUI_BlitLogoChunked(
+        x,
+        y,
+        G_LOGO_IMAGE_DATA_W,
+        G_LOGO_IMAGE_DATA_H,
+        g_logo_image_data);
+}
+
+static void GUI_BlitLogoChunked(uint16_t x, uint16_t y, uint16_t w, uint16_t h, const uint16_t *pixels)
+{
+    uint16_t chunk_y = 0U;
+    const uint16_t chunk_h_max = 120U;
+
+    while (chunk_y < h)
+    {
+        uint16_t chunk_h = (uint16_t)(h - chunk_y);
+        const uint16_t *chunk_pixels;
+
+        if (chunk_h > chunk_h_max)
+        {
+            chunk_h = chunk_h_max;
+        }
+
+        chunk_pixels = pixels + (uint32_t)chunk_y * w;
+        LCD_BlitRectRGB565(
+            x,
+            (uint16_t)(y + chunk_y),
+            w,
+            chunk_h,
+            chunk_pixels);
+
+        chunk_y = (uint16_t)(chunk_y + chunk_h);
+    }
 }

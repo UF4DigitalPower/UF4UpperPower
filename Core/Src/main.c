@@ -74,6 +74,7 @@ static uint32_t g_gui_tick = 0U;
 #define APP_COMM_CONTROL_SYNC_PERIOD_MS 100U
 #define APP_COMM_READ_TO_STREAM_DELAY_MS 80U
 #define APP_COMM_START_TIMEOUT_MS 1000U
+#define APP_SETPOINT_APPLY_DELAY_MS 500U
 
 static uint32_t g_comm_control_sync_tick = 0U;
 static uint32_t g_comm_start_tick = 0U;
@@ -86,6 +87,10 @@ static float g_comm_last_ovp = -1.0F;
 static float g_comm_last_ocp = -1.0F;
 static float g_comm_last_otp = -1.0F;
 static uint8_t g_comm_last_output_enabled = 0xFFU;
+static float g_pending_vset = -1.0F;
+static float g_pending_iset = -1.0F;
+static uint32_t g_pending_vset_tick = 0U;
+static uint32_t g_pending_iset_tick = 0U;
 
 static void App_InitUf4ControlBaseline(void);
 
@@ -385,14 +390,27 @@ static void App_SyncUf4Controls(uint32_t now_tick)
   }
   g_comm_control_sync_tick = now_tick;
 
-  if (App_FloatChanged(vset, g_comm_last_vset, 0.005F) != 0U)
+  if (App_FloatChanged(vset, g_pending_vset, 0.005F) != 0U)
+  {
+    g_pending_vset = vset;
+    g_pending_vset_tick = now_tick;
+  }
+  if (App_FloatChanged(iset, g_pending_iset, 0.005F) != 0U)
+  {
+    g_pending_iset = iset;
+    g_pending_iset_tick = now_tick;
+  }
+
+  if (App_FloatChanged(vset, g_comm_last_vset, 0.005F) != 0U &&
+      (now_tick - g_pending_vset_tick) >= APP_SETPOINT_APPLY_DELAY_MS)
   {
     ids[count] = UF4_ID_SET_VOLTAGE_LIMIT;
     values[count] = App_FloatToMilliU16(vset);
     ++count;
     g_comm_last_vset = vset;
   }
-  if (App_FloatChanged(iset, g_comm_last_iset, 0.005F) != 0U)
+  if (App_FloatChanged(iset, g_comm_last_iset, 0.005F) != 0U &&
+      (now_tick - g_pending_iset_tick) >= APP_SETPOINT_APPLY_DELAY_MS)
   {
     ids[count] = UF4_ID_SET_CURRENT_LIMIT;
     values[count] = App_FloatToMilliU16(iset);
@@ -530,12 +548,18 @@ static void App_FillGuiFromUf4(GUI_Data_t *gui_data)
 
 static void App_InitUf4ControlBaseline(void)
 {
+  uint32_t now_tick = HAL_GetTick();
+
   g_comm_last_vset = SetpointInput_GetVset();
   g_comm_last_iset = SetpointInput_GetIset();
   g_comm_last_ovp = PanelKeys_GetOvp();
   g_comm_last_ocp = PanelKeys_GetOcp();
   g_comm_last_otp = PanelKeys_GetOtp();
   g_comm_last_output_enabled = PanelKeys_GetOutputEnabled();
+  g_pending_vset = g_comm_last_vset;
+  g_pending_iset = g_comm_last_iset;
+  g_pending_vset_tick = now_tick;
+  g_pending_iset_tick = now_tick;
 }
 
 /* USER CODE END 0 */
