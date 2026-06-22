@@ -477,8 +477,8 @@ static void App_FillGuiFromUf4(GUI_Data_t *gui_data)
     gui_data->efficiency = 0.0F;
   }
 
-  gui_data->vset = App_ReadUf4MilliFallback(UF4_ID_SET_VOLTAGE_LIMIT, SetpointInput_GetVset());
-  gui_data->iset = App_ReadUf4MilliFallback(UF4_ID_SET_CURRENT_LIMIT, SetpointInput_GetIset());
+  gui_data->vset = SetpointInput_GetVset();
+  gui_data->iset = SetpointInput_GetIset();
   gui_data->vset_digit = SetpointInput_GetVsetDigit();
   gui_data->iset_digit = SetpointInput_GetIsetDigit();
   gui_data->ovp = App_ReadUf4MilliFallback(UF4_ID_OVP_SET_VALUE, PanelKeys_GetOvp());
