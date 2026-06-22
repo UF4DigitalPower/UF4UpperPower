@@ -37,6 +37,8 @@
 #define GUI_FONT_SET_VALUE  34U
 #define GUI_FONT_LABEL      24U
 #define GUI_FONT_VALUE      144U
+#define GUI_TOP_VALUE_CELL_W 16U
+#define GUI_TILE_VALUE_CELL_W 12U
 #define GUI_SET_CELL_W      16U
 #define GUI_SET_TEXT_W      (5U * GUI_SET_CELL_W)
 
@@ -55,7 +57,11 @@
 #define GUI_DIRTY_CPU_TEMP  (1UL << 12)
 #define GUI_DIRTY_BUCK_TEMP (1UL << 13)
 #define GUI_DIRTY_BOOST_TEMP (1UL << 14)
-#define GUI_DIRTY_PERF      (1UL << 15)
+#define GUI_DIRTY_OTP       (1UL << 16)
+#define GUI_DIRTY_OVP       (1UL << 17)
+#define GUI_DIRTY_OCP       (1UL << 18)
+#define GUI_DIRTY_OUT       (1UL << 19)
+#define GUI_DIRTY_COMM      (1UL << 20)
 
 #define GUI_TOP_Y           4U
 #define GUI_TOP_H           54U
@@ -71,13 +77,17 @@
 #define GUI_RIGHT_COL2_W    132U
 #define GUI_SIDE_TILE_H     42U
 #define GUI_SIDE_TILE_GAP   3U
-#define GUI_PERF_Y          (GUI_BODY_Y + 2U * (GUI_ROW_H + GUI_ROW_GAP) + GUI_SIDE_TILE_H + GUI_SIDE_TILE_GAP)
-#define GUI_PERF_H          (2U * GUI_SIDE_TILE_H + GUI_SIDE_TILE_GAP)
 #define GUI_MAIN_VALUE_X_OFFSET 6U
 #define GUI_MAIN_VALUE_Y_OFFSET 20U
 #define GUI_MAIN_VALUE_W        300U
 #define GUI_MAIN_VALUE_H        104U
 #define GUI_MAIN_VALUE_CELL_W   60U
+#define GUI_FRONT_COPY_ENABLE   0U
+#define GUI_PANEL_FIELD_OTP     0U
+#define GUI_PANEL_FIELD_OVP     1U
+#define GUI_PANEL_FIELD_OCP     2U
+#define GUI_PANEL_FIELD_OUT     3U
+#define GUI_PANEL_FIELD_BLE     4U
 
 static GUI_Data_t g_last_data;
 static uint8_t g_gui_has_last;
@@ -138,7 +148,7 @@ static const GUI_TextTile_t g_status_tiles[] =
     {{GUI_RIGHT_COL2_X, GUI_BODY_Y + GUI_ROW_H + GUI_ROW_GAP, GUI_RIGHT_COL2_W, GUI_SIDE_TILE_H}, "CMD", "PASS"},
     {{GUI_RIGHT_COL2_X, GUI_BODY_Y + GUI_ROW_H + GUI_ROW_GAP + GUI_SIDE_TILE_H + GUI_SIDE_TILE_GAP, GUI_RIGHT_COL2_W, GUI_SIDE_TILE_H}, "STATE", "INIT"},
     {{GUI_RIGHT_COL2_X, GUI_BODY_Y + GUI_ROW_H + GUI_ROW_GAP + 2U * (GUI_SIDE_TILE_H + GUI_SIDE_TILE_GAP), GUI_RIGHT_COL2_W, GUI_SIDE_TILE_H}, "FAULT", "NA"},
-    {{GUI_RIGHT_COL2_X, GUI_BODY_Y + 2U * (GUI_ROW_H + GUI_ROW_GAP), GUI_RIGHT_COL2_W, GUI_SIDE_TILE_H}, "BLE", "NA"},
+    {{GUI_RIGHT_COL2_X, GUI_BODY_Y + 2U * (GUI_ROW_H + GUI_ROW_GAP), GUI_RIGHT_COL2_W, GUI_ROW_H}, "COM", "IDLE"},
 };
 
 static const GUI_ValueTile_t g_temp_tiles[] =
@@ -148,28 +158,26 @@ static const GUI_ValueTile_t g_temp_tiles[] =
     {{GUI_RIGHT_X, GUI_BODY_Y + 2U * (GUI_ROW_H + GUI_ROW_GAP) + 2U * (GUI_SIDE_TILE_H + GUI_SIDE_TILE_GAP), GUI_RIGHT_COL_W, GUI_SIDE_TILE_H}, "BOOST", "C"},
 };
 
-static const GUI_Rect_t g_perf_rect =
-{
-    GUI_RIGHT_COL2_X,
-    GUI_PERF_Y,
-    GUI_RIGHT_COL2_W,
-    GUI_PERF_H
-};
-
 static void GUI_DrawBorder(const GUI_Rect_t *rect);
+static void GUI_DrawBorderColor(const GUI_Rect_t *rect, uint32_t color);
 static void GUI_DrawPanel(const GUI_Rect_t *rect, uint32_t color);
 static void GUI_DrawCenteredText(const GUI_Rect_t *rect, const char *text, uint16_t font, uint32_t color, uint32_t bg);
-static void GUI_DrawSmallValueTile(const GUI_ValueTile_t *tile, float value);
+static void GUI_DrawFixedSlotText(const GUI_Rect_t *rect, const char *text, uint16_t font, uint16_t cell_w, uint32_t color, uint32_t bg);
+static void GUI_DrawSmallValueTile(const GUI_ValueTile_t *tile, float value, uint8_t full_redraw);
 static void GUI_DrawMainValueTile(const GUI_ValueTile_t *tile, float value);
 static void GUI_DrawMainValueTileDelta(const GUI_ValueTile_t *tile, float value, float previous_value);
 static void GUI_DrawSetValueTile(const GUI_ValueTile_t *tile, float value, uint8_t digit);
-static void GUI_DrawTempTile(const GUI_ValueTile_t *tile, float value);
+static void GUI_DrawProtectTile(const GUI_TextTile_t *tile, float value, const char *unit, uint8_t enabled, uint8_t selected);
+static void GUI_DrawOutputTile(const GUI_TextTile_t *tile, uint8_t enabled, uint8_t selected);
+static void GUI_DrawCommTile(const GUI_TextTile_t *tile, const GUI_Data_t *data);
+static void GUI_DrawTempTile(const GUI_ValueTile_t *tile, float value, uint8_t full_redraw);
 static void GUI_DrawTextTile(const GUI_TextTile_t *tile);
-static void GUI_DrawPerfTile(uint16_t fps, uint8_t cpu_usage);
-static void GUI_DrawDirtyTiles(const GUI_Data_t *data, uint32_t dirty_mask);
+static void GUI_DrawDirtyTiles(const GUI_Data_t *data, uint32_t dirty_mask, uint32_t full_redraw_mask);
+#if GUI_FRONT_COPY_ENABLE
 static void GUI_CopyDirtyTilesFromFront(uint32_t dirty_mask);
 static void GUI_CopyRectFromFront(const GUI_Rect_t *rect);
 static void GUI_CopyMainValueFromFront(const GUI_ValueTile_t *tile);
+#endif
 static void GUI_FormatMainValue(char *buf, uint32_t size, float value);
 static void GUI_FormatFixed2(char *buf, uint32_t size, float value);
 static uint8_t GUI_FormattedMainChanged(float current, float previous);
@@ -236,6 +244,8 @@ void GUI_Update(
         const GUI_Data_t *data)
 {
     uint32_t dirty_mask = 0U;
+    uint32_t actual_dirty_mask;
+    uint32_t full_redraw_mask = 0U;
     uint8_t vin_dirty;
     uint8_t iin_dirty;
     uint8_t pin_dirty;
@@ -248,10 +258,14 @@ void GUI_Update(
     uint8_t iset_dirty;
     uint8_t vset_digit_dirty;
     uint8_t iset_digit_dirty;
+    uint8_t ovp_dirty;
+    uint8_t ocp_dirty;
+    uint8_t otp_dirty;
+    uint8_t out_dirty;
+    uint8_t comm_dirty;
     uint8_t cpu_temp_dirty;
     uint8_t buck_temp_dirty;
     uint8_t boost_temp_dirty;
-    uint8_t perf_dirty;
 
     if(data == NULL)
     {
@@ -270,12 +284,33 @@ void GUI_Update(
     iset_dirty = (uint8_t)(!g_gui_has_last || GUI_FloatChanged(data->iset, g_last_data.iset));
     vset_digit_dirty = (uint8_t)(!g_gui_has_last || data->vset_digit != g_last_data.vset_digit);
     iset_digit_dirty = (uint8_t)(!g_gui_has_last || data->iset_digit != g_last_data.iset_digit);
+    ovp_dirty = (uint8_t)(!g_gui_has_last ||
+                          GUI_FormattedFixed2Changed(data->ovp, g_last_data.ovp) ||
+                          data->ovp_enabled != g_last_data.ovp_enabled ||
+                          data->panel_field != g_last_data.panel_field);
+    ocp_dirty = (uint8_t)(!g_gui_has_last ||
+                          GUI_FormattedFixed2Changed(data->ocp, g_last_data.ocp) ||
+                          data->ocp_enabled != g_last_data.ocp_enabled ||
+                          data->panel_field != g_last_data.panel_field);
+    otp_dirty = (uint8_t)(!g_gui_has_last ||
+                          GUI_FormattedFixed2Changed(data->otp, g_last_data.otp) ||
+                          data->otp_enabled != g_last_data.otp_enabled ||
+                          data->panel_field != g_last_data.panel_field);
+    out_dirty = (uint8_t)(!g_gui_has_last ||
+                          data->output_enabled != g_last_data.output_enabled ||
+                          data->panel_field != g_last_data.panel_field);
+    comm_dirty = (uint8_t)(!g_gui_has_last ||
+                           data->comm_state != g_last_data.comm_state ||
+                           data->comm_stream_enabled != g_last_data.comm_stream_enabled ||
+                           data->comm_last_tx_cmd != g_last_data.comm_last_tx_cmd ||
+                           data->comm_last_tx_ok != g_last_data.comm_last_tx_ok ||
+                           data->comm_tx_ok_count != g_last_data.comm_tx_ok_count ||
+                           data->comm_tx_fail_count != g_last_data.comm_tx_fail_count ||
+                           data->comm_rx_frame_count != g_last_data.comm_rx_frame_count ||
+                           data->comm_rx_error_count != g_last_data.comm_rx_error_count);
     cpu_temp_dirty = (uint8_t)(!g_gui_has_last || GUI_FormattedFixed2Changed(data->cpu_temp, g_last_data.cpu_temp));
     buck_temp_dirty = (uint8_t)(!g_gui_has_last || GUI_FormattedFixed2Changed(data->buck_temp, g_last_data.buck_temp));
     boost_temp_dirty = (uint8_t)(!g_gui_has_last || GUI_FormattedFixed2Changed(data->boost_temp, g_last_data.boost_temp));
-    perf_dirty = (uint8_t)(!g_gui_has_last ||
-                           data->fps != g_last_data.fps ||
-                           data->cpu_usage != g_last_data.cpu_usage);
 
     if (vin_dirty) { dirty_mask |= GUI_DIRTY_VIN; }
     if (iin_dirty) { dirty_mask |= GUI_DIRTY_IIN; }
@@ -289,35 +324,50 @@ void GUI_Update(
     if (iset_dirty) { dirty_mask |= GUI_DIRTY_ISET; }
     if (vset_digit_dirty) { dirty_mask |= GUI_DIRTY_VSET_DIG; }
     if (iset_digit_dirty) { dirty_mask |= GUI_DIRTY_ISET_DIG; }
+    if (ovp_dirty) { dirty_mask |= GUI_DIRTY_OVP; }
+    if (ocp_dirty) { dirty_mask |= GUI_DIRTY_OCP; }
+    if (otp_dirty) { dirty_mask |= GUI_DIRTY_OTP; }
+    if (out_dirty) { dirty_mask |= GUI_DIRTY_OUT; }
+    if (comm_dirty) { dirty_mask |= GUI_DIRTY_COMM; }
     if (cpu_temp_dirty) { dirty_mask |= GUI_DIRTY_CPU_TEMP; }
     if (buck_temp_dirty) { dirty_mask |= GUI_DIRTY_BUCK_TEMP; }
     if (boost_temp_dirty) { dirty_mask |= GUI_DIRTY_BOOST_TEMP; }
-    if (perf_dirty) { dirty_mask |= GUI_DIRTY_PERF; }
+    actual_dirty_mask = dirty_mask;
 
-    if (dirty_mask == 0U)
+    if (dirty_mask == 0U && g_draw_buffer_stale_mask == 0U)
     {
         return;
     }
 
+#if GUI_FRONT_COPY_ENABLE
     if (g_draw_buffer_stale_mask != 0U)
     {
         GUI_CopyDirtyTilesFromFront(g_draw_buffer_stale_mask);
         g_draw_buffer_stale_mask = 0U;
     }
+#else
+    full_redraw_mask = g_draw_buffer_stale_mask;
+    dirty_mask |= full_redraw_mask;
+    g_draw_buffer_stale_mask = 0U;
+#endif
+    if (!g_gui_has_last)
+    {
+        full_redraw_mask |= dirty_mask;
+    }
 
-    GUI_DrawDirtyTiles(data, dirty_mask);
+    GUI_DrawDirtyTiles(data, dirty_mask, full_redraw_mask);
     g_last_data = *data;
     LCD_Present();
-    if (g_gui_has_last)
-    {
-        g_draw_buffer_stale_mask |= dirty_mask;
-    }
-    else
+
+    if (!g_gui_has_last)
     {
         g_draw_buffer_stale_mask = 0U;
-        GUI_DrawDirtyTiles(data, dirty_mask);
+        GUI_DrawDirtyTiles(data, dirty_mask, dirty_mask);
         g_gui_has_last = 1U;
+        return;
     }
+
+    g_draw_buffer_stale_mask |= actual_dirty_mask;
 }
 
 static void GUI_DrawPanel(const GUI_Rect_t *rect, uint32_t color)
@@ -334,6 +384,11 @@ static void GUI_DrawPanel(const GUI_Rect_t *rect, uint32_t color)
 
 static void GUI_DrawBorder(const GUI_Rect_t *rect)
 {
+    GUI_DrawBorderColor(rect, GUI_BORDER_COLOR);
+}
+
+static void GUI_DrawBorderColor(const GUI_Rect_t *rect, uint32_t color)
+{
     uint16_t x2 =
         (uint16_t)(rect->x + rect->w - 1U);
     uint16_t y2 =
@@ -344,25 +399,25 @@ static void GUI_DrawBorder(const GUI_Rect_t *rect)
         rect->y,
         x2,
         rect->y,
-        GUI_BORDER_COLOR);
+        color);
     LCD_Rect_Fill(
         rect->x,
         y2,
         x2,
         y2,
-        GUI_BORDER_COLOR);
+        color);
     LCD_Rect_Fill(
         rect->x,
         rect->y,
         rect->x,
         y2,
-        GUI_BORDER_COLOR);
+        color);
     LCD_Rect_Fill(
         x2,
         rect->y,
         x2,
         y2,
-        GUI_BORDER_COLOR);
+        color);
 }
 
 static void GUI_DrawCenteredText(
@@ -376,6 +431,8 @@ static void GUI_DrawCenteredText(
         LCD_MeasureFontString(
             text,
             font);
+    uint16_t text_min_row = 0U;
+    uint16_t text_h = font;
     uint16_t x =
         rect->x;
     uint16_t y =
@@ -386,7 +443,13 @@ static void GUI_DrawCenteredText(
         x = (uint16_t)(rect->x + (rect->w - text_w) / 2U);
     }
 
-    LCD_DrawFontStringDMA(
+    if (LCD_GetFontStringBBox(text, font, &text_min_row, &text_h) != 0U &&
+        rect->h > text_h)
+    {
+        y = (uint16_t)(rect->y + (rect->h - text_h) / 2U - text_min_row);
+    }
+
+    LCD_DrawFontStringDMATight(
         x,
         y,
         (uint16_t)(rect->x + rect->w - x),
@@ -397,7 +460,75 @@ static void GUI_DrawCenteredText(
         bg);
 }
 
-static void GUI_DrawSmallValueTile(const GUI_ValueTile_t *tile, float value)
+static void GUI_DrawFixedSlotText(
+        const GUI_Rect_t *rect,
+        const char *text,
+        uint16_t font,
+        uint16_t cell_w,
+        uint32_t color,
+        uint32_t bg)
+{
+    uint16_t text_len;
+    uint16_t slot_w;
+    uint16_t start_x;
+    uint16_t y;
+    uint16_t text_min_row = 0U;
+    uint16_t text_h = font;
+    uint32_t i;
+
+    if (rect == NULL || text == NULL || cell_w == 0U)
+    {
+        return;
+    }
+
+    text_len = (uint16_t)strlen(text);
+    slot_w = (uint16_t)(text_len * cell_w);
+    start_x = rect->x;
+    if (slot_w < rect->w)
+    {
+        start_x = (uint16_t)(rect->x + (rect->w - slot_w) / 2U);
+    }
+
+    y = (uint16_t)(rect->y + (rect->h > font ? (rect->h - font) / 2U : 0U));
+    if (LCD_GetFontStringBBox(text, font, &text_min_row, &text_h) != 0U &&
+        rect->h > text_h)
+    {
+        y = (uint16_t)(rect->y + (rect->h - text_h) / 2U - text_min_row);
+    }
+
+    for (i = 0U; i < text_len; ++i)
+    {
+        char cell_text[2];
+        GUI_Rect_t cell_rect;
+        uint16_t glyph_w;
+        uint16_t glyph_x_offset = 0U;
+
+        cell_text[0] = text[i];
+        cell_text[1] = '\0';
+        glyph_w = LCD_MeasureFontString(cell_text, font);
+        if (glyph_w < cell_w)
+        {
+            glyph_x_offset = (uint16_t)((cell_w - glyph_w) / 2U);
+        }
+
+        cell_rect.x = (uint16_t)(start_x + i * cell_w + glyph_x_offset);
+        cell_rect.y = y;
+        cell_rect.w = (uint16_t)(cell_w - glyph_x_offset);
+        cell_rect.h = rect->h;
+
+        LCD_DrawFontStringDMATight(
+            cell_rect.x,
+            cell_rect.y,
+            cell_rect.w,
+            cell_rect.h,
+            cell_text,
+            font,
+            color,
+            bg);
+    }
+}
+
+static void GUI_DrawSmallValueTile(const GUI_ValueTile_t *tile, float value, uint8_t full_redraw)
 {
     char buf[16];
     GUI_Rect_t title_rect;
@@ -406,25 +537,37 @@ static void GUI_DrawSmallValueTile(const GUI_ValueTile_t *tile, float value)
 
     GUI_FormatMainValue(buf, sizeof(buf), value);
 
-    GUI_DrawPanel(&tile->rect, GUI_PANEL_COLOR);
+    if (full_redraw != 0U)
+    {
+        GUI_DrawPanel(&tile->rect, GUI_PANEL_COLOR);
 
-    title_rect.x = tile->rect.x;
-    title_rect.y = (uint16_t)(tile->rect.y + 2U);
-    title_rect.w = tile->rect.w;
-    title_rect.h = 18U;
-    GUI_DrawCenteredText(&title_rect, tile->title, GUI_FONT_TOP_LABEL, GUI_MUTED_COLOR, GUI_PANEL_COLOR);
+        title_rect.x = tile->rect.x;
+        title_rect.y = (uint16_t)(tile->rect.y + 2U);
+        title_rect.w = tile->rect.w;
+        title_rect.h = 18U;
+        GUI_DrawCenteredText(&title_rect, tile->title, GUI_FONT_TOP_LABEL, GUI_MUTED_COLOR, GUI_PANEL_COLOR);
+    }
 
-    value_rect.x = (uint16_t)(tile->rect.x + 6U);
-    value_rect.y = (uint16_t)(tile->rect.y + 18U);
+    value_rect.x = (uint16_t)(tile->rect.x + 8U);  // 上面5个标签中间值的位置对于标签的位置增量
+    value_rect.y = (uint16_t)(tile->rect.y + 15U);
     value_rect.w = (uint16_t)(tile->rect.w - 30U);
     value_rect.h = 34U;
-    LCD_DrawFontStringDMA(value_rect.x, value_rect.y, value_rect.w, value_rect.h, buf, GUI_FONT_TOP_VALUE, GUI_TEXT_COLOR, GUI_PANEL_COLOR);
+    LCD_Rect_Fill(
+        value_rect.x,
+        value_rect.y,
+        (uint16_t)(value_rect.x + value_rect.w - 1U),
+        (uint16_t)(value_rect.y + value_rect.h - 1U),
+        GUI_PANEL_COLOR);
+    GUI_DrawFixedSlotText(&value_rect, buf, GUI_FONT_TOP_VALUE, GUI_TOP_VALUE_CELL_W, GUI_TEXT_COLOR, GUI_PANEL_COLOR);
 
-    unit_rect.x = (uint16_t)(tile->rect.x + tile->rect.w - 22U);
-    unit_rect.y = (uint16_t)(tile->rect.y + 24U);
-    unit_rect.w = 18U;
-    unit_rect.h = 24U;
-    GUI_DrawCenteredText(&unit_rect, tile->unit, GUI_FONT_LABEL, GUI_ACCENT_COLOR, GUI_PANEL_COLOR);
+    if (full_redraw != 0U)
+    {
+        unit_rect.x = (uint16_t)(tile->rect.x + tile->rect.w - 22U);
+        unit_rect.y = (uint16_t)(tile->rect.y + 24U);
+        unit_rect.w = 18U;
+        unit_rect.h = 24U;
+        GUI_DrawCenteredText(&unit_rect, tile->unit, GUI_FONT_LABEL, GUI_ACCENT_COLOR, GUI_PANEL_COLOR);
+    }
 }
 
 static void GUI_DrawMainValueTile(const GUI_ValueTile_t *tile, float value)
@@ -575,13 +718,22 @@ static void GUI_DrawSetValueTile(const GUI_ValueTile_t *tile, float value, uint8
     }
 }
 
-static void GUI_DrawTempTile(const GUI_ValueTile_t *tile, float value)
+static void GUI_DrawProtectTile(const GUI_TextTile_t *tile, float value, const char *unit, uint8_t enabled, uint8_t selected)
 {
     char buf[16];
+    char value_buf[20];
     GUI_Rect_t title_rect;
     GUI_Rect_t value_rect;
 
-    GUI_FormatFixed2(buf, sizeof(buf), value);
+    if (enabled != 0U)
+    {
+        GUI_FormatFixed2(buf, sizeof(buf), value);
+        snprintf(value_buf, sizeof(value_buf), "%s%s", buf, unit);
+    }
+    else
+    {
+        snprintf(value_buf, sizeof(value_buf), "OFF");
+    }
 
     GUI_DrawPanel(&tile->rect, GUI_PANEL_COLOR);
 
@@ -591,11 +743,142 @@ static void GUI_DrawTempTile(const GUI_ValueTile_t *tile, float value)
     title_rect.h = 20U;
     GUI_DrawCenteredText(&title_rect, tile->title, GUI_FONT_TILE_TITLE, GUI_MUTED_COLOR, GUI_PANEL_COLOR);
 
+    value_rect.x = (uint16_t)(tile->rect.x + 58U);
+    value_rect.y = (uint16_t)(tile->rect.y + 9U);
+    value_rect.w = (uint16_t)(tile->rect.w - 62U);
+    value_rect.h = 24U;
+    GUI_DrawFixedSlotText(&value_rect, value_buf, GUI_FONT_TILE_VALUE, GUI_TILE_VALUE_CELL_W, GUI_TEXT_COLOR, GUI_PANEL_COLOR);
+
+    if (selected != 0U)
+    {
+        GUI_DrawBorderColor(&tile->rect, GUI_ACCENT_COLOR);
+    }
+}
+
+static void GUI_DrawOutputTile(const GUI_TextTile_t *tile, uint8_t enabled, uint8_t selected)
+{
+    GUI_TextTile_t output_tile = *tile;
+
+    output_tile.value = (enabled != 0U) ? "ON" : "OFF";
+    GUI_DrawTextTile(&output_tile);
+
+    if (selected != 0U)
+    {
+        GUI_DrawBorderColor(&tile->rect, GUI_ACCENT_COLOR);
+    }
+}
+
+static const char *GUI_CommStateText(uint8_t state)
+{
+    switch (state)
+    {
+        case 1U:
+            return "RD";
+        case 2U:
+            return "DLY";
+        case 3U:
+            return "SR";
+        case 4U:
+            return "RUN";
+        default:
+            return "IDLE";
+    }
+}
+
+static void GUI_DrawCommTile(const GUI_TextTile_t *tile, const GUI_Data_t *data)
+{
+    char line[5][24];
+    GUI_Rect_t title_rect;
+    GUI_Rect_t line_rect;
+    uint32_t i;
+
+    if (tile == NULL || data == NULL)
+    {
+        return;
+    }
+
+    snprintf(
+        line[0],
+        sizeof(line[0]),
+        "ST %s %s",
+        GUI_CommStateText(data->comm_state),
+        data->comm_stream_enabled != 0U ? "S" : "-");
+    snprintf(
+        line[1],
+        sizeof(line[1]),
+        "CMD %02X %s",
+        (unsigned int)data->comm_last_tx_cmd,
+        data->comm_last_tx_ok != 0U ? "OK" : "FAIL");
+    snprintf(
+        line[2],
+        sizeof(line[2]),
+        "TX  %lu",
+        (unsigned long)data->comm_tx_ok_count);
+    snprintf(
+        line[3],
+        sizeof(line[3]),
+        "FAIL %lu",
+        (unsigned long)data->comm_tx_fail_count);
+    snprintf(
+        line[4],
+        sizeof(line[4]),
+        "RX %lu E%lu",
+        (unsigned long)data->comm_rx_frame_count,
+        (unsigned long)data->comm_rx_error_count);
+
+    GUI_DrawPanel(&tile->rect, GUI_PANEL_COLOR);
+
+    title_rect.x = tile->rect.x;
+    title_rect.y = (uint16_t)(tile->rect.y + 4U);
+    title_rect.w = tile->rect.w;
+    title_rect.h = 20U;
+    GUI_DrawCenteredText(&title_rect, tile->title, GUI_FONT_TILE_VALUE, GUI_MUTED_COLOR, GUI_PANEL_COLOR);
+
+    line_rect.x = (uint16_t)(tile->rect.x + 6U);
+    line_rect.w = (uint16_t)(tile->rect.w - 12U);
+    line_rect.h = 18U;
+    for (i = 0U; i < 5U; ++i)
+    {
+        line_rect.y = (uint16_t)(tile->rect.y + 28U + i * 19U);
+        GUI_DrawCenteredText(
+            &line_rect,
+            line[i],
+            GUI_FONT_TOP_LABEL,
+            (i == 0U || i == 1U) ? GUI_ACCENT_COLOR : GUI_TEXT_COLOR,
+            GUI_PANEL_COLOR);
+    }
+}
+
+static void GUI_DrawTempTile(const GUI_ValueTile_t *tile, float value, uint8_t full_redraw)
+{
+    char buf[16];
+    GUI_Rect_t title_rect;
+    GUI_Rect_t value_rect;
+
+    GUI_FormatFixed2(buf, sizeof(buf), value);
+
+    if (full_redraw != 0U)
+    {
+        GUI_DrawPanel(&tile->rect, GUI_PANEL_COLOR);
+
+        title_rect.x = (uint16_t)(tile->rect.x + 4U);
+        title_rect.y = (uint16_t)(tile->rect.y + 11U);
+        title_rect.w = 52U;
+        title_rect.h = 20U;
+        GUI_DrawCenteredText(&title_rect, tile->title, GUI_FONT_TILE_TITLE, GUI_MUTED_COLOR, GUI_PANEL_COLOR);
+    }
+
     value_rect.x = (uint16_t)(tile->rect.x + 56U);
     value_rect.y = (uint16_t)(tile->rect.y + 9U);
     value_rect.w = (uint16_t)(tile->rect.w - 60U);
     value_rect.h = 24U;
-    GUI_DrawCenteredText(&value_rect, buf, GUI_FONT_TILE_VALUE, GUI_TEXT_COLOR, GUI_PANEL_COLOR);
+    LCD_Rect_Fill(
+        value_rect.x,
+        value_rect.y,
+        (uint16_t)(value_rect.x + value_rect.w - 1U),
+        (uint16_t)(value_rect.y + value_rect.h - 1U),
+        GUI_PANEL_COLOR);
+    GUI_DrawFixedSlotText(&value_rect, buf, GUI_FONT_TILE_VALUE, GUI_TILE_VALUE_CELL_W, GUI_TEXT_COLOR, GUI_PANEL_COLOR);
 }
 
 static void GUI_DrawTextTile(const GUI_TextTile_t *tile)
@@ -621,80 +904,36 @@ static void GUI_DrawTextTile(const GUI_TextTile_t *tile)
     GUI_DrawCenteredText(&value_rect, tile->value, GUI_FONT_TILE_VALUE, GUI_TEXT_COLOR, GUI_PANEL_COLOR);
 }
 
-static void GUI_DrawPerfTile(uint16_t fps, uint8_t cpu_usage)
-{
-    char fps_buf[16];
-    char cpu_buf[16];
-    GUI_Rect_t fps_label_rect;
-    GUI_Rect_t fps_value_rect;
-    GUI_Rect_t cpu_label_rect;
-    GUI_Rect_t cpu_value_rect;
-
-    if (cpu_usage > 100U)
-    {
-        cpu_usage = 100U;
-    }
-
-    snprintf(fps_buf, sizeof(fps_buf), "%03u", (unsigned int)fps);
-    snprintf(cpu_buf, sizeof(cpu_buf), "%03u%%", (unsigned int)cpu_usage);
-
-    GUI_DrawPanel(&g_perf_rect, GUI_PANEL_COLOR);
-
-    fps_label_rect.x = (uint16_t)(g_perf_rect.x + 6U);
-    fps_label_rect.y = (uint16_t)(g_perf_rect.y + 10U);
-    fps_label_rect.w = 48U;
-    fps_label_rect.h = 20U;
-    GUI_DrawCenteredText(&fps_label_rect, "FPS", GUI_FONT_TILE_TITLE, GUI_MUTED_COLOR, GUI_PANEL_COLOR);
-
-    fps_value_rect.x = (uint16_t)(g_perf_rect.x + 56U);
-    fps_value_rect.y = (uint16_t)(g_perf_rect.y + 8U);
-    fps_value_rect.w = (uint16_t)(g_perf_rect.w - 62U);
-    fps_value_rect.h = 24U;
-    GUI_DrawCenteredText(&fps_value_rect, fps_buf, GUI_FONT_TILE_VALUE, GUI_TEXT_COLOR, GUI_PANEL_COLOR);
-
-    cpu_label_rect.x = (uint16_t)(g_perf_rect.x + 6U);
-    cpu_label_rect.y = (uint16_t)(g_perf_rect.y + GUI_SIDE_TILE_H + GUI_SIDE_TILE_GAP + 10U);
-    cpu_label_rect.w = 48U;
-    cpu_label_rect.h = 20U;
-    GUI_DrawCenteredText(&cpu_label_rect, "CPU", GUI_FONT_TILE_TITLE, GUI_MUTED_COLOR, GUI_PANEL_COLOR);
-
-    cpu_value_rect.x = (uint16_t)(g_perf_rect.x + 56U);
-    cpu_value_rect.y = (uint16_t)(g_perf_rect.y + GUI_SIDE_TILE_H + GUI_SIDE_TILE_GAP + 8U);
-    cpu_value_rect.w = (uint16_t)(g_perf_rect.w - 62U);
-    cpu_value_rect.h = 24U;
-    GUI_DrawCenteredText(&cpu_value_rect, cpu_buf, GUI_FONT_TILE_VALUE, GUI_TEXT_COLOR, GUI_PANEL_COLOR);
-}
-
-static void GUI_DrawDirtyTiles(const GUI_Data_t *data, uint32_t dirty_mask)
+static void GUI_DrawDirtyTiles(const GUI_Data_t *data, uint32_t dirty_mask, uint32_t full_redraw_mask)
 {
     if ((dirty_mask & GUI_DIRTY_VIN) != 0U)
     {
-        GUI_DrawSmallValueTile(&g_top_tiles[0], data->vin);
+        GUI_DrawSmallValueTile(&g_top_tiles[0], data->vin, (uint8_t)((full_redraw_mask & GUI_DIRTY_VIN) != 0U));
     }
 
     if ((dirty_mask & GUI_DIRTY_IIN) != 0U)
     {
-        GUI_DrawSmallValueTile(&g_top_tiles[1], data->iin);
+        GUI_DrawSmallValueTile(&g_top_tiles[1], data->iin, (uint8_t)((full_redraw_mask & GUI_DIRTY_IIN) != 0U));
     }
 
     if ((dirty_mask & GUI_DIRTY_PIN) != 0U)
     {
-        GUI_DrawSmallValueTile(&g_top_tiles[2], data->pin);
+        GUI_DrawSmallValueTile(&g_top_tiles[2], data->pin, (uint8_t)((full_redraw_mask & GUI_DIRTY_PIN) != 0U));
     }
 
     if ((dirty_mask & GUI_DIRTY_EFF) != 0U)
     {
-        GUI_DrawSmallValueTile(&g_top_tiles[3], data->efficiency);
+        GUI_DrawSmallValueTile(&g_top_tiles[3], data->efficiency, (uint8_t)((full_redraw_mask & GUI_DIRTY_EFF) != 0U));
     }
 
     if ((dirty_mask & GUI_DIRTY_FAN) != 0U)
     {
-        GUI_DrawSmallValueTile(&g_top_tiles[4], data->fan);
+        GUI_DrawSmallValueTile(&g_top_tiles[4], data->fan, (uint8_t)((full_redraw_mask & GUI_DIRTY_FAN) != 0U));
     }
 
     if ((dirty_mask & GUI_DIRTY_VOUT) != 0U)
     {
-        if (g_gui_has_last)
+        if (g_gui_has_last && (full_redraw_mask & GUI_DIRTY_VOUT) == 0U)
         {
             GUI_DrawMainValueTileDelta(&g_main_tiles[0], data->vout, g_last_data.vout);
         }
@@ -706,7 +945,7 @@ static void GUI_DrawDirtyTiles(const GUI_Data_t *data, uint32_t dirty_mask)
 
     if ((dirty_mask & GUI_DIRTY_IOUT) != 0U)
     {
-        if (g_gui_has_last)
+        if (g_gui_has_last && (full_redraw_mask & GUI_DIRTY_IOUT) == 0U)
         {
             GUI_DrawMainValueTileDelta(&g_main_tiles[1], data->iout, g_last_data.iout);
         }
@@ -718,7 +957,7 @@ static void GUI_DrawDirtyTiles(const GUI_Data_t *data, uint32_t dirty_mask)
 
     if ((dirty_mask & GUI_DIRTY_POUT) != 0U)
     {
-        if (g_gui_has_last)
+        if (g_gui_has_last && (full_redraw_mask & GUI_DIRTY_POUT) == 0U)
         {
             GUI_DrawMainValueTileDelta(&g_main_tiles[2], data->pout, g_last_data.pout);
         }
@@ -738,27 +977,69 @@ static void GUI_DrawDirtyTiles(const GUI_Data_t *data, uint32_t dirty_mask)
         GUI_DrawSetValueTile(&g_set_tiles[1], data->iset, data->iset_digit);
     }
 
+    if ((dirty_mask & GUI_DIRTY_OTP) != 0U)
+    {
+        GUI_DrawProtectTile(
+            &g_status_tiles[0],
+            data->otp,
+            "C",
+            data->otp_enabled,
+            (uint8_t)(data->panel_field == GUI_PANEL_FIELD_OTP));
+    }
+
+    if ((dirty_mask & GUI_DIRTY_OVP) != 0U)
+    {
+        GUI_DrawProtectTile(
+            &g_status_tiles[1],
+            data->ovp,
+            "V",
+            data->ovp_enabled,
+            (uint8_t)(data->panel_field == GUI_PANEL_FIELD_OVP));
+    }
+
+    if ((dirty_mask & GUI_DIRTY_OCP) != 0U)
+    {
+        GUI_DrawProtectTile(
+            &g_status_tiles[2],
+            data->ocp,
+            "A",
+            data->ocp_enabled,
+            (uint8_t)(data->panel_field == GUI_PANEL_FIELD_OCP));
+    }
+
+    if ((dirty_mask & GUI_DIRTY_OUT) != 0U)
+    {
+        GUI_DrawOutputTile(
+            &g_status_tiles[3],
+            data->output_enabled,
+            (uint8_t)(data->panel_field == GUI_PANEL_FIELD_OUT));
+    }
+
+    if ((dirty_mask & GUI_DIRTY_COMM) != 0U)
+    {
+        GUI_DrawCommTile(
+            &g_status_tiles[9],
+            data);
+    }
+
     if ((dirty_mask & GUI_DIRTY_CPU_TEMP) != 0U)
     {
-        GUI_DrawTempTile(&g_temp_tiles[0], data->cpu_temp);
+        GUI_DrawTempTile(&g_temp_tiles[0], data->cpu_temp, (uint8_t)((full_redraw_mask & GUI_DIRTY_CPU_TEMP) != 0U));
     }
 
     if ((dirty_mask & GUI_DIRTY_BUCK_TEMP) != 0U)
     {
-        GUI_DrawTempTile(&g_temp_tiles[1], data->buck_temp);
+        GUI_DrawTempTile(&g_temp_tiles[1], data->buck_temp, (uint8_t)((full_redraw_mask & GUI_DIRTY_BUCK_TEMP) != 0U));
     }
 
     if ((dirty_mask & GUI_DIRTY_BOOST_TEMP) != 0U)
     {
-        GUI_DrawTempTile(&g_temp_tiles[2], data->boost_temp);
+        GUI_DrawTempTile(&g_temp_tiles[2], data->boost_temp, (uint8_t)((full_redraw_mask & GUI_DIRTY_BOOST_TEMP) != 0U));
     }
 
-    if ((dirty_mask & GUI_DIRTY_PERF) != 0U)
-    {
-        GUI_DrawPerfTile(data->fps, data->cpu_usage);
-    }
 }
 
+#if GUI_FRONT_COPY_ENABLE
 static void GUI_CopyDirtyTilesFromFront(uint32_t dirty_mask)
 {
     if ((dirty_mask & GUI_DIRTY_VIN) != 0U)
@@ -811,6 +1092,31 @@ static void GUI_CopyDirtyTilesFromFront(uint32_t dirty_mask)
         GUI_CopyRectFromFront(&g_set_tiles[1].rect);
     }
 
+    if ((dirty_mask & GUI_DIRTY_OTP) != 0U)
+    {
+        GUI_CopyRectFromFront(&g_status_tiles[0].rect);
+    }
+
+    if ((dirty_mask & GUI_DIRTY_OVP) != 0U)
+    {
+        GUI_CopyRectFromFront(&g_status_tiles[1].rect);
+    }
+
+    if ((dirty_mask & GUI_DIRTY_OCP) != 0U)
+    {
+        GUI_CopyRectFromFront(&g_status_tiles[2].rect);
+    }
+
+    if ((dirty_mask & GUI_DIRTY_OUT) != 0U)
+    {
+        GUI_CopyRectFromFront(&g_status_tiles[3].rect);
+    }
+
+    if ((dirty_mask & GUI_DIRTY_COMM) != 0U)
+    {
+        GUI_CopyRectFromFront(&g_status_tiles[9].rect);
+    }
+
     if ((dirty_mask & GUI_DIRTY_CPU_TEMP) != 0U)
     {
         GUI_CopyRectFromFront(&g_temp_tiles[0].rect);
@@ -826,10 +1132,6 @@ static void GUI_CopyDirtyTilesFromFront(uint32_t dirty_mask)
         GUI_CopyRectFromFront(&g_temp_tiles[2].rect);
     }
 
-    if ((dirty_mask & GUI_DIRTY_PERF) != 0U)
-    {
-        GUI_CopyRectFromFront(&g_perf_rect);
-    }
 }
 
 static void GUI_CopyRectFromFront(const GUI_Rect_t *rect)
@@ -845,6 +1147,7 @@ static void GUI_CopyMainValueFromFront(const GUI_ValueTile_t *tile)
         GUI_MAIN_VALUE_W,
         GUI_MAIN_VALUE_H);
 }
+#endif
 
 static void GUI_FormatMainValue(char *buf, uint32_t size, float value)
 {

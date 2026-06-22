@@ -10,7 +10,8 @@
 - GUI 逻辑坐标: 横屏 `640 x 480`。
 - 外部 SDRAM:
   - `0xC0000000` 起始保留 4 MB 给双 framebuffer。
-  - `.sdram` 大缓存放在 `SDRAM_SCRATCH`, 从 `0xC0400000` 开始。
+  - framebuffer MPU 配置为 non-cacheable，减少 LTDC/DMA2D 目标区 cache 维护。
+  - `.sdram` 大缓存放在 `SDRAM_SCRATCH`, 从 `0xC0400000` 开始，MPU 配置为 cacheable。
 
 ## 目录结构
 
@@ -19,13 +20,13 @@ Core/
   Inc, Src             CubeMX/HAL 生成的外设初始化、main、时钟、MPU、中断
 Drivers/              STM32 HAL/CMSIS 驱动
 UF4BSP/
-  bsp_lcd.*           LCD 抽象、LTDC framebuffer、DMA2D blit、显示方向映射
-  bsp_font.*          Teko 字体渲染、字体缓存、MDMA 预旋转缓存
+  bsp_lcd.*           LCD 抽象、LTDC framebuffer、DMA2D blit、显示方向映射、性能计数
+  bsp_font.*          Teko 字体渲染、字体缓存、tight blit、MDMA 预旋转缓存
   bsp_st7701.*        ST7701 面板初始化
 UF4APP/
   GUI/                数字电源界面、脏矩形刷新、性能显示
   TELECOM/            UF4COM 通信客户端、USART1 收发和寄存器缓存
-  USER/               编码器/按键设定值输入
+  USER/               VSET/ISET 编码器输入、5 键保护/输出面板输入
 UF4COM/               通信协议子模块
 script/, storage/     工程辅助文件
 ```
@@ -42,13 +43,14 @@ cmake --build cmake-build-debug
 
 `Core/Src/main.c` 中的主要初始化顺序：
 
-1. 配置 MPU，开启 I-Cache/D-Cache。
+1. 配置 MPU，开启 I-Cache/D-Cache，并启用 DWT cycle counter。
 2. 初始化 GPIO、DMA、MDMA、DMA2D、FMC、LTDC、QSPI、SPI、UART、TIM。
 3. `LCD_Init()` 配置 LCD 抽象层和 framebuffer。
 4. `ST7701Init()` 初始化面板。
-5. `SetpointInput_Init()` 启动两个旋转编码器。
-6. `HAL_TIM_Base_Start_IT(&htim6)` 用 TIM6 周期更新编码器/按键。
-7. `GUI_Init()` 绘制静态界面并初始化双缓冲内容。
+5. `SetpointInput_Init()` 启动 VSET/ISET 两个旋转编码器。
+6. `PanelKeys_Init()` 初始化 5 个面板按键。
+7. `HAL_TIM_Base_Start_IT(&htim6)` 用 TIM6 周期更新编码器和面板按键。
+8. `GUI_Init()` 绘制静态界面并初始化双缓冲内容。
 
 主循环按 `APP_GUI_UPDATE_PERIOD_MS = 20 ms` 尝试刷新 GUI；当前模拟遥测更新周期为 `APP_TELEMETRY_UPDATE_PERIOD_MS = 50 ms`，对应 20 Hz。数据流 20 Hz 是系统约束，不通过修改数据频率来换帧率。
 
@@ -58,12 +60,15 @@ GUI 位于 `UF4APP/GUI/gui.c`，当前布局是横屏 `640 x 480`：
 
 - 顶部: VIN/IIN/PIN/EFF/FAN。
 - 左侧大块: VO/IO/PO。
-- 右侧: VSET/ISET、状态块、温度块、FPS/CPU 性能块。
+- 右侧: VSET/ISET、OTP/OVP/OCP/OUT/BLE、状态块、温度块、FPS/CPU/GUI/DMA 性能块。
 - 使用 dirty mask 判断哪些区域需要重画。
-- 重画前通过 `LCD_CopyRectFromFrontToDraw()` 把未变化区域从 front buffer 同步到 draw buffer。
+- `GUI_FRONT_COPY_ENABLE` 当前为 `0`，双缓冲 stale 区域通过重画同步，不走 front-to-draw DMA2D 补拷。
 - 完成后 `LCD_Present()` 切换显示 buffer。
 
-这种方式避免每帧整屏重画，主要 CPU 压力来自数字字体绘制和缓存/总线同步。
+小字体显示做了两类优化：
+
+- `LCD_DrawFontStringDMATight()` 根据 glyph 实际 `min_row/height` 裁掉上下空白，只 blit 实际字形区域。
+- `GUI_DrawFixedSlotText()` 给小数字使用固定字符槽，避免 `1`、`.` 等窄字符导致数值左右跳动。
 
 ## LCD 与 DMA2D 热路径
 
@@ -74,9 +79,18 @@ GUI 位于 `UF4APP/GUI/gui.c`，当前布局是横屏 `640 x 480`：
 - `LCD_BlitRectRGB565()`：直接 RGB565 矩形拷贝。
 - `LCD_BlitRotatedRectRGB565()`：源数据需要先做 DCache clean，再由 DMA2D 搬到 framebuffer。
 - `LCD_BlitRotatedRectRGB565Clean()`：源数据已经是干净缓存，跳过源 DCache clean，运行时开销更低。
-- `LCD_CopyRectFromFrontToDraw()`：DMA2D 从 front buffer 拷贝脏矩形背景到 draw buffer。
+- `LCD_CopyRectFromFrontToDraw()`：保留为可选 front-to-draw 补拷路径；当前 GUI 默认不使用。
 
-曾测试过运行时 MDMA linked-list 旋转 blit，但实际 CPU 占用升高且帧率下降。因此运行时不启用 MDMA 旋转，`LCD_MDMA_ROTATE_ENABLE` 保持关闭。
+framebuffer 所在 4 MB MPU 区域为 non-cacheable，因此对 framebuffer 目标地址的 DCache clean/invalidate 会被跳过。`.sdram` scratch/cache 区仍为 cacheable，字体缓存、临时 buffer 和 MDMA node 仍按 DMA 方向做 cache 维护。
+
+`LCD_PerfGet()` / `LCD_PerfReset()` 提供 DMA2D busy-wait 和 DCache 维护周期统计。屏幕性能块当前显示：
+
+```text
+FPS
+CPU  主循环墙钟 busy 百分比
+GUI  GUI_Update() DWT 周期百分比
+DMA  DMA2D 轮询等待 DWT 周期百分比
+```
 
 ## 字体缓存策略
 
@@ -89,18 +103,7 @@ GUI 位于 `UF4APP/GUI/gui.c`，当前布局是横屏 `640 x 480`：
 - 预旋转阶段使用 MDMA linked-list，仅在缓存构建时运行。
 - 运行时直接 `LCD_BlitRotatedRectRGB565Clean()` + DMA2D 搬缓存，不再逐像素绘制或每帧 MDMA 旋转。
 
-这个设计的目标是把旋转成本从每帧热路径挪到初始化/首次使用阶段。
-
-## MDMA 使用边界
-
-当前 MDMA 的使用原则：
-
-- 可以用于字体缓存预旋转。
-- 不用于每帧 LCD blit 热路径。
-- 不改变遥测数据流频率。
-- 若 MDMA 预旋转失败，字体缓存会回退到 CPU 旋转，保证界面仍可显示。
-
-注意：`Core/Src/mdma.c` 中仍有整屏旋转实验代码和测试 buffer，当前 GUI 热路径不依赖它。后续如果清理 SDRAM 占用，可以评估是否移除这些实验 buffer。
+普通小字体使用 tight blit 和固定槽显示；大数字和设定值仍优先走预旋转 cache。
 
 ## 编码器输入
 
@@ -108,8 +111,46 @@ GUI 位于 `UF4APP/GUI/gui.c`，当前布局是横屏 `640 x 480`：
 
 - TIM4: VSET 编码器。
 - TIM2: ISET 编码器。
-- 按键切换当前编辑位。
+- 编码器 PUSH 切换当前编辑位，当前方向为反向循环。
 - 当前按一格机械 detent 只变化 1 个单位步进，通过 `SETPOINT_ENCODER_COUNTS_PER_STEP = 2` 对硬件计数做累积折算。
+
+VSET/ISET 不放入 5 键菜单，继续由各自编码器独立调整。
+
+## 5 键保护/输出输入
+
+`UF4APP/USER/panel_keys.c` 管理 `KEY_L/KEY_R/KEY_UP/KEY_DN/KEY_M`：
+
+```text
+选择顺序: OTP -> OVP -> OCP -> OUT -> BLE
+
+KEY_L / KEY_R:
+  切换当前选中框，GUI 用整框 accent 边框高亮。
+
+KEY_UP / KEY_DN:
+  OTP/OVP/OCP: 调整保护值，支持长按连发和长按加速。
+  OUT: UP=ON, DN=OFF。
+  BLE: UP=ON, DN=OFF。
+
+KEY_M 短按:
+  OTP/OVP/OCP: 无动作。
+  OUT: ON/OFF 切换，并产生 PANEL_APPLY_OUTPUT。
+  BLE: ON/OFF 切换，并产生 PANEL_APPLY_BLE。
+
+KEY_M 长按:
+  当前预留，暂不执行动作。
+```
+
+当前默认值：
+
+```text
+OTP: 80.00 C，步进 1 C
+OVP: 24.00 V，步进 0.1 V
+OCP: 15.00 A，步进 0.1 A
+OUT: OFF
+BLE: OFF
+```
+
+`PanelKeys_TakeApplyEvent()` 已保留给后续通信写寄存器使用。
 
 ## 通信
 
@@ -120,6 +161,8 @@ GUI 位于 `UF4APP/GUI/gui.c`，当前布局是横屏 `640 x 480`：
 - UART RX 使用中断逐字节喂入 parser。
 - 接收到 stream/read/write 响应后更新本地寄存器缓存和数据变化标志。
 
+当前 5 键保护/输出菜单已产生本地状态和 apply 事件，真实写寄存器仍待接入通信层。
+
 ## 性能优化记录
 
 当前显示性能优化的结论：
@@ -127,12 +170,14 @@ GUI 位于 `UF4APP/GUI/gui.c`，当前布局是横屏 `640 x 480`：
 - 不改 20 Hz 数据流。
 - 不在运行时使用 MDMA 做整屏/矩形旋转。
 - 大字体和设定值小字体预旋转缓存收益明显。
-- 缓存拆成不同用途的区域，便于查找和避免混用。
+- framebuffer 改为 non-cacheable，避免对 LTDC/DMA2D 目标区做大范围 cache 维护。
+- 双缓冲 stale 区域当前通过重画同步，避免 front-to-draw 补拷带来的 DMA2D 等待和总线压力。
+- 小字体 tight blit 和固定槽显示可减少空白区域 blit，并避免数值位置抖动。
 - DMA2D 是运行时搬运主力；MDMA 只承担缓存生成时的旋转工作。
-- DCache 一致性非常关键：CPU 写给 DMA 读之前要 clean，DMA 写回后 CPU 可能读取的区域要 invalidate。
 
 ## 后续可做
 
+- 将 `PanelKeys_TakeApplyEvent()` 接入 UF4COM 写寄存器，真正下发 OTP/OVP/OCP/OUT/BLE。
+- 将真实遥测接入 GUI 数据源后，保持 20 Hz 数据节奏，只优化绘制路径。
 - 清理 `Core/Src/mdma.c` 中未参与正式路径的整屏旋转测试 buffer，释放 SDRAM scratch。
 - 继续扩大预旋转缓存覆盖范围，但应优先缓存高频、尺寸大、背景固定的字体。
-- 将真实遥测接入 GUI 数据源后，保持 20 Hz 数据节奏，只优化绘制路径。

@@ -34,6 +34,7 @@ static uint32_t g_lcd_front_buffer_addr = LCD_FRAMEBUFFER_ADDR;
 static uint32_t g_lcd_draw_buffer_addr = LCD_FRAMEBUFFER_BACK_ADDR;
 static MDMA_HandleTypeDef hmdma_lcd_rotate;
 static uint8_t g_lcd_mdma_rotate_ready = 0U;
+static LCD_PerfCounters_t g_lcd_perf;
 
 uint32_t POINT_COLOR = WHITE;
 uint32_t BACK_COLOR = BLACK;
@@ -44,6 +45,20 @@ static uint32_t lcd_get_pixel_address(const uint32_t base_addr, const uint16_t x
 	}
 
 	return base_addr + LCD_DEV.pixsize * (LTDC_WIDTH * y + x);
+}
+
+static uint32_t lcd_cycle_now(void) {
+	return DWT->CYCCNT;
+}
+
+static uint8_t lcd_addr_is_framebuffer(const uint32_t addr) {
+	return (uint8_t)(addr >= LCD_FRAMEBUFFER_ADDR &&
+			addr < (LCD_FRAMEBUFFER_ADDR + LCD_FRAMEBUFFER_REGION_BYTES));
+}
+
+static void lcd_perf_add_dcache(const uint32_t start_cycle) {
+	g_lcd_perf.dcache_cycles += lcd_cycle_now() - start_cycle;
+	g_lcd_perf.dcache_call_count++;
 }
 
 static void lcd_map_rect_to_physical(const uint16_t sx, const uint16_t sy, const uint16_t ex, const uint16_t ey,
@@ -65,23 +80,37 @@ static void lcd_map_rect_to_physical(const uint16_t sx, const uint16_t sy, const
 static void lcd_clean_dcache(const uint32_t addr, const uint32_t size) {
 	uintptr_t aligned_addr;
 	uint32_t aligned_size;
+	uint32_t start_cycle;
+
+	if (size == 0U || lcd_addr_is_framebuffer(addr) != 0U) {
+		return;
+	}
 
 	aligned_addr = (uintptr_t) addr & ~(uintptr_t) 31U;
 	aligned_size = size + (uint32_t) ((uintptr_t) addr - aligned_addr);
 	aligned_size = (aligned_size + 31U) & ~31U;
 
+	start_cycle = lcd_cycle_now();
 	SCB_CleanDCache_by_Addr((uint32_t *) aligned_addr, (int32_t) aligned_size);
+	lcd_perf_add_dcache(start_cycle);
 }
 
 static void lcd_invalidate_dcache(const uint32_t addr, const uint32_t size) {
 	uintptr_t aligned_addr;
 	uint32_t aligned_size;
+	uint32_t start_cycle;
+
+	if (size == 0U || lcd_addr_is_framebuffer(addr) != 0U) {
+		return;
+	}
 
 	aligned_addr = (uintptr_t) addr & ~(uintptr_t) 31U;
 	aligned_size = size + (uint32_t) ((uintptr_t) addr - aligned_addr);
 	aligned_size = (aligned_size + 31U) & ~31U;
 
+	start_cycle = lcd_cycle_now();
 	SCB_InvalidateDCache_by_Addr((uint32_t *) aligned_addr, (int32_t) aligned_size);
+	lcd_perf_add_dcache(start_cycle);
 }
 
 static uint32_t lcd_get_rect_span_bytes(const uint32_t psx, const uint32_t psy, const uint32_t pex, const uint32_t pey) {
@@ -91,6 +120,7 @@ static uint32_t lcd_get_rect_span_bytes(const uint32_t psx, const uint32_t psy, 
 static void lcd_dma2d_copy_rgb565(const uint32_t src_addr, const uint32_t dst_addr,
 		const uint16_t width, const uint16_t height, const uint16_t dst_offline) {
 	uint32_t timeout = 0;
+	uint32_t wait_start;
 
 	while ((DMA2D->CR & DMA2D_CR_START) != 0U) {
 		timeout++;
@@ -114,12 +144,15 @@ static void lcd_dma2d_copy_rgb565(const uint32_t src_addr, const uint32_t dst_ad
 	DMA2D->NLR = (uint32_t) height | ((uint32_t) width << 16);
 	DMA2D->CR |= DMA2D_CR_START;
 
+	wait_start = lcd_cycle_now();
 	while ((DMA2D->ISR & (DMA2D_ISR_TCIF | DMA2D_ISR_TEIF | DMA2D_ISR_CEIF)) == 0U) {
 		timeout++;
 		if (timeout > 0X1FFFFFU) {
 			break;
 		}
 	}
+	g_lcd_perf.dma2d_wait_cycles += lcd_cycle_now() - wait_start;
+	g_lcd_perf.dma2d_call_count++;
 
 	DMA2D->IFCR = DMA2D_IFCR_CTCIF | DMA2D_IFCR_CTEIF | DMA2D_IFCR_CCEIF |
 				  DMA2D_IFCR_CCTCIF | DMA2D_IFCR_CAECIF | DMA2D_IFCR_CTWIF;
@@ -129,6 +162,7 @@ static void lcd_dma2d_copy_rect_rgb565(const uint32_t src_addr, const uint32_t d
 		const uint16_t width, const uint16_t height, const uint16_t src_offline,
 		const uint16_t dst_offline) {
 	uint32_t timeout = 0U;
+	uint32_t wait_start;
 
 	while ((DMA2D->CR & DMA2D_CR_START) != 0U) {
 		timeout++;
@@ -152,12 +186,15 @@ static void lcd_dma2d_copy_rect_rgb565(const uint32_t src_addr, const uint32_t d
 	DMA2D->NLR = (uint32_t) height | ((uint32_t) width << 16);
 	DMA2D->CR |= DMA2D_CR_START;
 
+	wait_start = lcd_cycle_now();
 	while ((DMA2D->ISR & (DMA2D_ISR_TCIF | DMA2D_ISR_TEIF | DMA2D_ISR_CEIF)) == 0U) {
 		timeout++;
 		if (timeout > 0X1FFFFFU) {
 			break;
 		}
 	}
+	g_lcd_perf.dma2d_wait_cycles += lcd_cycle_now() - wait_start;
+	g_lcd_perf.dma2d_call_count++;
 
 	DMA2D->IFCR = DMA2D_IFCR_CTCIF | DMA2D_IFCR_CTEIF | DMA2D_IFCR_CCEIF |
 				  DMA2D_IFCR_CCTCIF | DMA2D_IFCR_CAECIF | DMA2D_IFCR_CTWIF;
@@ -320,6 +357,18 @@ void LCD_SetDrawBufferAddress(uint32_t addr) {
 void LCD_SetFrameBuffers(const uint32_t front_addr, const uint32_t draw_addr) {
 	g_lcd_front_buffer_addr = front_addr;
 	g_lcd_draw_buffer_addr = draw_addr;
+}
+
+void LCD_PerfReset(void) {
+	(void) memset(&g_lcd_perf, 0, sizeof(g_lcd_perf));
+}
+
+void LCD_PerfGet(LCD_PerfCounters_t *counters) {
+	if (counters == NULL) {
+		return;
+	}
+
+	*counters = g_lcd_perf;
 }
 
 /**
@@ -594,6 +643,7 @@ void LCD_Rect_Fill(const uint16_t sx, const uint16_t sy, const uint16_t ex, cons
 	uint32_t span_bytes;
 	uint16_t offline;
 	uint32_t addr;
+	uint32_t wait_start;
 
 	lcd_map_rect_to_physical(sx, sy, ex, ey, &psx, &psy, &pex, &pey);
 
@@ -612,12 +662,15 @@ void LCD_Rect_Fill(const uint16_t sx, const uint16_t sy, const uint16_t ex, cons
 	DMA2D->NLR = (uint32_t) ((pey - psy + 1U) | ((pex - psx + 1U) << 16)); //设定行数寄存器
 	DMA2D->OCOLR = LCD_EncodeColor((uint16_t) color);									//设定输出颜色寄存器
 	DMA2D->CR |= 1 << 0;									//启动DMA2D
+	wait_start = lcd_cycle_now();
 	while ((DMA2D->ISR & (1 << 1)) == 0)					//等待传输完成
 	{
 		timeout++;
 		if (timeout > 0X1FFFFF)
 			break; //超时退出
 	}
+	g_lcd_perf.dma2d_wait_cycles += lcd_cycle_now() - wait_start;
+	g_lcd_perf.dma2d_call_count++;
 	DMA2D->IFCR |= 1 << 1; //清除传输完成标志
 }
 
@@ -630,6 +683,7 @@ void LCD_Color_Fill(uint16_t sx, uint16_t sy, uint16_t ex, uint16_t ey, uint16_t
 	uint32_t span_bytes;
 	uint16_t offline;
 	uint32_t addr;
+	uint32_t wait_start;
 	lcd_map_rect_to_physical(sx, sy, ex, ey, &psx, &psy, &pex, &pey);
 	offline = LTDC_WIDTH - (uint16_t) (pex - psx + 1U);
 	addr = g_lcd_draw_buffer_addr + LCD_DEV.pixsize * (LTDC_WIDTH * psy + psx);
@@ -647,12 +701,15 @@ void LCD_Color_Fill(uint16_t sx, uint16_t sy, uint16_t ex, uint16_t ey, uint16_t
 	DMA2D->OMAR = addr;										//输出存储器地址
 	DMA2D->NLR = (uint32_t) ((pey - psy + 1U) | ((pex - psx + 1U) << 16)); //设定行数寄存器
 	DMA2D->CR |= 1 << 0;									//启动DMA2D
+	wait_start = lcd_cycle_now();
 	while ((DMA2D->ISR & (1 << 1)) == 0)					//等待传输完成
 	{
 		timeout++;
 		if (timeout > 0X1FFFFF)
 			break; //超时退出
 	}
+	g_lcd_perf.dma2d_wait_cycles += lcd_cycle_now() - wait_start;
+	g_lcd_perf.dma2d_call_count++;
 	DMA2D->IFCR |= 1 << 1; //清除传输完成标志
 }
 

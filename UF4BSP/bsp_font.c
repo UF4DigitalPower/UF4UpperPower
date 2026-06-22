@@ -456,6 +456,67 @@ uint16_t LCD_MeasureFontString(
     return width;
 }
 
+uint8_t LCD_GetFontStringBBox(
+        const char *str,
+        uint16_t size,
+        uint16_t *min_row,
+        uint16_t *height)
+{
+    uint16_t top = size;
+    uint16_t bottom = 0U;
+    uint8_t found = 0U;
+
+    if (!str || !min_row || !height)
+    {
+        return 0U;
+    }
+
+    while (*str && *str != '\n')
+    {
+        const LCD_FontGlyph *glyph;
+
+        if (*str == ' ')
+        {
+            str++;
+            continue;
+        }
+
+        glyph =
+            Teko_SemiBold_FindGlyph(
+                *str,
+                size);
+
+        if (glyph)
+        {
+            uint16_t glyph_bottom =
+                (uint16_t)(glyph->min_row + glyph->height);
+
+            if (glyph->min_row < top)
+            {
+                top = glyph->min_row;
+            }
+            if (glyph_bottom > bottom)
+            {
+                bottom = glyph_bottom;
+            }
+            found = 1U;
+        }
+
+        str++;
+    }
+
+    if (found == 0U || bottom <= top)
+    {
+        *min_row = 0U;
+        *height = size;
+        return 0U;
+    }
+
+    *min_row = top;
+    *height = (uint16_t)(bottom - top);
+    return 1U;
+}
+
 void LCD_RenderFontStringToBuffer(
         uint16_t *buffer,
         uint16_t width,
@@ -680,6 +741,129 @@ void LCD_DrawFontStringDMA(
         y,
         w,
         h,
+        g_font_dma_buffer);
+}
+
+void LCD_DrawFontStringDMATight(
+        uint16_t x,
+        uint16_t y,
+        uint16_t w,
+        uint16_t h,
+        const char *str,
+        uint16_t size,
+        uint32_t color,
+        uint32_t bg_color)
+{
+    uint32_t i;
+    uint16_t bg;
+    uint16_t min_row = 0U;
+    uint16_t tight_h = h;
+
+    if (!str || w == 0U || h == 0U)
+    {
+        return;
+    }
+
+    if (LCD_GetFontStringBBox(str, size, &min_row, &tight_h) == 0U)
+    {
+        LCD_DrawFontStringDMA(x, y, w, h, str, size, color, bg_color);
+        return;
+    }
+    if (min_row >= h)
+    {
+        return;
+    }
+    if ((uint32_t)min_row + tight_h > h)
+    {
+        tight_h = (uint16_t)(h - min_row);
+    }
+    if ((uint32_t)w * tight_h > (uint32_t)(sizeof(g_font_dma_buffer) / sizeof(g_font_dma_buffer[0])))
+    {
+        return;
+    }
+
+    bg =
+        LCD_EncodeColor(
+            (uint16_t)(bg_color == LCD_FONT_BG_TRANSPARENT ? 0U : bg_color));
+
+    for (i = 0U; i < (uint32_t)w * tight_h; ++i)
+    {
+        g_font_dma_buffer[i] = bg;
+    }
+
+    {
+        uint16_t cursor = 0U;
+        uint16_t fg = LCD_EncodeColor((uint16_t)color);
+        const char *p = str;
+
+        while (*p)
+        {
+            const LCD_FontGlyph *glyph;
+            uint16_t row;
+            uint16_t col;
+
+            if (*p == '\n')
+            {
+                break;
+            }
+
+            glyph =
+                Teko_SemiBold_FindGlyph(
+                    *p,
+                    size);
+
+            if (glyph)
+            {
+                for (row = glyph->min_row;
+                     row < glyph->min_row + glyph->height;
+                     row++)
+                {
+                    uint16_t dst_y =
+                        (uint16_t)(row - min_row);
+
+                    if (row < min_row || dst_y >= tight_h)
+                    {
+                        continue;
+                    }
+
+                    for (col = glyph->min_col;
+                         col < glyph->min_col + glyph->width;
+                         col++)
+                    {
+                        uint16_t dst_x =
+                            (uint16_t)(cursor + col - glyph->min_col);
+
+                        if (dst_x >= w)
+                        {
+                            continue;
+                        }
+
+                        if (LCD_GlyphPixelIsSet(
+                                glyph->bitmap,
+                                size,
+                                row,
+                                col))
+                        {
+                            g_font_dma_buffer[(uint32_t)dst_y * w + dst_x] = fg;
+                        }
+                    }
+                }
+            }
+
+            cursor +=
+                LCD_GetFontAdvance(
+                    (uint8_t)*p,
+                    size);
+
+            p++;
+        }
+    }
+
+    LCD_BlitRectRGB565(
+        x,
+        (uint16_t)(y + min_row),
+        w,
+        tight_h,
         g_font_dma_buffer);
 }
 

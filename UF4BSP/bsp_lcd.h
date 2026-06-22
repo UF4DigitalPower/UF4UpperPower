@@ -24,6 +24,7 @@
 
 #define LCD_FRAMEBUFFER_ADDR      0xC0000000UL
 #define LCD_FRAMEBUFFER_BACK_ADDR (LCD_FRAMEBUFFER_ADDR + (2UL * 1024UL * 1024UL))
+#define LCD_FRAMEBUFFER_REGION_BYTES (4UL * 1024UL * 1024UL)
 #define LCD_FRAMEBUFFER_PIXELS    ((uint32_t)LTDC_WIDTH * (uint32_t)LTDC_HEIGHT)
 #define LCD_FRAMEBUFFER_BYTES     (LCD_FRAMEBUFFER_PIXELS * 2UL)
 
@@ -89,6 +90,13 @@ typedef struct {
     uint32_t pixsize;	//每个像素所占字节数
 } lcd_dev;
 
+typedef struct {
+	uint32_t dma2d_wait_cycles;
+	uint32_t dcache_cycles;
+	uint32_t dma2d_call_count;
+	uint32_t dcache_call_count;
+} LCD_PerfCounters_t;
+
 extern lcd_dev LCD_DEV; //管理LCD重要参数
 
 extern uint32_t POINT_COLOR; //默认红色 LCD的画笔颜色和背景色
@@ -117,6 +125,8 @@ void LCD_DrawPixelColor(uint16_t x, uint16_t y, uint32_t color);
 void LCD_Present(void);
 void LCD_PresentBuffer(uint32_t buffer_addr);
 int32_t LTDC_GetCurrentVisibleLine(void);
+void LCD_PerfReset(void);
+void LCD_PerfGet(LCD_PerfCounters_t *counters);
 
 #ifdef __cplusplus
 }

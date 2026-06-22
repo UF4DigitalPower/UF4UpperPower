@@ -27,6 +27,11 @@ extern "C" {
 
   uint16_t LCD_GetFontAdvance(uint8_t ch, uint16_t size);
   uint16_t LCD_MeasureFontString(const char *str, uint16_t size);
+  uint8_t LCD_GetFontStringBBox(
+          const char *str,
+          uint16_t size,
+          uint16_t *min_row,
+          uint16_t *height);
 
   void LCD_RenderFontStringToBuffer(
           uint16_t *buffer,
@@ -50,6 +55,16 @@ extern "C" {
           uint32_t color);
 
   void LCD_DrawFontStringDMA(
+          uint16_t x,
+          uint16_t y,
+          uint16_t w,
+          uint16_t h,
+          const char *str,
+          uint16_t size,
+          uint32_t color,
+          uint32_t bg_color);
+
+  void LCD_DrawFontStringDMATight(
           uint16_t x,
           uint16_t y,
           uint16_t w,

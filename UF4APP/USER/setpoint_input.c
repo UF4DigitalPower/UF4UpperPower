@@ -165,7 +165,9 @@ static void SetpointInput_UpdatePush(volatile SetpointInput_Channel_t *channel)
 
         if (channel->debounced_push_state != channel->idle_push_state)
         {
-            channel->digit = (uint8_t)((channel->digit + 1U) % SETPOINT_DIGIT_COUNT);
+            channel->digit = (channel->digit == 0U)
+                ? (uint8_t)(SETPOINT_DIGIT_COUNT - 1U)
+                : (uint8_t)(channel->digit - 1U);
         }
 
         channel->last_debounced_push_state = channel->debounced_push_state;

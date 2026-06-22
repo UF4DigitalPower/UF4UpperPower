@@ -24,6 +24,11 @@ uint32_t UF4PowerClient_TxFailCount(void);
 uint32_t UF4PowerClient_RxByteCount(void);
 uint32_t UF4PowerClient_RxFrameCount(void);
 uint32_t UF4PowerClient_RxErrorCount(void);
+uint32_t UF4PowerClient_RxOverflowCount(void);
+uint8_t UF4PowerClient_LastTxCmd(void);
+uint8_t UF4PowerClient_LastTxLen(void);
+bool UF4PowerClient_LastTxOk(void);
+void UF4PowerClient_UartIrqHandler(void);
 
 #ifdef __cplusplus
 }
