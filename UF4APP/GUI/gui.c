@@ -17,6 +17,7 @@
 #include "gui.h"
 
 #include <stdio.h>
+#include <string.h>
 
 #include "bap_font.h"
 #include "bsp_lcd.h"
@@ -72,9 +73,15 @@
 #define GUI_SIDE_TILE_GAP   3U
 #define GUI_PERF_Y          (GUI_BODY_Y + 2U * (GUI_ROW_H + GUI_ROW_GAP) + GUI_SIDE_TILE_H + GUI_SIDE_TILE_GAP)
 #define GUI_PERF_H          (2U * GUI_SIDE_TILE_H + GUI_SIDE_TILE_GAP)
+#define GUI_MAIN_VALUE_X_OFFSET 6U
+#define GUI_MAIN_VALUE_Y_OFFSET 20U
+#define GUI_MAIN_VALUE_W        300U
+#define GUI_MAIN_VALUE_H        104U
+#define GUI_MAIN_VALUE_CELL_W   60U
 
 static GUI_Data_t g_last_data;
 static uint8_t g_gui_has_last;
+static uint32_t g_draw_buffer_stale_mask;
 
 typedef struct
 {
@@ -154,14 +161,21 @@ static void GUI_DrawPanel(const GUI_Rect_t *rect, uint32_t color);
 static void GUI_DrawCenteredText(const GUI_Rect_t *rect, const char *text, uint16_t font, uint32_t color, uint32_t bg);
 static void GUI_DrawSmallValueTile(const GUI_ValueTile_t *tile, float value);
 static void GUI_DrawMainValueTile(const GUI_ValueTile_t *tile, float value);
+static void GUI_DrawMainValueTileDelta(const GUI_ValueTile_t *tile, float value, float previous_value);
 static void GUI_DrawSetValueTile(const GUI_ValueTile_t *tile, float value, uint8_t digit);
 static void GUI_DrawTempTile(const GUI_ValueTile_t *tile, float value);
 static void GUI_DrawTextTile(const GUI_TextTile_t *tile);
 static void GUI_DrawPerfTile(uint16_t fps, uint8_t cpu_usage);
 static void GUI_DrawDirtyTiles(const GUI_Data_t *data, uint32_t dirty_mask);
+static void GUI_CopyDirtyTilesFromFront(uint32_t dirty_mask);
+static void GUI_CopyRectFromFront(const GUI_Rect_t *rect);
+static void GUI_CopyMainValueFromFront(const GUI_ValueTile_t *tile);
 static void GUI_FormatMainValue(char *buf, uint32_t size, float value);
 static void GUI_FormatFixed2(char *buf, uint32_t size, float value);
+static uint8_t GUI_FormattedMainChanged(float current, float previous);
+static uint8_t GUI_FormattedFixed2Changed(float current, float previous);
 static uint8_t GUI_FloatChanged(float a, float b);
+static uint8_t GUI_FloatChangedBy(float a, float b, float threshold);
 
 void GUI_Init(void)
 {
@@ -172,6 +186,7 @@ void GUI_Init(void)
     GUI_Clear();
     GUI_DrawStatic();
     g_gui_has_last = 0U;
+    g_draw_buffer_stale_mask = 0U;
 }
 
 void GUI_Clear(void)
@@ -243,21 +258,21 @@ void GUI_Update(
         return;
     }
 
-    vin_dirty = (uint8_t)(!g_gui_has_last || GUI_FloatChanged(data->vin, g_last_data.vin));
-    iin_dirty = (uint8_t)(!g_gui_has_last || GUI_FloatChanged(data->iin, g_last_data.iin));
-    pin_dirty = (uint8_t)(!g_gui_has_last || GUI_FloatChanged(data->pin, g_last_data.pin));
-    efficiency_dirty = (uint8_t)(!g_gui_has_last || GUI_FloatChanged(data->efficiency, g_last_data.efficiency));
-    fan_dirty = (uint8_t)(!g_gui_has_last || GUI_FloatChanged(data->fan, g_last_data.fan));
-    vout_dirty = (uint8_t)(!g_gui_has_last || GUI_FloatChanged(data->vout, g_last_data.vout));
-    iout_dirty = (uint8_t)(!g_gui_has_last || GUI_FloatChanged(data->iout, g_last_data.iout));
-    pout_dirty = (uint8_t)(!g_gui_has_last || GUI_FloatChanged(data->pout, g_last_data.pout));
+    vin_dirty = (uint8_t)(!g_gui_has_last || GUI_FormattedMainChanged(data->vin, g_last_data.vin));
+    iin_dirty = (uint8_t)(!g_gui_has_last || GUI_FormattedMainChanged(data->iin, g_last_data.iin));
+    pin_dirty = (uint8_t)(!g_gui_has_last || GUI_FormattedMainChanged(data->pin, g_last_data.pin));
+    efficiency_dirty = (uint8_t)(!g_gui_has_last || GUI_FormattedMainChanged(data->efficiency, g_last_data.efficiency));
+    fan_dirty = (uint8_t)(!g_gui_has_last || GUI_FormattedMainChanged(data->fan, g_last_data.fan));
+    vout_dirty = (uint8_t)(!g_gui_has_last || GUI_FormattedMainChanged(data->vout, g_last_data.vout));
+    iout_dirty = (uint8_t)(!g_gui_has_last || GUI_FormattedMainChanged(data->iout, g_last_data.iout));
+    pout_dirty = (uint8_t)(!g_gui_has_last || GUI_FormattedMainChanged(data->pout, g_last_data.pout));
     vset_dirty = (uint8_t)(!g_gui_has_last || GUI_FloatChanged(data->vset, g_last_data.vset));
     iset_dirty = (uint8_t)(!g_gui_has_last || GUI_FloatChanged(data->iset, g_last_data.iset));
     vset_digit_dirty = (uint8_t)(!g_gui_has_last || data->vset_digit != g_last_data.vset_digit);
     iset_digit_dirty = (uint8_t)(!g_gui_has_last || data->iset_digit != g_last_data.iset_digit);
-    cpu_temp_dirty = (uint8_t)(!g_gui_has_last || GUI_FloatChanged(data->cpu_temp, g_last_data.cpu_temp));
-    buck_temp_dirty = (uint8_t)(!g_gui_has_last || GUI_FloatChanged(data->buck_temp, g_last_data.buck_temp));
-    boost_temp_dirty = (uint8_t)(!g_gui_has_last || GUI_FloatChanged(data->boost_temp, g_last_data.boost_temp));
+    cpu_temp_dirty = (uint8_t)(!g_gui_has_last || GUI_FormattedFixed2Changed(data->cpu_temp, g_last_data.cpu_temp));
+    buck_temp_dirty = (uint8_t)(!g_gui_has_last || GUI_FormattedFixed2Changed(data->buck_temp, g_last_data.buck_temp));
+    boost_temp_dirty = (uint8_t)(!g_gui_has_last || GUI_FormattedFixed2Changed(data->boost_temp, g_last_data.boost_temp));
     perf_dirty = (uint8_t)(!g_gui_has_last ||
                            data->fps != g_last_data.fps ||
                            data->cpu_usage != g_last_data.cpu_usage);
@@ -284,12 +299,25 @@ void GUI_Update(
         return;
     }
 
-    GUI_DrawDirtyTiles(data, dirty_mask);
+    if (g_draw_buffer_stale_mask != 0U)
+    {
+        GUI_CopyDirtyTilesFromFront(g_draw_buffer_stale_mask);
+        g_draw_buffer_stale_mask = 0U;
+    }
 
-    g_last_data = *data;
-    g_gui_has_last = 1U;
-    LCD_Present();
     GUI_DrawDirtyTiles(data, dirty_mask);
+    g_last_data = *data;
+    LCD_Present();
+    if (g_gui_has_last)
+    {
+        g_draw_buffer_stale_mask |= dirty_mask;
+    }
+    else
+    {
+        g_draw_buffer_stale_mask = 0U;
+        GUI_DrawDirtyTiles(data, dirty_mask);
+        g_gui_has_last = 1U;
+    }
 }
 
 static void GUI_DrawPanel(const GUI_Rect_t *rect, uint32_t color)
@@ -409,13 +437,13 @@ static void GUI_DrawMainValueTile(const GUI_ValueTile_t *tile, float value)
 
     GUI_DrawPanel(&tile->rect, GUI_PANEL_DARK);
     LCD_DrawFontStringFixedDMA(
-        (uint16_t)(tile->rect.x + 6U),
-        (uint16_t)(tile->rect.y + 20U),
-        300U,
-        120U,
+        (uint16_t)(tile->rect.x + GUI_MAIN_VALUE_X_OFFSET),
+        (uint16_t)(tile->rect.y + GUI_MAIN_VALUE_Y_OFFSET),
+        GUI_MAIN_VALUE_W,
+        GUI_MAIN_VALUE_H,
         buf,
         GUI_FONT_VALUE,
-        60U,
+        GUI_MAIN_VALUE_CELL_W,
         GUI_TEXT_COLOR,
         GUI_PANEL_DARK);
 
@@ -432,6 +460,66 @@ static void GUI_DrawMainValueTile(const GUI_ValueTile_t *tile, float value)
     GUI_DrawCenteredText(&unit_rect, tile->unit, GUI_FONT_LABEL, GUI_ACCENT_COLOR, GUI_PANEL_DARK);
 
     GUI_DrawBorder(&tile->rect);
+}
+
+static void GUI_DrawMainValueTileDelta(const GUI_ValueTile_t *tile, float value, float previous_value)
+{
+    char buf[16];
+    char last_buf[16];
+    uint32_t i;
+    uint8_t changed = 0U;
+    const uint16_t text_x = (uint16_t)(tile->rect.x + GUI_MAIN_VALUE_X_OFFSET);
+    const uint16_t text_y = (uint16_t)(tile->rect.y + GUI_MAIN_VALUE_Y_OFFSET);
+    const uint16_t text_h = GUI_MAIN_VALUE_H;
+    const uint16_t cell_w = GUI_MAIN_VALUE_CELL_W;
+    const uint16_t max_cells = 5U;
+
+    GUI_FormatMainValue(buf, sizeof(buf), value);
+    GUI_FormatMainValue(last_buf, sizeof(last_buf), previous_value);
+
+    if (strlen(buf) != strlen(last_buf))
+    {
+        GUI_DrawMainValueTile(tile, value);
+        return;
+    }
+
+    for (i = 0U; i < max_cells && buf[i] != '\0'; ++i)
+    {
+        char cell_text[2];
+
+        if (buf[i] == last_buf[i])
+        {
+            continue;
+        }
+
+        cell_text[0] = buf[i];
+        cell_text[1] = '\0';
+
+        LCD_Rect_Fill(
+            (uint16_t)(text_x + i * cell_w),
+            text_y,
+            (uint16_t)(text_x + (i + 1U) * cell_w - 1U),
+            (uint16_t)(text_y + text_h - 1U),
+            GUI_PANEL_DARK);
+
+        LCD_DrawFontStringFixedDMA(
+            (uint16_t)(text_x + i * cell_w),
+            text_y,
+            cell_w,
+            text_h,
+            cell_text,
+            GUI_FONT_VALUE,
+            cell_w,
+            GUI_TEXT_COLOR,
+            GUI_PANEL_DARK);
+
+        changed = 1U;
+    }
+
+    if (changed != 0U)
+    {
+        GUI_DrawBorder(&tile->rect);
+    }
 }
 
 static void GUI_DrawSetValueTile(const GUI_ValueTile_t *tile, float value, uint8_t digit)
@@ -606,17 +694,38 @@ static void GUI_DrawDirtyTiles(const GUI_Data_t *data, uint32_t dirty_mask)
 
     if ((dirty_mask & GUI_DIRTY_VOUT) != 0U)
     {
-        GUI_DrawMainValueTile(&g_main_tiles[0], data->vout);
+        if (g_gui_has_last)
+        {
+            GUI_DrawMainValueTileDelta(&g_main_tiles[0], data->vout, g_last_data.vout);
+        }
+        else
+        {
+            GUI_DrawMainValueTile(&g_main_tiles[0], data->vout);
+        }
     }
 
     if ((dirty_mask & GUI_DIRTY_IOUT) != 0U)
     {
-        GUI_DrawMainValueTile(&g_main_tiles[1], data->iout);
+        if (g_gui_has_last)
+        {
+            GUI_DrawMainValueTileDelta(&g_main_tiles[1], data->iout, g_last_data.iout);
+        }
+        else
+        {
+            GUI_DrawMainValueTile(&g_main_tiles[1], data->iout);
+        }
     }
 
     if ((dirty_mask & GUI_DIRTY_POUT) != 0U)
     {
-        GUI_DrawMainValueTile(&g_main_tiles[2], data->pout);
+        if (g_gui_has_last)
+        {
+            GUI_DrawMainValueTileDelta(&g_main_tiles[2], data->pout, g_last_data.pout);
+        }
+        else
+        {
+            GUI_DrawMainValueTile(&g_main_tiles[2], data->pout);
+        }
     }
 
     if ((dirty_mask & (GUI_DIRTY_VSET | GUI_DIRTY_VSET_DIG)) != 0U)
@@ -650,6 +759,93 @@ static void GUI_DrawDirtyTiles(const GUI_Data_t *data, uint32_t dirty_mask)
     }
 }
 
+static void GUI_CopyDirtyTilesFromFront(uint32_t dirty_mask)
+{
+    if ((dirty_mask & GUI_DIRTY_VIN) != 0U)
+    {
+        GUI_CopyRectFromFront(&g_top_tiles[0].rect);
+    }
+
+    if ((dirty_mask & GUI_DIRTY_IIN) != 0U)
+    {
+        GUI_CopyRectFromFront(&g_top_tiles[1].rect);
+    }
+
+    if ((dirty_mask & GUI_DIRTY_PIN) != 0U)
+    {
+        GUI_CopyRectFromFront(&g_top_tiles[2].rect);
+    }
+
+    if ((dirty_mask & GUI_DIRTY_EFF) != 0U)
+    {
+        GUI_CopyRectFromFront(&g_top_tiles[3].rect);
+    }
+
+    if ((dirty_mask & GUI_DIRTY_FAN) != 0U)
+    {
+        GUI_CopyRectFromFront(&g_top_tiles[4].rect);
+    }
+
+    if ((dirty_mask & GUI_DIRTY_VOUT) != 0U)
+    {
+        GUI_CopyMainValueFromFront(&g_main_tiles[0]);
+    }
+
+    if ((dirty_mask & GUI_DIRTY_IOUT) != 0U)
+    {
+        GUI_CopyMainValueFromFront(&g_main_tiles[1]);
+    }
+
+    if ((dirty_mask & GUI_DIRTY_POUT) != 0U)
+    {
+        GUI_CopyMainValueFromFront(&g_main_tiles[2]);
+    }
+
+    if ((dirty_mask & (GUI_DIRTY_VSET | GUI_DIRTY_VSET_DIG)) != 0U)
+    {
+        GUI_CopyRectFromFront(&g_set_tiles[0].rect);
+    }
+
+    if ((dirty_mask & (GUI_DIRTY_ISET | GUI_DIRTY_ISET_DIG)) != 0U)
+    {
+        GUI_CopyRectFromFront(&g_set_tiles[1].rect);
+    }
+
+    if ((dirty_mask & GUI_DIRTY_CPU_TEMP) != 0U)
+    {
+        GUI_CopyRectFromFront(&g_temp_tiles[0].rect);
+    }
+
+    if ((dirty_mask & GUI_DIRTY_BUCK_TEMP) != 0U)
+    {
+        GUI_CopyRectFromFront(&g_temp_tiles[1].rect);
+    }
+
+    if ((dirty_mask & GUI_DIRTY_BOOST_TEMP) != 0U)
+    {
+        GUI_CopyRectFromFront(&g_temp_tiles[2].rect);
+    }
+
+    if ((dirty_mask & GUI_DIRTY_PERF) != 0U)
+    {
+        GUI_CopyRectFromFront(&g_perf_rect);
+    }
+}
+
+static void GUI_CopyRectFromFront(const GUI_Rect_t *rect)
+{
+    LCD_CopyRectFromFrontToDraw(rect->x, rect->y, rect->w, rect->h);
+}
+
+static void GUI_CopyMainValueFromFront(const GUI_ValueTile_t *tile)
+{
+    LCD_CopyRectFromFrontToDraw(
+        (uint16_t)(tile->rect.x + GUI_MAIN_VALUE_X_OFFSET),
+        (uint16_t)(tile->rect.y + GUI_MAIN_VALUE_Y_OFFSET),
+        GUI_MAIN_VALUE_W,
+        GUI_MAIN_VALUE_H);
+}
+
 static void GUI_FormatMainValue(char *buf, uint32_t size, float value)
 {
     float abs_value = value;
@@ -674,7 +870,34 @@ static void GUI_FormatFixed2(char *buf, uint32_t size, float value)
     snprintf(buf, size, "%05.2f", value);
 }
 
+static uint8_t GUI_FormattedMainChanged(float current, float previous)
+{
+    char current_buf[16];
+    char previous_buf[16];
+
+    GUI_FormatMainValue(current_buf, sizeof(current_buf), current);
+    GUI_FormatMainValue(previous_buf, sizeof(previous_buf), previous);
+
+    return (uint8_t)(strcmp(current_buf, previous_buf) != 0);
+}
+
+static uint8_t GUI_FormattedFixed2Changed(float current, float previous)
+{
+    char current_buf[16];
+    char previous_buf[16];
+
+    GUI_FormatFixed2(current_buf, sizeof(current_buf), current);
+    GUI_FormatFixed2(previous_buf, sizeof(previous_buf), previous);
+
+    return (uint8_t)(strcmp(current_buf, previous_buf) != 0);
+}
+
 static uint8_t GUI_FloatChanged(float a, float b)
+{
+    return GUI_FloatChangedBy(a, b, 0.005F);
+}
+
+static uint8_t GUI_FloatChangedBy(float a, float b, float threshold)
 {
     float diff = a - b;
 
@@ -683,5 +906,5 @@ static uint8_t GUI_FloatChanged(float a, float b)
         diff = -diff;
     }
 
-    return diff >= 0.005F;
+    return diff >= threshold;
 }

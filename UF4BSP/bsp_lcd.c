@@ -119,6 +119,44 @@ static void lcd_dma2d_copy_rgb565(const uint32_t src_addr, const uint32_t dst_ad
 				  DMA2D_IFCR_CCTCIF | DMA2D_IFCR_CAECIF | DMA2D_IFCR_CTWIF;
 }
 
+static void lcd_dma2d_copy_rect_rgb565(const uint32_t src_addr, const uint32_t dst_addr,
+		const uint16_t width, const uint16_t height, const uint16_t src_offline,
+		const uint16_t dst_offline) {
+	uint32_t timeout = 0U;
+
+	while ((DMA2D->CR & DMA2D_CR_START) != 0U) {
+		timeout++;
+		if (timeout > 0X1FFFFFU) {
+			break;
+		}
+	}
+
+	timeout = 0U;
+	__HAL_DMA2D_CLEAR_FLAG(&hdma2d, DMA2D_FLAG_TC);
+	RCC->AHB1ENR |= 1 << 23;
+	DMA2D->CR &= ~(DMA2D_CR_START);
+	DMA2D->IFCR = DMA2D_IFCR_CTCIF | DMA2D_IFCR_CTEIF | DMA2D_IFCR_CCEIF |
+				  DMA2D_IFCR_CCTCIF | DMA2D_IFCR_CAECIF | DMA2D_IFCR_CTWIF;
+	DMA2D->CR = DMA2D_M2M;
+	DMA2D->FGPFCCR = LTDC_PIXEL_FORMAT_RGB565;
+	DMA2D->FGOR = src_offline;
+	DMA2D->OOR = dst_offline;
+	DMA2D->FGMAR = src_addr;
+	DMA2D->OMAR = dst_addr;
+	DMA2D->NLR = (uint32_t) height | ((uint32_t) width << 16);
+	DMA2D->CR |= DMA2D_CR_START;
+
+	while ((DMA2D->ISR & (DMA2D_ISR_TCIF | DMA2D_ISR_TEIF | DMA2D_ISR_CEIF)) == 0U) {
+		timeout++;
+		if (timeout > 0X1FFFFFU) {
+			break;
+		}
+	}
+
+	DMA2D->IFCR = DMA2D_IFCR_CTCIF | DMA2D_IFCR_CTEIF | DMA2D_IFCR_CCEIF |
+				  DMA2D_IFCR_CCTCIF | DMA2D_IFCR_CAECIF | DMA2D_IFCR_CTWIF;
+}
+
 void LCD_DrawPixelColor(uint16_t x, uint16_t y, uint32_t color) {
 	if (x >= LCD_DEV.width || y >= LCD_DEV.height) {
 		return;
@@ -169,9 +207,12 @@ void LCD_CopyRectFromFrontToDraw(uint16_t x, uint16_t y, uint16_t w, uint16_t h)
 	uint32_t psy;
 	uint32_t pex;
 	uint32_t pey;
-	uint32_t row_bytes;
-	uint32_t rows;
-	uint32_t row;
+	uint16_t phys_w;
+	uint16_t phys_h;
+	uint16_t offline;
+	uint32_t src_addr;
+	uint32_t dst_addr;
+	uint32_t span_bytes;
 
 	if (w == 0U || h == 0U) {
 		return;
@@ -192,14 +233,17 @@ void LCD_CopyRectFromFrontToDraw(uint16_t x, uint16_t y, uint16_t w, uint16_t h)
 
 	lcd_map_rect_to_physical(x, y, (uint16_t) (x + w - 1U), (uint16_t) (y + h - 1U), &psx, &psy, &pex, &pey);
 
-	row_bytes = (pex - psx + 1U) * LCD_DEV.pixsize;
-	rows = pey - psy + 1U;
+	phys_w = (uint16_t) (pex - psx + 1U);
+	phys_h = (uint16_t) (pey - psy + 1U);
+	offline = (uint16_t) (LTDC_WIDTH - phys_w);
+	src_addr = g_lcd_front_buffer_addr + LCD_DEV.pixsize * (LTDC_WIDTH * psy + psx);
+	dst_addr = g_lcd_draw_buffer_addr + LCD_DEV.pixsize * (LTDC_WIDTH * psy + psx);
+	span_bytes = lcd_get_rect_span_bytes(psx, psy, pex, pey);
 
-	for (row = 0U; row < rows; ++row) {
-		(void) memcpy((void *) (g_lcd_draw_buffer_addr + LCD_DEV.pixsize * (LTDC_WIDTH * (psy + row) + psx)),
-					  (const void *) (g_lcd_front_buffer_addr + LCD_DEV.pixsize * (LTDC_WIDTH * (psy + row) + psx)),
-					  row_bytes);
-	}
+	lcd_clean_dcache(src_addr, span_bytes);
+	lcd_clean_dcache(dst_addr, span_bytes);
+	lcd_dma2d_copy_rect_rgb565(src_addr, dst_addr, phys_w, phys_h, offline, offline);
+	lcd_invalidate_dcache(dst_addr, span_bytes);
 }
 
 void LCD_BlitRectRGB565(uint16_t x, uint16_t y, uint16_t w, uint16_t h, const uint16_t *pixels) {
@@ -269,20 +313,11 @@ void LCD_Present(void) {
 }
 
 void LCD_PresentBuffer(const uint32_t buffer_addr) {
-	lcd_clean_dcache(buffer_addr, LCD_FRAMEBUFFER_BYTES);
-
 	if (HAL_LTDC_SetAddress_NoReload(&hltdc, buffer_addr, 0) != HAL_OK) {
 		Error_Handler();
 	}
 
 	HAL_LTDC_Reload(&hltdc, LTDC_RELOAD_VERTICAL_BLANKING);
-
-	const uint32_t timeout = HAL_GetTick();
-	while ((LTDC->SRCR & LTDC_SRCR_VBR) != 0U) {
-		if (HAL_GetTick() - timeout > 50U) {
-			break;
-		}
-	}
 }
 
 void LCD_Init(void) {

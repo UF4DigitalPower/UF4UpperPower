@@ -74,6 +74,55 @@ static uint8_t g_perf_cpu_usage = 0U;
 static uint32_t g_perf_window_tick = 0U;
 static uint32_t g_perf_frame_count = 0U;
 static uint32_t g_perf_busy_ticks = 0U;
+static uint32_t g_gui_tick = 0U;
+static uint32_t g_sim_tick = 0U;
+static uint32_t g_sim_rand = 0x12345678UL;
+static float g_sim_vin = 48.0F;
+static float g_sim_iin = 6.10F;
+static float g_sim_efficiency = 91.0F;
+static float g_sim_fan = 38.0F;
+static float g_sim_vout = 21.33F;
+static float g_sim_iout = 12.21F;
+static float g_sim_cpu_temp = 45.0F;
+static float g_sim_buck_temp = 52.0F;
+static float g_sim_boost_temp = 49.0F;
+
+#define APP_GUI_UPDATE_PERIOD_MS 33U
+#define APP_TELEMETRY_UPDATE_PERIOD_MS 200U
+
+static uint32_t App_NextRandom(void)
+{
+  g_sim_rand = g_sim_rand * 1664525UL + 1013904223UL;
+  return g_sim_rand;
+}
+
+static float App_RandomRange(float min_value, float max_value)
+{
+  uint32_t sample = (App_NextRandom() >> 8) & 0xFFFFUL;
+  float ratio = (float)sample / 65535.0F;
+  return min_value + ((max_value - min_value) * ratio);
+}
+
+static void App_UpdateSimulatedTelemetry(void)
+{
+  uint32_t now = HAL_GetTick();
+
+  if (now - g_sim_tick < APP_TELEMETRY_UPDATE_PERIOD_MS)
+  {
+    return;
+  }
+
+  g_sim_tick = now;
+  g_sim_vin = App_RandomRange(38.40F, 47.60F);
+  g_sim_iin = App_RandomRange(5.70F, 16.50F);
+  g_sim_efficiency = App_RandomRange(79.5F, 93.5F);
+  g_sim_fan = App_RandomRange(28.0F, 62.0F);
+  g_sim_vout = App_RandomRange(10.90F, 21.70F);
+  g_sim_iout = App_RandomRange(1.60F, 12.80F);
+  g_sim_cpu_temp = App_RandomRange(42.0F, 51.0F);
+  g_sim_buck_temp = App_RandomRange(48.0F, 60.0F);
+  g_sim_boost_temp = App_RandomRange(46.0F, 58.0F);
+}
 
 /* USER CODE END 0 */
 
@@ -135,6 +184,8 @@ int main(void)
   ST7701Init();
   GUI_Data_t gui_data;
   g_perf_window_tick = HAL_GetTick();
+  g_gui_tick = HAL_GetTick();
+  g_sim_tick = HAL_GetTick();
 
   SetpointInput_Init();
   HAL_TIM_Base_Start_IT(&htim6);
@@ -146,33 +197,47 @@ int main(void)
   while (1)
   {
     uint32_t loop_start_tick = HAL_GetTick();
+    uint32_t now_tick;
 
-    gui_data.vin = 48.0F;
-    gui_data.iin = 6.10F;
-    gui_data.pin = gui_data.vin * gui_data.iin;
-    gui_data.efficiency = 91.0F;
-    gui_data.fan = 38.0F;
+    App_UpdateSimulatedTelemetry();
 
-    gui_data.vout = 21.33F;
-    gui_data.iout = 12.21F;
-    gui_data.pout = gui_data.vout * gui_data.iout;
-    gui_data.power = gui_data.pout;
+    now_tick = HAL_GetTick();
+    if (now_tick - g_gui_tick >= APP_GUI_UPDATE_PERIOD_MS)
+    {
+      g_gui_tick += APP_GUI_UPDATE_PERIOD_MS;
+      if (now_tick - g_gui_tick >= APP_GUI_UPDATE_PERIOD_MS)
+      {
+        g_gui_tick = now_tick;
+      }
 
-    gui_data.vset = SetpointInput_GetVset();
-    gui_data.iset = SetpointInput_GetIset();
-    gui_data.vset_digit = SetpointInput_GetVsetDigit();
-    gui_data.iset_digit = SetpointInput_GetIsetDigit();
-    gui_data.cpu_temp = 0.0F;
-    gui_data.buck_temp = 0.0F;
-    gui_data.boost_temp = 0.0F;
-    gui_data.fps = g_perf_fps;
-    gui_data.cpu_usage = g_perf_cpu_usage;
+      gui_data.vin = g_sim_vin;
+      gui_data.iin = g_sim_iin;
+      gui_data.pin = gui_data.vin * gui_data.iin;
+      gui_data.efficiency = g_sim_efficiency;
+      gui_data.fan = g_sim_fan;
 
-    GUI_Update(
-            &gui_data);
+      gui_data.vout = g_sim_vout;
+      gui_data.iout = g_sim_iout;
+      gui_data.pout = gui_data.vout * gui_data.iout;
+      gui_data.power = gui_data.pout;
+
+      gui_data.vset = SetpointInput_GetVset();
+      gui_data.iset = SetpointInput_GetIset();
+      gui_data.vset_digit = SetpointInput_GetVsetDigit();
+      gui_data.iset_digit = SetpointInput_GetIsetDigit();
+      gui_data.cpu_temp = g_sim_cpu_temp;
+      gui_data.buck_temp = g_sim_buck_temp;
+      gui_data.boost_temp = g_sim_boost_temp;
+      gui_data.fps = g_perf_fps;
+      gui_data.cpu_usage = g_perf_cpu_usage;
+
+      GUI_Update(
+              &gui_data);
+
+      ++g_perf_frame_count;
+    }
 
     g_perf_busy_ticks += HAL_GetTick() - loop_start_tick;
-    ++g_perf_frame_count;
 
     if (HAL_GetTick() - g_perf_window_tick >= 1000U)
     {
@@ -188,7 +253,7 @@ int main(void)
       g_perf_window_tick = HAL_GetTick();
     }
 
-    HAL_Delay(2);
+    HAL_Delay(1);
 
     /* USER CODE END WHILE */
 
