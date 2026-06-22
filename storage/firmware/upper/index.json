@@ -3,6 +3,13 @@
   "kind": "Upper",
   "versions": [
     {
+      "version": "v1.0.0",
+      "date": "2026-06-22",
+      "channel": "stable",
+      "recommended": true,
+      "manifest_url": "/api/v1/firmware/upper/versions/v1.0.0"
+    },
+    {
       "version": "v0.0.3",
       "date": "2026-06-03",
       "channel": "beta",

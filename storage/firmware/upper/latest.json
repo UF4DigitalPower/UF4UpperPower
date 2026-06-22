@@ -1,7 +1,7 @@
 {
   "project": "F4CP",
   "kind": "Upper",
-  "latest": "v0.0.3",
-  "manifest_url": "/api/v1/firmware/upper/versions/v0.0.3",
-  "changelog_url": "/api/v1/firmware/upper/versions/v0.0.3/changelog"
+  "latest": "v1.0.0",
+  "manifest_url": "/api/v1/firmware/upper/versions/v1.0.0",
+  "changelog_url": "/api/v1/firmware/upper/versions/v1.0.0/changelog"
 }
