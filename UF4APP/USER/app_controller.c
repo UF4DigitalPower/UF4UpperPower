@@ -466,8 +466,7 @@ static bool AppController_RequestInitialStatusRead(void)
     UF4_ID_DUTY_CMD,
     UF4_ID_PWM_A_COMPARE,
     UF4_ID_PWM_D_COMPARE,
-    UF4_ID_FAN_SPEED,
-    UF4_ID_FAN_SET_VALUE
+    UF4_ID_FAN_SPEED
   };
 
   return UF4PowerClient_ReadU16Pairs(ids, (uint8_t)(sizeof(ids) / sizeof(ids[0])));
