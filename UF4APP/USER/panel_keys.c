@@ -7,6 +7,7 @@
 #include "panel_keys.h"
 
 #include "gpio.h"
+#include "setpoint_input.h"
 
 #define PANEL_KEY_DEBOUNCE_TICKS       3U
 #define PANEL_KEY_LONG_TICKS           50U
@@ -71,6 +72,16 @@ static uint8_t g_output_enabled = 0U;
 static PanelBleState_t g_ble_state = PANEL_BLE_OFF;
 static PanelPage_t g_page = PANEL_PAGE_MAIN;
 static PanelApplyEvent_t g_apply_event = PANEL_APPLY_NONE;
+static PanelScopeField_t g_scope_field = PANEL_SCOPE_FIELD_VSET;
+static uint8_t g_scope_timebase = 1U;
+static uint8_t g_scope_ch1_enabled = 1U;
+static uint8_t g_scope_ch2_enabled = 1U;
+static uint8_t g_scope_hold = 0U;
+static PanelScopeTrigger_t g_scope_trigger = PANEL_SCOPE_TRIGGER_AUTO;
+static PanelScopeSource_t g_scope_ch1_source = PANEL_SCOPE_SOURCE_VOUT;
+static PanelScopeSource_t g_scope_ch2_source = PANEL_SCOPE_SOURCE_IOUT;
+static uint8_t g_scope_ch1_scale = 2U;
+static uint8_t g_scope_ch2_scale = 2U;
 
 static void PanelKeys_UpdateKey(PanelKey_t *key);
 static uint8_t PanelKeys_ConsumePress(PanelKeyId_t key);
@@ -80,6 +91,11 @@ static void PanelKeys_SelectNext(void);
 static void PanelKeys_SelectPrevious(void);
 static void PanelKeys_AdjustSelected(int8_t dir);
 static void PanelKeys_ToggleSelected(void);
+static void PanelKeys_UpdateScopePage(void);
+static void PanelKeys_SelectScopeNext(void);
+static void PanelKeys_SelectScopePrevious(void);
+static void PanelKeys_AdjustScopeSelected(int8_t dir);
+static void PanelKeys_ToggleScopeSelected(void);
 static float PanelKeys_Clamp(float value, float min_value, float max_value);
 
 void PanelKeys_Init(void)
@@ -116,20 +132,7 @@ void PanelKeys_Update(void)
 
     if (g_page == PANEL_PAGE_SCOPE)
     {
-        if (PanelKeys_ConsumePress(PANEL_KEY_M) != 0U)
-        {
-            g_page = PANEL_PAGE_MAIN;
-        }
-        else
-        {
-            (void)PanelKeys_ConsumePress(PANEL_KEY_L);
-            (void)PanelKeys_ConsumePress(PANEL_KEY_R);
-            (void)PanelKeys_ConsumePress(PANEL_KEY_UP);
-            (void)PanelKeys_ConsumePress(PANEL_KEY_DN);
-            (void)PanelKeys_ConsumeRepeat(PANEL_KEY_UP);
-            (void)PanelKeys_ConsumeRepeat(PANEL_KEY_DN);
-            (void)PanelKeys_ConsumeLong(PANEL_KEY_M);
-        }
+        PanelKeys_UpdateScopePage();
         return;
     }
 
@@ -210,6 +213,56 @@ uint8_t PanelKeys_GetOutputEnabled(void)
 PanelBleState_t PanelKeys_GetBleState(void)
 {
     return g_ble_state;
+}
+
+PanelScopeField_t PanelKeys_GetScopeField(void)
+{
+    return g_scope_field;
+}
+
+uint8_t PanelKeys_GetScopeTimebase(void)
+{
+    return g_scope_timebase;
+}
+
+uint8_t PanelKeys_GetScopeCh1Enabled(void)
+{
+    return g_scope_ch1_enabled;
+}
+
+uint8_t PanelKeys_GetScopeCh2Enabled(void)
+{
+    return g_scope_ch2_enabled;
+}
+
+uint8_t PanelKeys_GetScopeHold(void)
+{
+    return g_scope_hold;
+}
+
+PanelScopeTrigger_t PanelKeys_GetScopeTrigger(void)
+{
+    return g_scope_trigger;
+}
+
+PanelScopeSource_t PanelKeys_GetScopeCh1Source(void)
+{
+    return g_scope_ch1_source;
+}
+
+PanelScopeSource_t PanelKeys_GetScopeCh2Source(void)
+{
+    return g_scope_ch2_source;
+}
+
+uint8_t PanelKeys_GetScopeCh1Scale(void)
+{
+    return g_scope_ch1_scale;
+}
+
+uint8_t PanelKeys_GetScopeCh2Scale(void)
+{
+    return g_scope_ch2_scale;
 }
 
 void PanelKeys_SetProtectionState(float ovp, float ocp, float otp, uint8_t ovp_enabled, uint8_t ocp_enabled, uint8_t otp_enabled)
@@ -394,6 +447,167 @@ static void PanelKeys_ToggleSelected(void)
             break;
         case PANEL_FIELD_SCOPE:
             g_page = PANEL_PAGE_SCOPE;
+            g_scope_field = PANEL_SCOPE_FIELD_VSET;
+            break;
+        default:
+            break;
+    }
+}
+
+/**
+  * @brief Consume keys with an independent focus model while the scope page is active.
+  */
+static void PanelKeys_UpdateScopePage(void)
+{
+    if (PanelKeys_ConsumePress(PANEL_KEY_L) != 0U)
+    {
+        PanelKeys_SelectScopePrevious();
+    }
+    if (PanelKeys_ConsumePress(PANEL_KEY_R) != 0U)
+    {
+        PanelKeys_SelectScopeNext();
+    }
+    if (PanelKeys_ConsumePress(PANEL_KEY_UP) != 0U ||
+        PanelKeys_ConsumeRepeat(PANEL_KEY_UP) != 0U)
+    {
+        PanelKeys_AdjustScopeSelected(1);
+    }
+    if (PanelKeys_ConsumePress(PANEL_KEY_DN) != 0U ||
+        PanelKeys_ConsumeRepeat(PANEL_KEY_DN) != 0U)
+    {
+        PanelKeys_AdjustScopeSelected(-1);
+    }
+
+    (void)PanelKeys_ConsumeLong(PANEL_KEY_M);
+    if (PanelKeys_ConsumePress(PANEL_KEY_M) != 0U)
+    {
+        PanelKeys_ToggleScopeSelected();
+    }
+}
+
+static void PanelKeys_SelectScopeNext(void)
+{
+    g_scope_field = (PanelScopeField_t)(((uint8_t)g_scope_field + 1U) % (uint8_t)PANEL_SCOPE_FIELD_COUNT);
+}
+
+static void PanelKeys_SelectScopePrevious(void)
+{
+    g_scope_field = (g_scope_field == PANEL_SCOPE_FIELD_VSET)
+        ? PANEL_SCOPE_FIELD_BACK
+        : (PanelScopeField_t)((uint8_t)g_scope_field - 1U);
+}
+
+static void PanelKeys_AdjustScopeSelected(int8_t dir)
+{
+    switch (g_scope_field)
+    {
+        case PANEL_SCOPE_FIELD_VSET:
+            SetpointInput_AdjustVset(dir);
+            break;
+        case PANEL_SCOPE_FIELD_ISET:
+            SetpointInput_AdjustIset(dir);
+            break;
+        case PANEL_SCOPE_FIELD_CH1:
+            if (dir >= 0)
+            {
+                g_scope_ch1_source = (PanelScopeSource_t)(((uint8_t)g_scope_ch1_source + 1U) % (uint8_t)PANEL_SCOPE_SOURCE_COUNT);
+            }
+            else
+            {
+                g_scope_ch1_source = (g_scope_ch1_source == PANEL_SCOPE_SOURCE_VOUT)
+                    ? PANEL_SCOPE_SOURCE_FAN
+                    : (PanelScopeSource_t)((uint8_t)g_scope_ch1_source - 1U);
+            }
+            break;
+        case PANEL_SCOPE_FIELD_CH2:
+            if (dir >= 0)
+            {
+                g_scope_ch2_source = (PanelScopeSource_t)(((uint8_t)g_scope_ch2_source + 1U) % (uint8_t)PANEL_SCOPE_SOURCE_COUNT);
+            }
+            else
+            {
+                g_scope_ch2_source = (g_scope_ch2_source == PANEL_SCOPE_SOURCE_VOUT)
+                    ? PANEL_SCOPE_SOURCE_FAN
+                    : (PanelScopeSource_t)((uint8_t)g_scope_ch2_source - 1U);
+            }
+            break;
+        case PANEL_SCOPE_FIELD_Y1:
+            if (dir >= 0 && g_scope_ch1_scale < 4U)
+            {
+                ++g_scope_ch1_scale;
+            }
+            else if (dir < 0 && g_scope_ch1_scale > 0U)
+            {
+                --g_scope_ch1_scale;
+            }
+            break;
+        case PANEL_SCOPE_FIELD_Y2:
+            if (dir >= 0 && g_scope_ch2_scale < 4U)
+            {
+                ++g_scope_ch2_scale;
+            }
+            else if (dir < 0 && g_scope_ch2_scale > 0U)
+            {
+                --g_scope_ch2_scale;
+            }
+            break;
+        case PANEL_SCOPE_FIELD_TIME:
+            if (dir >= 0 && g_scope_timebase < 4U)
+            {
+                ++g_scope_timebase;
+            }
+            else if (dir < 0 && g_scope_timebase > 0U)
+            {
+                --g_scope_timebase;
+            }
+            break;
+        case PANEL_SCOPE_FIELD_TRIG:
+            if (dir >= 0)
+            {
+                g_scope_trigger = (PanelScopeTrigger_t)(((uint8_t)g_scope_trigger + 1U) % (uint8_t)PANEL_SCOPE_TRIGGER_COUNT);
+            }
+            else
+            {
+                g_scope_trigger = (g_scope_trigger == PANEL_SCOPE_TRIGGER_AUTO)
+                    ? PANEL_SCOPE_TRIGGER_STATE
+                    : (PanelScopeTrigger_t)((uint8_t)g_scope_trigger - 1U);
+            }
+            break;
+        case PANEL_SCOPE_FIELD_HOLD:
+            g_scope_hold = (dir >= 0) ? 1U : 0U;
+            break;
+        case PANEL_SCOPE_FIELD_BACK:
+            break;
+        default:
+            break;
+    }
+}
+
+static void PanelKeys_ToggleScopeSelected(void)
+{
+    switch (g_scope_field)
+    {
+        case PANEL_SCOPE_FIELD_CH1:
+            g_scope_ch1_enabled = (uint8_t)!g_scope_ch1_enabled;
+            break;
+        case PANEL_SCOPE_FIELD_CH2:
+            g_scope_ch2_enabled = (uint8_t)!g_scope_ch2_enabled;
+            break;
+        case PANEL_SCOPE_FIELD_VSET:
+        case PANEL_SCOPE_FIELD_ISET:
+        case PANEL_SCOPE_FIELD_Y1:
+        case PANEL_SCOPE_FIELD_Y2:
+        case PANEL_SCOPE_FIELD_TIME:
+            PanelKeys_AdjustScopeSelected(1);
+            break;
+        case PANEL_SCOPE_FIELD_TRIG:
+            PanelKeys_AdjustScopeSelected(1);
+            break;
+        case PANEL_SCOPE_FIELD_HOLD:
+            g_scope_hold = (uint8_t)!g_scope_hold;
+            break;
+        case PANEL_SCOPE_FIELD_BACK:
+            g_page = PANEL_PAGE_MAIN;
             break;
         default:
             break;

@@ -76,7 +76,9 @@ void GUI_DrawFixedSlotText(const GUI_Rect_t *rect, const char *text, uint16_t fo
 void GUI_FormatMainValue(char *buf, uint32_t size, float value);
 void GUI_FormatFixed2(char *buf, uint32_t size, float value);
 void GUI_DrawTopTile(const GUI_ValueTile_t *tile, float value);
+void GUI_DrawTopTileValue(const GUI_ValueTile_t *tile, float value);
 void GUI_DrawMainTile(const GUI_ValueTile_t *tile, float value);
+void GUI_DrawMainTileValue(const GUI_ValueTile_t *tile, float value);
 void GUI_DrawSetTile(const GUI_ValueTile_t *tile, float value, uint8_t digit);
 void GUI_DrawProtectTile(const GUI_LabelTile_t *tile, float value, const char *unit, uint8_t enabled, uint8_t selected);
 void GUI_DrawStateTile(const GUI_LabelTile_t *tile, const char *value, uint16_t fill_color, uint8_t selected);
@@ -88,6 +90,6 @@ const char *GUI_FaultText(uint8_t fault);
 const char *GUI_TopoText(const GUI_Data_t *data);
 
 void GUI_DrawMainPage(const GUI_Data_t *data, const GUI_Data_t *last_data);
-void GUI_DrawWavePage(void);
+void GUI_DrawWavePage(const GUI_Data_t *data);
 
 #endif /* GUI_INTERNAL_H */

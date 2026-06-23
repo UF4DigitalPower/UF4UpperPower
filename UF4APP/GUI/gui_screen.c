@@ -12,6 +12,7 @@ static GUI_Data_t g_last_data;
 static uint8_t g_has_last;
 
 static uint8_t GUI_DataEqual(const GUI_Data_t *a, const GUI_Data_t *b);
+static uint8_t GUI_ScopeDataEqual(const GUI_Data_t *a, const GUI_Data_t *b);
 static void GUI_DrawBootLogo(void);
 static void GUI_BlitLogoChunked(uint16_t x, uint16_t y, uint16_t w, uint16_t h, const uint16_t *pixels);
 
@@ -38,11 +39,11 @@ void GUI_DrawStatic(void)
 {
     if (g_last_data.page != 0U)
     {
-        GUI_DrawWavePage();
+        GUI_DrawWavePage(&g_last_data);
     }
     else
     {
-        GUI_DrawMainPage(&g_last_data, g_has_last != 0U ? &g_last_data : NULL);
+        GUI_DrawMainPage(&g_last_data, NULL);
     }
 }
 
@@ -50,21 +51,29 @@ void GUI_Update(const GUI_Data_t *data)
 {
     uint8_t need_full_clear;
     uint8_t page_changed;
-    uint8_t scope_page;
+    uint8_t data_equal;
+    const GUI_Data_t *last_data;
 
     if (data == NULL)
     {
         return;
     }
 
-    if (g_has_last != 0U && GUI_DataEqual(&g_last_data, data) != 0U)
+    data_equal = 0U;
+    if (g_has_last != 0U)
+    {
+        data_equal = (data->page != 0U)
+            ? GUI_ScopeDataEqual(&g_last_data, data)
+            : GUI_DataEqual(&g_last_data, data);
+    }
+    if (data_equal != 0U)
     {
         return;
     }
 
     page_changed = (uint8_t)(g_has_last == 0U || data->page != g_last_data.page);
-    scope_page = (uint8_t)(data->page != 0U);
-    need_full_clear = (uint8_t)(page_changed != 0U || scope_page != 0U);
+    need_full_clear = page_changed;
+    last_data = (page_changed == 0U && g_has_last != 0U) ? &g_last_data : NULL;
 
     if (need_full_clear != 0U)
     {
@@ -73,11 +82,11 @@ void GUI_Update(const GUI_Data_t *data)
 
     if (data->page != 0U)
     {
-        GUI_DrawWavePage();
+        GUI_DrawWavePage(data);
     }
     else
     {
-        GUI_DrawMainPage(data, g_has_last != 0U ? &g_last_data : NULL);
+        GUI_DrawMainPage(data, last_data);
     }
     LCD_Present();
 
@@ -87,11 +96,11 @@ void GUI_Update(const GUI_Data_t *data)
 
         if (data->page != 0U)
         {
-            GUI_DrawWavePage();
+            GUI_DrawWavePage(data);
         }
         else
         {
-            GUI_DrawMainPage(data, g_has_last != 0U ? &g_last_data : NULL);
+            GUI_DrawMainPage(data, NULL);
         }
     }
 
@@ -258,6 +267,30 @@ void GUI_DrawTopTile(const GUI_ValueTile_t *tile, float value)
     GUI_DrawCenteredText(&unit_rect, tile->unit, GUI_FONT_LABEL, GUI_ACCENT_COLOR, GUI_PANEL_COLOR);
 }
 
+/**
+  * @brief Refresh only the numeric area of a top status tile.
+  */
+void GUI_DrawTopTileValue(const GUI_ValueTile_t *tile, float value)
+{
+    char buf[16];
+    GUI_Rect_t value_rect;
+
+    if (tile == NULL)
+    {
+        return;
+    }
+
+    GUI_FormatMainValue(buf, sizeof(buf), value);
+    value_rect = (GUI_Rect_t){(uint16_t)(tile->rect.x + 8U), (uint16_t)(tile->rect.y + 15U), (uint16_t)(tile->rect.w - 30U), 34U};
+
+    LCD_Rect_Fill(value_rect.x,
+                  value_rect.y,
+                  (uint16_t)(value_rect.x + value_rect.w - 1U),
+                  (uint16_t)(value_rect.y + value_rect.h - 1U),
+                  GUI_PANEL_COLOR);
+    GUI_DrawFixedSlotText(&value_rect, buf, GUI_FONT_TOP_VALUE, GUI_TOP_VALUE_CELL_W, GUI_TEXT_COLOR, GUI_PANEL_COLOR);
+}
+
 void GUI_DrawMainTile(const GUI_ValueTile_t *tile, float value)
 {
     char buf[16];
@@ -282,6 +315,31 @@ void GUI_DrawMainTile(const GUI_ValueTile_t *tile, float value)
     unit_rect = (GUI_Rect_t){(uint16_t)(tile->rect.x + tile->rect.w - 38U), (uint16_t)(tile->rect.y + 74U), 32U, 40U};
     GUI_DrawCenteredText(&title_rect, tile->title, GUI_FONT_LABEL, GUI_MUTED_COLOR, GUI_PANEL_DARK);
     GUI_DrawCenteredText(&unit_rect, tile->unit, GUI_FONT_LABEL, GUI_ACCENT_COLOR, GUI_PANEL_DARK);
+}
+
+/**
+  * @brief Refresh only the large numeric area of a main value tile.
+  */
+void GUI_DrawMainTileValue(const GUI_ValueTile_t *tile, float value)
+{
+    char buf[16];
+
+    if (tile == NULL)
+    {
+        return;
+    }
+
+    GUI_FormatMainValue(buf, sizeof(buf), value);
+    LCD_DrawFontStringFixedDMA(
+        (uint16_t)(tile->rect.x + GUI_MAIN_VALUE_X_OFFSET),
+        (uint16_t)(tile->rect.y + GUI_MAIN_VALUE_Y_OFFSET),
+        GUI_MAIN_VALUE_W,
+        GUI_MAIN_VALUE_H,
+        buf,
+        GUI_FONT_VALUE,
+        GUI_MAIN_VALUE_CELL_W,
+        GUI_TEXT_COLOR,
+        GUI_PANEL_DARK);
 }
 
 void GUI_DrawSetTile(const GUI_ValueTile_t *tile, float value, uint8_t digit)
@@ -452,6 +510,49 @@ const char *GUI_TopoText(const GUI_Data_t *data)
 static uint8_t GUI_DataEqual(const GUI_Data_t *a, const GUI_Data_t *b)
 {
     return (uint8_t)(memcmp(a, b, sizeof(GUI_Data_t)) == 0);
+}
+
+/**
+  * @brief Compare only fields that are rendered by the scope page.
+  */
+static uint8_t GUI_ScopeDataEqual(const GUI_Data_t *a, const GUI_Data_t *b)
+{
+    uint8_t scope_valid_mask = GUI_VALID_FAULT_STATE | GUI_VALID_STATE_MACHINE_STATE;
+
+    if (a->page != b->page ||
+        a->scope_field != b->scope_field ||
+        a->scope_timebase != b->scope_timebase ||
+        a->scope_ch1_enabled != b->scope_ch1_enabled ||
+        a->scope_ch2_enabled != b->scope_ch2_enabled ||
+        a->scope_hold != b->scope_hold ||
+        a->scope_trigger != b->scope_trigger ||
+        a->scope_ch1_source != b->scope_ch1_source ||
+        a->scope_ch2_source != b->scope_ch2_source ||
+        a->scope_ch1_scale != b->scope_ch1_scale ||
+        a->scope_ch2_scale != b->scope_ch2_scale ||
+        a->fault_state != b->fault_state ||
+        a->state_machine_state != b->state_machine_state ||
+        a->comm_rx_frame_count != b->comm_rx_frame_count ||
+        (a->valid_flags & scope_valid_mask) != (b->valid_flags & scope_valid_mask))
+    {
+        return 0U;
+    }
+
+    if (a->vin != b->vin ||
+        a->iin != b->iin ||
+        a->pin != b->pin ||
+        a->vout != b->vout ||
+        a->iout != b->iout ||
+        a->pout != b->pout ||
+        a->vset != b->vset ||
+        a->iset != b->iset ||
+        a->efficiency != b->efficiency ||
+        a->fan != b->fan)
+    {
+        return 0U;
+    }
+
+    return 1U;
 }
 
 static void GUI_DrawBootLogo(void)

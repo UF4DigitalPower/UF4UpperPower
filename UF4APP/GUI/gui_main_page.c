@@ -1,6 +1,7 @@
 #include "gui_internal.h"
 
 #include <stdio.h>
+#include <string.h>
 
 static const GUI_ValueTile_t g_top_tiles[] =
 {
@@ -46,10 +47,12 @@ static const GUI_ValueTile_t g_temp_tiles[] =
     {{GUI_RIGHT_X, GUI_BODY_Y + 2U * (GUI_ROW_H + GUI_ROW_GAP) + 2U * (GUI_SIDE_TILE_H + GUI_SIDE_TILE_GAP), GUI_RIGHT_COL_W, GUI_SIDE_TILE_H}, "BOOST", "C"},
 };
 
+static void GUI_DrawTopTiles(const GUI_Data_t *data, const GUI_Data_t *last_data);
+static void GUI_DrawMainTiles(const GUI_Data_t *data, const GUI_Data_t *last_data);
+static uint8_t GUI_MainValueTextChanged(float value, float last_value);
+
 void GUI_DrawMainPage(const GUI_Data_t *data, const GUI_Data_t *last_data)
 {
-    uint32_t i;
-    float top_values[sizeof(g_top_tiles) / sizeof(g_top_tiles[0])];
     char cmd_buf[8];
     uint8_t out_selected;
     uint8_t ble_selected;
@@ -61,20 +64,9 @@ void GUI_DrawMainPage(const GUI_Data_t *data, const GUI_Data_t *last_data)
         return;
     }
 
-    top_values[0] = data->vin;
-    top_values[1] = data->iin;
-    top_values[2] = data->pin;
-    top_values[3] = data->efficiency;
-    top_values[4] = data->fan;
+    GUI_DrawTopTiles(data, last_data);
 
-    for (i = 0U; i < sizeof(g_top_tiles) / sizeof(g_top_tiles[0]); ++i)
-    {
-        GUI_DrawTopTile(&g_top_tiles[i], top_values[i]);
-    }
-
-    GUI_DrawMainTile(&g_main_tiles[0], data->vout);
-    GUI_DrawMainTile(&g_main_tiles[1], data->iout);
-    GUI_DrawMainTile(&g_main_tiles[2], data->pout);
+    GUI_DrawMainTiles(data, last_data);
 
     GUI_DrawSetTile(&g_set_tiles[0], data->vset, data->vset_digit);
     GUI_DrawSetTile(&g_set_tiles[1], data->iset, data->iset_digit);
@@ -108,4 +100,82 @@ void GUI_DrawMainPage(const GUI_Data_t *data, const GUI_Data_t *last_data)
     GUI_DrawTempTile(&g_temp_tiles[0], data->cpu_temp);
     GUI_DrawTempTile(&g_temp_tiles[1], data->buck_temp);
     GUI_DrawTempTile(&g_temp_tiles[2], data->boost_temp);
+}
+
+/**
+  * @brief Draw top status tiles without repainting static labels on every refresh.
+  */
+static void GUI_DrawTopTiles(const GUI_Data_t *data, const GUI_Data_t *last_data)
+{
+    if (last_data == NULL)
+    {
+        GUI_DrawTopTile(&g_top_tiles[0], data->vin);
+        GUI_DrawTopTile(&g_top_tiles[1], data->iin);
+        GUI_DrawTopTile(&g_top_tiles[2], data->pin);
+        GUI_DrawTopTile(&g_top_tiles[3], data->efficiency);
+        GUI_DrawTopTile(&g_top_tiles[4], data->fan);
+        return;
+    }
+
+    if (GUI_MainValueTextChanged(data->vin, last_data->vin) != 0U)
+    {
+        GUI_DrawTopTileValue(&g_top_tiles[0], data->vin);
+    }
+    if (GUI_MainValueTextChanged(data->iin, last_data->iin) != 0U)
+    {
+        GUI_DrawTopTileValue(&g_top_tiles[1], data->iin);
+    }
+    if (GUI_MainValueTextChanged(data->pin, last_data->pin) != 0U)
+    {
+        GUI_DrawTopTileValue(&g_top_tiles[2], data->pin);
+    }
+    if (GUI_MainValueTextChanged(data->efficiency, last_data->efficiency) != 0U)
+    {
+        GUI_DrawTopTileValue(&g_top_tiles[3], data->efficiency);
+    }
+    if (GUI_MainValueTextChanged(data->fan, last_data->fan) != 0U)
+    {
+        GUI_DrawTopTileValue(&g_top_tiles[4], data->fan);
+    }
+}
+
+/**
+  * @brief Draw VO/IO/PO without repainting the whole black panel each tick.
+  */
+static void GUI_DrawMainTiles(const GUI_Data_t *data, const GUI_Data_t *last_data)
+{
+    if (last_data == NULL)
+    {
+        GUI_DrawMainTile(&g_main_tiles[0], data->vout);
+        GUI_DrawMainTile(&g_main_tiles[1], data->iout);
+        GUI_DrawMainTile(&g_main_tiles[2], data->pout);
+        return;
+    }
+
+    if (GUI_MainValueTextChanged(data->vout, last_data->vout) != 0U)
+    {
+        GUI_DrawMainTileValue(&g_main_tiles[0], data->vout);
+    }
+    if (GUI_MainValueTextChanged(data->iout, last_data->iout) != 0U)
+    {
+        GUI_DrawMainTileValue(&g_main_tiles[1], data->iout);
+    }
+    if (GUI_MainValueTextChanged(data->pout, last_data->pout) != 0U)
+    {
+        GUI_DrawMainTileValue(&g_main_tiles[2], data->pout);
+    }
+}
+
+/**
+  * @brief Compare the text that will be displayed, not raw float jitter.
+  */
+static uint8_t GUI_MainValueTextChanged(float value, float last_value)
+{
+    char value_text[16];
+    char last_text[16];
+
+    GUI_FormatMainValue(value_text, sizeof(value_text), value);
+    GUI_FormatMainValue(last_text, sizeof(last_text), last_value);
+
+    return (uint8_t)(strcmp(value_text, last_text) != 0);
 }

@@ -44,6 +44,44 @@ typedef enum
     PANEL_PAGE_SCOPE
 } PanelPage_t;
 
+typedef enum
+{
+    PANEL_SCOPE_FIELD_VSET = 0,
+    PANEL_SCOPE_FIELD_ISET,
+    PANEL_SCOPE_FIELD_CH1,
+    PANEL_SCOPE_FIELD_CH2,
+    PANEL_SCOPE_FIELD_Y1,
+    PANEL_SCOPE_FIELD_Y2,
+    PANEL_SCOPE_FIELD_TIME,
+    PANEL_SCOPE_FIELD_TRIG,
+    PANEL_SCOPE_FIELD_HOLD,
+    PANEL_SCOPE_FIELD_BACK,
+    PANEL_SCOPE_FIELD_COUNT
+} PanelScopeField_t;
+
+typedef enum
+{
+    PANEL_SCOPE_SOURCE_VOUT = 0,
+    PANEL_SCOPE_SOURCE_IOUT,
+    PANEL_SCOPE_SOURCE_POUT,
+    PANEL_SCOPE_SOURCE_VIN,
+    PANEL_SCOPE_SOURCE_IIN,
+    PANEL_SCOPE_SOURCE_PIN,
+    PANEL_SCOPE_SOURCE_VSET,
+    PANEL_SCOPE_SOURCE_ISET,
+    PANEL_SCOPE_SOURCE_EFF,
+    PANEL_SCOPE_SOURCE_FAN,
+    PANEL_SCOPE_SOURCE_COUNT
+} PanelScopeSource_t;
+
+typedef enum
+{
+    PANEL_SCOPE_TRIGGER_AUTO = 0,
+    PANEL_SCOPE_TRIGGER_FAULT,
+    PANEL_SCOPE_TRIGGER_STATE,
+    PANEL_SCOPE_TRIGGER_COUNT
+} PanelScopeTrigger_t;
+
 void PanelKeys_Init(void);
 void PanelKeys_Update(void);
 
@@ -57,6 +95,16 @@ uint8_t PanelKeys_GetOcpEnabled(void);
 uint8_t PanelKeys_GetOtpEnabled(void);
 uint8_t PanelKeys_GetOutputEnabled(void);
 PanelBleState_t PanelKeys_GetBleState(void);
+PanelScopeField_t PanelKeys_GetScopeField(void);
+uint8_t PanelKeys_GetScopeTimebase(void);
+uint8_t PanelKeys_GetScopeCh1Enabled(void);
+uint8_t PanelKeys_GetScopeCh2Enabled(void);
+uint8_t PanelKeys_GetScopeHold(void);
+PanelScopeTrigger_t PanelKeys_GetScopeTrigger(void);
+PanelScopeSource_t PanelKeys_GetScopeCh1Source(void);
+PanelScopeSource_t PanelKeys_GetScopeCh2Source(void);
+uint8_t PanelKeys_GetScopeCh1Scale(void);
+uint8_t PanelKeys_GetScopeCh2Scale(void);
 void PanelKeys_SetProtectionState(float ovp, float ocp, float otp, uint8_t ovp_enabled, uint8_t ocp_enabled, uint8_t otp_enabled);
 void PanelKeys_SetOutputEnabled(uint8_t enabled);
 

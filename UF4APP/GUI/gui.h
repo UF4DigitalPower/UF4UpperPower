@@ -54,6 +54,16 @@ typedef struct
         uint8_t ble_state;
         uint8_t page;
         uint8_t panel_field;
+        uint8_t scope_field;
+        uint8_t scope_timebase;
+        uint8_t scope_ch1_enabled;
+        uint8_t scope_ch2_enabled;
+        uint8_t scope_hold;
+        uint8_t scope_trigger;
+        uint8_t scope_ch1_source;
+        uint8_t scope_ch2_source;
+        uint8_t scope_ch1_scale;
+        uint8_t scope_ch2_scale;
         uint8_t valid_flags;
         uint8_t comm_state;
         uint8_t comm_stream_enabled;

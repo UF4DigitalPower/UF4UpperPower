@@ -21,6 +21,7 @@
 #include <string.h>
 
 #define APP_GUI_UPDATE_PERIOD_MS            20U
+#define APP_SCOPE_GUI_UPDATE_PERIOD_MS      40U
 #define APP_COMM_CONTROL_SYNC_PERIOD_MS     100U
 #define APP_COMM_READ_TO_STREAM_DELAY_MS    80U
 #define APP_COMM_START_TIMEOUT_MS           1000U
@@ -220,13 +221,17 @@ static void AppController_RunCommunication(uint32_t now_tick)
   */
 static void AppController_RunGui(uint32_t now_tick)
 {
-  if (now_tick - g_gui_tick < APP_GUI_UPDATE_PERIOD_MS)
+  const uint32_t update_period = (PanelKeys_GetPage() == PANEL_PAGE_SCOPE)
+      ? APP_SCOPE_GUI_UPDATE_PERIOD_MS
+      : APP_GUI_UPDATE_PERIOD_MS;
+
+  if (now_tick - g_gui_tick < update_period)
   {
     return;
   }
 
-  g_gui_tick += APP_GUI_UPDATE_PERIOD_MS;
-  if (now_tick - g_gui_tick >= APP_GUI_UPDATE_PERIOD_MS)
+  g_gui_tick += update_period;
+  if (now_tick - g_gui_tick >= update_period)
   {
     g_gui_tick = now_tick;
   }
@@ -505,6 +510,16 @@ static void AppController_FillGuiFromUf4(GUI_Data_t *gui_data)
   gui_data->ble_state = (uint8_t)PanelKeys_GetBleState();
   gui_data->page = (uint8_t)PanelKeys_GetPage();
   gui_data->panel_field = (uint8_t)PanelKeys_GetSelectedField();
+  gui_data->scope_field = (uint8_t)PanelKeys_GetScopeField();
+  gui_data->scope_timebase = PanelKeys_GetScopeTimebase();
+  gui_data->scope_ch1_enabled = PanelKeys_GetScopeCh1Enabled();
+  gui_data->scope_ch2_enabled = PanelKeys_GetScopeCh2Enabled();
+  gui_data->scope_hold = PanelKeys_GetScopeHold();
+  gui_data->scope_trigger = (uint8_t)PanelKeys_GetScopeTrigger();
+  gui_data->scope_ch1_source = (uint8_t)PanelKeys_GetScopeCh1Source();
+  gui_data->scope_ch2_source = (uint8_t)PanelKeys_GetScopeCh2Source();
+  gui_data->scope_ch1_scale = PanelKeys_GetScopeCh1Scale();
+  gui_data->scope_ch2_scale = PanelKeys_GetScopeCh2Scale();
   gui_data->comm_state = (uint8_t)g_comm_start_state;
   gui_data->comm_stream_enabled = (uint8_t)(UF4PowerClient_IsStreamEnabled() ? 1U : 0U);
   gui_data->comm_last_tx_cmd = UF4PowerClient_LastTxCmd();
