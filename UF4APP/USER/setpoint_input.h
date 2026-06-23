@@ -19,8 +19,6 @@ float SetpointInput_GetVset(void);
 float SetpointInput_GetIset(void);
 void SetpointInput_SetVset(float value);
 void SetpointInput_SetIset(float value);
-void SetpointInput_AdjustVset(int32_t step);
-void SetpointInput_AdjustIset(int32_t step);
 
 uint8_t SetpointInput_GetVsetDigit(void);
 uint8_t SetpointInput_GetIsetDigit(void);

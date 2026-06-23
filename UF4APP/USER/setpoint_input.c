@@ -137,16 +137,6 @@ void SetpointInput_SetIset(float value)
     g_iset_input.value = SetpointInput_Clamp(&g_iset_input, value);
 }
 
-void SetpointInput_AdjustVset(int32_t step)
-{
-    SetpointInput_AdjustValue(&g_vset_input, step);
-}
-
-void SetpointInput_AdjustIset(int32_t step)
-{
-    SetpointInput_AdjustValue(&g_iset_input, step);
-}
-
 uint8_t SetpointInput_GetVsetDigit(void)
 {
     return g_vset_input.digit;

@@ -13,6 +13,8 @@ static uint8_t g_has_last;
 
 static uint8_t GUI_DataEqual(const GUI_Data_t *a, const GUI_Data_t *b);
 static uint8_t GUI_ScopeDataEqual(const GUI_Data_t *a, const GUI_Data_t *b);
+static uint8_t GUI_ScopeSourceValueEqual(const GUI_Data_t *a, const GUI_Data_t *b, uint8_t source);
+static float GUI_ScopeDataSourceValue(const GUI_Data_t *data, uint8_t source);
 static void GUI_DrawBootLogo(void);
 static void GUI_BlitLogoChunked(uint16_t x, uint16_t y, uint16_t w, uint16_t h, const uint16_t *pixels);
 
@@ -530,29 +532,63 @@ static uint8_t GUI_ScopeDataEqual(const GUI_Data_t *a, const GUI_Data_t *b)
         a->scope_ch2_source != b->scope_ch2_source ||
         a->scope_ch1_scale != b->scope_ch1_scale ||
         a->scope_ch2_scale != b->scope_ch2_scale ||
+        a->vset_digit != b->vset_digit ||
+        a->iset_digit != b->iset_digit ||
         a->fault_state != b->fault_state ||
         a->state_machine_state != b->state_machine_state ||
-        a->comm_rx_frame_count != b->comm_rx_frame_count ||
         (a->valid_flags & scope_valid_mask) != (b->valid_flags & scope_valid_mask))
     {
         return 0U;
     }
 
-    if (a->vin != b->vin ||
-        a->iin != b->iin ||
-        a->pin != b->pin ||
-        a->vout != b->vout ||
-        a->iout != b->iout ||
-        a->pout != b->pout ||
-        a->vset != b->vset ||
-        a->iset != b->iset ||
-        a->efficiency != b->efficiency ||
-        a->fan != b->fan)
+    if (a->vset != b->vset || a->iset != b->iset)
     {
         return 0U;
     }
 
+    if (a->scope_hold == 0U)
+    {
+        if (a->scope_ch1_enabled != 0U &&
+            GUI_ScopeSourceValueEqual(a, b, a->scope_ch1_source) == 0U)
+        {
+            return 0U;
+        }
+
+        if (a->scope_ch2_enabled != 0U &&
+            GUI_ScopeSourceValueEqual(a, b, a->scope_ch2_source) == 0U)
+        {
+            return 0U;
+        }
+    }
+
     return 1U;
+}
+
+/**
+  * @brief Compare the telemetry value currently bound to a scope channel.
+  */
+static uint8_t GUI_ScopeSourceValueEqual(const GUI_Data_t *a, const GUI_Data_t *b, uint8_t source)
+{
+    return (uint8_t)(GUI_ScopeDataSourceValue(a, source) == GUI_ScopeDataSourceValue(b, source));
+}
+
+static float GUI_ScopeDataSourceValue(const GUI_Data_t *data, uint8_t source)
+{
+    switch (source)
+    {
+        case 1U: return data->iout;
+        case 2U: return data->pout;
+        case 3U: return data->vin;
+        case 4U: return data->iin;
+        case 5U: return data->pin;
+        case 6U: return data->vset;
+        case 7U: return data->iset;
+        case 8U: return data->efficiency;
+        case 9U: return data->fan;
+        case 0U:
+        default:
+            return data->vout;
+    }
 }
 
 static void GUI_DrawBootLogo(void)

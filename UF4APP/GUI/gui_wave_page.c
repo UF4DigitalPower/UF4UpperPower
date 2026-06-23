@@ -4,7 +4,7 @@
 
 #include <stdio.h>
 
-#define GUI_SCOPE_SAMPLE_COUNT       256U
+#define GUI_SCOPE_SAMPLE_COUNT       96U
 #define GUI_SCOPE_GRID_X             40U
 #define GUI_SCOPE_GRID_Y             78U
 #define GUI_SCOPE_GRID_W             560U
@@ -20,16 +20,14 @@
 #define GUI_SCOPE_GRID_DIV_X         10U
 #define GUI_SCOPE_GRID_DIV_Y         8U
 
-#define GUI_SCOPE_FIELD_VSET         0U
-#define GUI_SCOPE_FIELD_ISET         1U
-#define GUI_SCOPE_FIELD_CH1          2U
-#define GUI_SCOPE_FIELD_CH2          3U
-#define GUI_SCOPE_FIELD_Y1           4U
-#define GUI_SCOPE_FIELD_Y2           5U
-#define GUI_SCOPE_FIELD_TIME         6U
-#define GUI_SCOPE_FIELD_TRIG         7U
-#define GUI_SCOPE_FIELD_HOLD         8U
-#define GUI_SCOPE_FIELD_BACK         9U
+#define GUI_SCOPE_FIELD_CH1          0U
+#define GUI_SCOPE_FIELD_CH2          1U
+#define GUI_SCOPE_FIELD_Y1           2U
+#define GUI_SCOPE_FIELD_Y2           3U
+#define GUI_SCOPE_FIELD_TIME         4U
+#define GUI_SCOPE_FIELD_TRIG         5U
+#define GUI_SCOPE_FIELD_HOLD         6U
+#define GUI_SCOPE_FIELD_BACK         7U
 
 #define GUI_SCOPE_TRIGGER_AUTO       0U
 #define GUI_SCOPE_TRIGGER_FAULT      1U
@@ -79,6 +77,7 @@ static const GUI_ScopeSample_t *GUI_ScopeGetVisibleSample(uint8_t timebase, uint
 static uint16_t GUI_ScopeVisibleCount(uint8_t timebase);
 static void GUI_DrawScopeHeader(const GUI_Data_t *data);
 static void GUI_DrawScopeHeaderTile(const GUI_Rect_t *rect, const char *title, const char *value, uint16_t fill_color, uint8_t selected);
+static void GUI_DrawScopeSetTile(const GUI_Rect_t *rect, const char *title, float value, const char *unit, uint8_t digit);
 static void GUI_DrawScopeGrid(const GUI_Data_t *data);
 static void GUI_DrawScopeAnalogTrace(const GUI_Data_t *data, uint8_t channel, uint16_t color);
 static void GUI_DrawScopeDigitalTracks(const GUI_Data_t *data);
@@ -213,10 +212,10 @@ static uint16_t GUI_ScopeVisibleCount(uint8_t timebase)
 
     switch (timebase)
     {
-        case 0U: target_count = 64U; break;
-        case 1U: target_count = 96U; break;
-        case 2U: target_count = 128U; break;
-        case 3U: target_count = 192U; break;
+        case 0U: target_count = 24U; break;
+        case 1U: target_count = 32U; break;
+        case 2U: target_count = 48U; break;
+        case 3U: target_count = 64U; break;
         default: target_count = GUI_SCOPE_SAMPLE_COUNT; break;
     }
 
@@ -229,41 +228,24 @@ static uint16_t GUI_ScopeVisibleCount(uint8_t timebase)
 static void GUI_DrawScopeHeader(const GUI_Data_t *data)
 {
     char buf[32];
-    char vset_buf[16];
-    char iset_buf[16];
     GUI_Rect_t header_rect = {4U, GUI_SCOPE_HEADER_Y, 632U, GUI_SCOPE_HEADER_H};
     GUI_Rect_t title_tile = {8U, 9U, 78U, 44U};
-    GUI_Rect_t vset_tile = {92U, 9U, 112U, 44U};
-    GUI_Rect_t iset_tile = {210U, 9U, 112U, 44U};
-    GUI_Rect_t time_tile = {328U, 9U, 76U, 44U};
-    GUI_Rect_t trig_tile = {410U, 9U, 86U, 44U};
-    GUI_Rect_t hold_tile = {502U, 9U, 62U, 44U};
-    GUI_Rect_t back_tile = {570U, 9U, 62U, 44U};
+    GUI_Rect_t vset_tile = {94U, 9U, 150U, 44U};
+    GUI_Rect_t iset_tile = {252U, 9U, 150U, 44U};
+    GUI_Rect_t state_tile = {410U, 9U, 112U, 44U};
+    GUI_Rect_t fault_tile = {530U, 9U, 102U, 44U};
 
     GUI_DrawPanel(&header_rect, GUI_PANEL_DARK);
 
-    snprintf(vset_buf, sizeof(vset_buf), "%.2fV", data->vset);
-    snprintf(iset_buf, sizeof(iset_buf), "%.2fA", data->iset);
-
     GUI_DrawScopeHeaderTile(&title_tile, "SCOPE", data->scope_hold != 0U ? "MEM" : "LIVE", GUI_PANEL_COLOR, 0U);
-    GUI_DrawScopeHeaderTile(&vset_tile, "VSET", vset_buf, GUI_PANEL_COLOR, GUI_ScopeSelected(data, GUI_SCOPE_FIELD_VSET));
-    GUI_DrawScopeHeaderTile(&iset_tile, "ISET", iset_buf, GUI_PANEL_COLOR, GUI_ScopeSelected(data, GUI_SCOPE_FIELD_ISET));
-    GUI_DrawScopeHeaderTile(&time_tile,
-                            "TIME",
-                            GUI_ScopeTimebaseText(data->scope_timebase),
-                            GUI_PANEL_COLOR,
-                            GUI_ScopeSelected(data, GUI_SCOPE_FIELD_TIME));
-    GUI_DrawScopeHeaderTile(&trig_tile,
-                            "TRIG",
-                            GUI_ScopeTriggerText(data->scope_trigger),
-                            data->scope_trigger == GUI_SCOPE_TRIGGER_FAULT ? GUI_WARN_COLOR : GUI_PANEL_COLOR,
-                            GUI_ScopeSelected(data, GUI_SCOPE_FIELD_TRIG));
-    GUI_DrawScopeHeaderTile(&hold_tile,
-                            "HOLD",
-                            data->scope_hold != 0U ? "ON" : "OFF",
-                            data->scope_hold != 0U ? GUI_WARN_COLOR : GUI_PANEL_COLOR,
-                            GUI_ScopeSelected(data, GUI_SCOPE_FIELD_HOLD));
-    GUI_DrawScopeHeaderTile(&back_tile, "BACK", "M", GUI_PANEL_COLOR, GUI_ScopeSelected(data, GUI_SCOPE_FIELD_BACK));
+    GUI_DrawScopeSetTile(&vset_tile, "VSET", data->vset, "V", data->vset_digit);
+    GUI_DrawScopeSetTile(&iset_tile, "ISET", data->iset, "A", data->iset_digit);
+
+    snprintf(buf, sizeof(buf), "%s", (data->valid_flags & GUI_VALID_STATE_MACHINE_STATE) != 0U ? GUI_StateText(data->state_machine_state) : "NA");
+    GUI_DrawScopeHeaderTile(&state_tile, "STATE", buf, GUI_PANEL_COLOR, 0U);
+
+    snprintf(buf, sizeof(buf), "%s", (data->valid_flags & GUI_VALID_FAULT_STATE) != 0U ? GUI_FaultText(data->fault_state) : "NA");
+    GUI_DrawScopeHeaderTile(&fault_tile, "FAULT", buf, data->fault_state != 0U ? GUI_WARN_COLOR : GUI_PANEL_COLOR, 0U);
 
     if (data->scope_ch1_enabled != 0U)
     {
@@ -316,6 +298,44 @@ static void GUI_DrawScopeHeaderTile(const GUI_Rect_t *rect, const char *title, c
     if (selected != 0U)
     {
         GUI_DrawPanelBorder(rect, GUI_ACCENT_COLOR);
+    }
+}
+
+/**
+  * @brief Draw encoder-owned setpoint with fixed-width digits and active digit mark.
+  */
+static void GUI_DrawScopeSetTile(const GUI_Rect_t *rect, const char *title, float value, const char *unit, uint8_t digit)
+{
+    char buf[16];
+    GUI_Rect_t title_rect = {rect->x, (uint16_t)(rect->y + 3U), rect->w, 16U};
+    GUI_Rect_t value_rect = {(uint16_t)(rect->x + 12U), (uint16_t)(rect->y + 19U), (uint16_t)(rect->w - 46U), 22U};
+    GUI_Rect_t unit_rect = {(uint16_t)(rect->x + rect->w - 20U), (uint16_t)(rect->y + 20U), 16U, 20U};
+    uint16_t slot_w = 5U * GUI_TILE_VALUE_CELL_W;
+    uint16_t start_x;
+    uint8_t char_index;
+    uint16_t mark_x;
+
+    GUI_FormatFixed2(buf, sizeof(buf), value);
+    GUI_DrawPanel(rect, GUI_PANEL_COLOR);
+    GUI_DrawCenteredText(&title_rect, title, GUI_FONT_TOP_LABEL, GUI_MUTED_COLOR, GUI_PANEL_COLOR);
+    GUI_DrawFixedSlotText(&value_rect, buf, GUI_FONT_TOP_LABEL, GUI_TILE_VALUE_CELL_W, GUI_TEXT_COLOR, GUI_PANEL_COLOR);
+    GUI_DrawCenteredText(&unit_rect, unit, GUI_FONT_TOP_LABEL, GUI_ACCENT_COLOR, GUI_PANEL_COLOR);
+
+    if (digit < 4U)
+    {
+        char_index = (digit < 2U) ? digit : (uint8_t)(digit + 1U);
+        start_x = value_rect.x;
+        if (slot_w < value_rect.w)
+        {
+            start_x = (uint16_t)(value_rect.x + (value_rect.w - slot_w) / 2U);
+        }
+
+        mark_x = (uint16_t)(start_x + char_index * GUI_TILE_VALUE_CELL_W);
+        LCD_Rect_Fill(mark_x,
+                      (uint16_t)(rect->y + rect->h - 4U),
+                      (uint16_t)(mark_x + GUI_TILE_VALUE_CELL_W - 2U),
+                      (uint16_t)(rect->y + rect->h - 3U),
+                      GUI_ACCENT_COLOR);
     }
 }
 
@@ -497,7 +517,7 @@ static void GUI_DrawScopeMeasurements(const GUI_Data_t *data)
     snprintf(buf, sizeof(buf), "R2 %.2f", GUI_ScopeAbs(max_ch2 - min_ch2));
     GUI_DrawCenteredText(&(GUI_Rect_t){414U, GUI_SCOPE_MEASURE_Y + 7U, 92U, 20U}, buf, GUI_FONT_TOP_LABEL, GUI_SCOPE_CH2_COLOR, GUI_PANEL_DARK);
 
-    snprintf(buf, sizeof(buf), "RX %lu", (unsigned long)data->comm_rx_frame_count);
+    snprintf(buf, sizeof(buf), "PTS %u", (unsigned int)visible_count);
     GUI_DrawCenteredText(&(GUI_Rect_t){520U, GUI_SCOPE_MEASURE_Y + 7U, 98U, 20U}, buf, GUI_FONT_TOP_LABEL, GUI_MUTED_COLOR, GUI_PANEL_DARK);
 }
 

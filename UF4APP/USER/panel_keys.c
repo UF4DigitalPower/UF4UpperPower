@@ -7,7 +7,6 @@
 #include "panel_keys.h"
 
 #include "gpio.h"
-#include "setpoint_input.h"
 
 #define PANEL_KEY_DEBOUNCE_TICKS       3U
 #define PANEL_KEY_LONG_TICKS           50U
@@ -72,7 +71,7 @@ static uint8_t g_output_enabled = 0U;
 static PanelBleState_t g_ble_state = PANEL_BLE_OFF;
 static PanelPage_t g_page = PANEL_PAGE_MAIN;
 static PanelApplyEvent_t g_apply_event = PANEL_APPLY_NONE;
-static PanelScopeField_t g_scope_field = PANEL_SCOPE_FIELD_VSET;
+static PanelScopeField_t g_scope_field = PANEL_SCOPE_FIELD_CH1;
 static uint8_t g_scope_timebase = 1U;
 static uint8_t g_scope_ch1_enabled = 1U;
 static uint8_t g_scope_ch2_enabled = 1U;
@@ -447,7 +446,7 @@ static void PanelKeys_ToggleSelected(void)
             break;
         case PANEL_FIELD_SCOPE:
             g_page = PANEL_PAGE_SCOPE;
-            g_scope_field = PANEL_SCOPE_FIELD_VSET;
+            g_scope_field = PANEL_SCOPE_FIELD_CH1;
             break;
         default:
             break;
@@ -492,7 +491,7 @@ static void PanelKeys_SelectScopeNext(void)
 
 static void PanelKeys_SelectScopePrevious(void)
 {
-    g_scope_field = (g_scope_field == PANEL_SCOPE_FIELD_VSET)
+    g_scope_field = (g_scope_field == PANEL_SCOPE_FIELD_CH1)
         ? PANEL_SCOPE_FIELD_BACK
         : (PanelScopeField_t)((uint8_t)g_scope_field - 1U);
 }
@@ -501,12 +500,6 @@ static void PanelKeys_AdjustScopeSelected(int8_t dir)
 {
     switch (g_scope_field)
     {
-        case PANEL_SCOPE_FIELD_VSET:
-            SetpointInput_AdjustVset(dir);
-            break;
-        case PANEL_SCOPE_FIELD_ISET:
-            SetpointInput_AdjustIset(dir);
-            break;
         case PANEL_SCOPE_FIELD_CH1:
             if (dir >= 0)
             {
@@ -593,8 +586,6 @@ static void PanelKeys_ToggleScopeSelected(void)
         case PANEL_SCOPE_FIELD_CH2:
             g_scope_ch2_enabled = (uint8_t)!g_scope_ch2_enabled;
             break;
-        case PANEL_SCOPE_FIELD_VSET:
-        case PANEL_SCOPE_FIELD_ISET:
         case PANEL_SCOPE_FIELD_Y1:
         case PANEL_SCOPE_FIELD_Y2:
         case PANEL_SCOPE_FIELD_TIME:
