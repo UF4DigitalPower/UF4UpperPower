@@ -117,6 +117,7 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+
     AppController_Run();  // 内置HAL 1ms tick
     /* USER CODE END WHILE */
 
