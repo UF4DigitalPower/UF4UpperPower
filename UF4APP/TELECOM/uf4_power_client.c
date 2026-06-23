@@ -1,5 +1,6 @@
 #include "uf4_power_client.h"
 
+#include "uf4_mem.h"
 #include "usart.h"
 #include "uf4com.h"
 #include "uf4com_parser.h"
@@ -34,6 +35,9 @@ static uint8_t g_uf4_power_rx_ring[UF4_POWER_CLIENT_RX_RING_SIZE];
 
 static void UF4PowerClient_HandleFrame(const uf4_frame_t *frame);
 
+/**
+  * @brief Transmit one assembled UF4 frame through USART1.
+  */
 static void UF4PowerClient_TxBytes(const uint8_t *data, uint16_t len, void *user)
 {
   (void)user;
@@ -51,7 +55,10 @@ static void UF4PowerClient_TxBytes(const uint8_t *data, uint16_t len, void *user
   }
 }
 
-static void UF4PowerClient_ProcessRxByte(uint8_t byte)
+/**
+  * @brief Feed one byte from the foreground RX ring into the UF4 parser.
+  */
+static void UF4_RAM_FUNC UF4PowerClient_ProcessRxByte(uint8_t byte)
 {
   uf4_frame_t frame;
 
@@ -62,20 +69,28 @@ static void UF4PowerClient_ProcessRxByte(uint8_t byte)
   }
 }
 
-static uint16_t UF4PowerClient_RxRingNext(uint16_t pos)
+/**
+  * @brief Return the next index in the fixed-size RX ring.
+  */
+UF4_FORCE_INLINE uint16_t UF4PowerClient_RxRingNext(uint16_t pos)
 {
   ++pos;
-  if (pos >= UF4_POWER_CLIENT_RX_RING_SIZE) {
+  if (pos >= UF4_POWER_CLIENT_RX_RING_SIZE)
+  {
     pos = 0U;
   }
   return pos;
 }
 
-static void UF4PowerClient_RxRingPush(uint8_t byte)
+/**
+  * @brief Push one byte into the ISR-safe RX ring.
+  */
+static void UF4_RAM_FUNC UF4PowerClient_RxRingPush(uint8_t byte)
 {
   const uint16_t next_head = UF4PowerClient_RxRingNext(g_uf4_power_rx_head);
 
-  if (next_head == g_uf4_power_rx_tail) {
+  if (next_head == g_uf4_power_rx_tail)
+  {
     ++g_uf4_power_rx_overflows;
     return;
   }
@@ -84,9 +99,13 @@ static void UF4PowerClient_RxRingPush(uint8_t byte)
   g_uf4_power_rx_head = next_head;
 }
 
-static bool UF4PowerClient_RxRingPop(uint8_t *byte)
+/**
+  * @brief Pop one byte from the foreground side of the RX ring.
+  */
+static bool UF4_RAM_FUNC UF4PowerClient_RxRingPop(uint8_t *byte)
 {
-  if (byte == NULL || g_uf4_power_rx_tail == g_uf4_power_rx_head) {
+  if (byte == NULL || g_uf4_power_rx_tail == g_uf4_power_rx_head)
+  {
     return false;
   }
 
@@ -95,11 +114,9 @@ static bool UF4PowerClient_RxRingPop(uint8_t *byte)
   return true;
 }
 
-static uint16_t UF4PowerClient_ClampU16(uint32_t value)
-{
-  return (value > 0xFFFFU) ? 0xFFFFU : (uint16_t)value;
-}
-
+/**
+  * @brief Send one command frame and remember the latest TX status.
+  */
 static bool UF4PowerClient_SendCommand(uint8_t cmd, const uint8_t *payload, uint8_t len)
 {
   bool ok;
@@ -118,16 +135,21 @@ static bool UF4PowerClient_SendCommand(uint8_t cmd, const uint8_t *payload, uint
   return ok;
 }
 
-static bool UF4PowerClient_SendTvCommand(uint8_t cmd, const uint8_t *ids, const uint16_t *values, uint8_t count)
+/**
+  * @brief Build and send type-value payloads for read/write/stream commands.
+  */
+static bool UF4_RAM_FUNC UF4PowerClient_SendTvCommand(uint8_t cmd, const uint8_t *ids, const uint16_t *values, uint8_t count)
 {
   uint8_t payload[UF4_POWER_CLIENT_TV_SIZE * UF4_POWER_CLIENT_MAX_TV_ITEMS];
   uint8_t offset = 0U;
 
-  if (ids == NULL || count == 0U || count > UF4_POWER_CLIENT_MAX_TV_ITEMS) {
+  if (ids == NULL || count == 0U || count > UF4_POWER_CLIENT_MAX_TV_ITEMS)
+  {
     return false;
   }
 
-  for (uint8_t i = 0U; i < count; ++i) {
+  for (uint8_t i = 0U; i < count; ++i)
+  {
     const uint16_t value = (values != NULL) ? values[i] : 0U;
     payload[offset++] = ids[i];
     payload[offset++] = (uint8_t)(value >> 8U);
@@ -137,14 +159,19 @@ static bool UF4PowerClient_SendTvCommand(uint8_t cmd, const uint8_t *ids, const 
   return UF4PowerClient_SendCommand(cmd, payload, offset);
 }
 
-static void UF4PowerClient_StoreTvPayload(const uf4_frame_t *frame)
+/**
+  * @brief Store received type-value pairs into the local register cache.
+  */
+static void UF4_RAM_FUNC UF4PowerClient_StoreTvPayload(const uf4_frame_t *frame)
 {
-  if (frame == NULL || (frame->len % UF4_POWER_CLIENT_TV_SIZE) != 0U) {
+  if (frame == NULL || (frame->len % UF4_POWER_CLIENT_TV_SIZE) != 0U)
+  {
     ++g_uf4_power_rx_errors;
     return;
   }
 
-  for (uint8_t offset = 0U; offset < frame->len; offset += UF4_POWER_CLIENT_TV_SIZE) {
+  for (uint8_t offset = 0U; offset < frame->len; offset += UF4_POWER_CLIENT_TV_SIZE)
+  {
     const uint8_t id = frame->data[offset];
     const uint16_t value = ((uint16_t)frame->data[offset + 1U] << 8U) | frame->data[offset + 2U];
     g_uf4_power_regs[id] = value;
@@ -153,19 +180,25 @@ static void UF4PowerClient_StoreTvPayload(const uf4_frame_t *frame)
   g_uf4_power_data_changed = true;
 }
 
-static void UF4PowerClient_HandleFrame(const uf4_frame_t *frame)
+/**
+  * @brief Dispatch a complete received UF4 frame into client state.
+  */
+static void UF4_RAM_FUNC UF4PowerClient_HandleFrame(const uf4_frame_t *frame)
 {
-  if (frame == NULL) {
+  if (frame == NULL)
+  {
     return;
   }
 
   ++g_uf4_power_rx_frames;
-  if ((frame->flags & UF4_FLAG_ERROR) != 0U) {
+  if ((frame->flags & UF4_FLAG_ERROR) != 0U)
+  {
     ++g_uf4_power_rx_errors;
     return;
   }
 
-  switch (frame->cmd) {
+  switch (frame->cmd)
+  {
     case UF4_CMD_READ_RSP:
     case UF4_CMD_WRITE_RSP:
       UF4PowerClient_StoreTvPayload(frame);
@@ -196,7 +229,7 @@ void UF4PowerClient_Init(void)
   __HAL_UART_ENABLE_IT(&huart1, UART_IT_PE);
 }
 
-void UF4PowerClient_Tick(void)
+void UF4_RAM_FUNC UF4PowerClient_Tick(void)
 {
   uint32_t rx_count = 0U;
   uint8_t byte;
@@ -230,7 +263,8 @@ void UF4PowerClient_Tick(void)
 
 bool UF4PowerClient_WriteU16Pairs(const uint8_t *ids, const uint16_t *values, uint8_t count)
 {
-  if (values == NULL) {
+  if (values == NULL)
+  {
     return false;
   }
 
@@ -249,7 +283,7 @@ bool UF4PowerClient_ReadU16Pairs(const uint8_t *ids, uint8_t count)
 
 bool UF4PowerClient_StartStreamAll(void)
 {
-  static const uint8_t ids[] =
+  static const uint8_t ids[] UF4_FAST_CONST =
   {
     UF4_ID_INPUT_VOLTAGE,
     UF4_ID_INPUT_CURRENT,
@@ -300,7 +334,8 @@ bool UF4PowerClient_StopStream(void)
 
 bool UF4PowerClient_GetU16(uint8_t id, uint16_t *value)
 {
-  if (value == NULL || g_uf4_power_valid[id] == 0U) {
+  if (value == NULL || g_uf4_power_valid[id] == 0U)
+  {
     return false;
   }
 
@@ -365,23 +400,26 @@ bool UF4PowerClient_LastTxOk(void)
   return g_uf4_power_last_tx_ok;
 }
 
-void UF4PowerClient_UartIrqHandler(void)
+void UF4_RAM_FUNC UF4PowerClient_UartIrqHandler(void)
 {
   uint32_t isr = huart1.Instance->ISR;
 
-  if ((isr & (USART_ISR_ORE | USART_ISR_FE | USART_ISR_NE | USART_ISR_PE)) != 0U) {
+  if ((isr & (USART_ISR_ORE | USART_ISR_FE | USART_ISR_NE | USART_ISR_PE)) != 0U)
+  {
     __HAL_UART_CLEAR_FLAG(&huart1, UART_CLEAR_OREF | UART_CLEAR_FEF | UART_CLEAR_NEF | UART_CLEAR_PEF);
     ++g_uf4_power_rx_errors;
   }
 
-  while ((huart1.Instance->ISR & USART_ISR_RXNE_RXFNE) != 0U) {
+  while ((huart1.Instance->ISR & USART_ISR_RXNE_RXFNE) != 0U)
+  {
     UF4PowerClient_RxRingPush((uint8_t)(huart1.Instance->RDR & 0xFFU));
   }
 }
 
 void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
 {
-  if (huart->Instance == USART1) {
+  if (huart->Instance == USART1)
+  {
     ++g_uf4_power_rx_errors;
   }
 }
