@@ -1,4 +1,4 @@
-/* USER CODE BEGIN Header */
+/* User CODE BEGIN Header */
 /**
   ******************************************************************************
   * File Name          : freertos.c
@@ -15,7 +15,7 @@
   *
   ******************************************************************************
   */
-/* USER CODE END Header */
+/* User CODE END Header */
 
 /* Includes ------------------------------------------------------------------*/
 #include "FreeRTOS.h"
@@ -24,29 +24,29 @@
 #include "cmsis_os.h"
 
 /* Private includes ----------------------------------------------------------*/
-/* USER CODE BEGIN Includes */
+/* User CODE BEGIN Includes */
 
-/* USER CODE END Includes */
+/* User CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
-/* USER CODE BEGIN PTD */
+/* User CODE BEGIN PTD */
 
-/* USER CODE END PTD */
+/* User CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
-/* USER CODE BEGIN PD */
+/* User CODE BEGIN PD */
 
-/* USER CODE END PD */
+/* User CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
-/* USER CODE BEGIN PM */
+/* User CODE BEGIN PM */
 
-/* USER CODE END PM */
+/* User CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
-/* USER CODE BEGIN Variables */
+/* User CODE BEGIN Variables */
 
-/* USER CODE END Variables */
+/* User CODE END Variables */
 /* Definitions for defaultTask */
 osThreadId_t defaultTaskHandle;
 const osThreadAttr_t defaultTask_attributes = {
@@ -56,9 +56,9 @@ const osThreadAttr_t defaultTask_attributes = {
 };
 
 /* Private function prototypes -----------------------------------------------*/
-/* USER CODE BEGIN FunctionPrototypes */
+/* User CODE BEGIN FunctionPrototypes */
 
-/* USER CODE END FunctionPrototypes */
+/* User CODE END FunctionPrototypes */
 
 void StartDefaultTask(void *argument);
 
@@ -70,60 +70,60 @@ void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
   * @retval None
   */
 void MX_FREERTOS_Init(void) {
-  /* USER CODE BEGIN Init */
+  /* User CODE BEGIN Init */
 
-  /* USER CODE END Init */
+  /* User CODE END Init */
 
-  /* USER CODE BEGIN RTOS_MUTEX */
+  /* User CODE BEGIN RTOS_MUTEX */
   /* add mutexes, ... */
-  /* USER CODE END RTOS_MUTEX */
+  /* User CODE END RTOS_MUTEX */
 
-  /* USER CODE BEGIN RTOS_SEMAPHORES */
+  /* User CODE BEGIN RTOS_SEMAPHORES */
   /* add semaphores, ... */
-  /* USER CODE END RTOS_SEMAPHORES */
+  /* User CODE END RTOS_SEMAPHORES */
 
-  /* USER CODE BEGIN RTOS_TIMERS */
+  /* User CODE BEGIN RTOS_TIMERS */
   /* start timers, add new ones, ... */
-  /* USER CODE END RTOS_TIMERS */
+  /* User CODE END RTOS_TIMERS */
 
-  /* USER CODE BEGIN RTOS_QUEUES */
+  /* User CODE BEGIN RTOS_QUEUES */
   /* add queues, ... */
-  /* USER CODE END RTOS_QUEUES */
+  /* User CODE END RTOS_QUEUES */
 
   /* Create the thread(s) */
   /* creation of defaultTask */
   defaultTaskHandle = osThreadNew(StartDefaultTask, NULL, &defaultTask_attributes);
 
-  /* USER CODE BEGIN RTOS_THREADS */
+  /* User CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
-  /* USER CODE END RTOS_THREADS */
+  /* User CODE END RTOS_THREADS */
 
-  /* USER CODE BEGIN RTOS_EVENTS */
+  /* User CODE BEGIN RTOS_EVENTS */
   /* add events, ... */
-  /* USER CODE END RTOS_EVENTS */
+  /* User CODE END RTOS_EVENTS */
 
 }
 
-/* USER CODE BEGIN Header_StartDefaultTask */
+/* User CODE BEGIN Header_StartDefaultTask */
 /**
   * @brief  Function implementing the defaultTask thread.
   * @param  argument: Not used
   * @retval None
   */
-/* USER CODE END Header_StartDefaultTask */
+/* User CODE END Header_StartDefaultTask */
 void StartDefaultTask(void *argument)
 {
-  /* USER CODE BEGIN StartDefaultTask */
+  /* User CODE BEGIN StartDefaultTask */
   /* Infinite loop */
   for(;;)
   {
     osDelay(1);
   }
-  /* USER CODE END StartDefaultTask */
+  /* User CODE END StartDefaultTask */
 }
 
 /* Private application code --------------------------------------------------*/
-/* USER CODE BEGIN Application */
+/* User CODE BEGIN Application */
 
-/* USER CODE END Application */
+/* User CODE END Application */
 

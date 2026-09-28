@@ -1,4 +1,4 @@
-/* USER CODE BEGIN Header */
+/* User CODE BEGIN Header */
 /**
   ******************************************************************************
   * @file    usart.c
@@ -16,13 +16,13 @@
   *
   ******************************************************************************
   */
-/* USER CODE END Header */
+/* User CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "usart.h"
 
-/* USER CODE BEGIN 0 */
+/* User CODE BEGIN 0 */
 
-/* USER CODE END 0 */
+/* User CODE END 0 */
 
 UART_HandleTypeDef huart1;
 UART_HandleTypeDef huart6;
@@ -32,13 +32,13 @@ UART_HandleTypeDef huart6;
 void MX_USART1_UART_Init(void)
 {
 
-  /* USER CODE BEGIN USART1_Init 0 */
+  /* User CODE BEGIN USART1_Init 0 */
 
-  /* USER CODE END USART1_Init 0 */
+  /* User CODE END USART1_Init 0 */
 
-  /* USER CODE BEGIN USART1_Init 1 */
+  /* User CODE BEGIN USART1_Init 1 */
 
-  /* USER CODE END USART1_Init 1 */
+  /* User CODE END USART1_Init 1 */
   huart1.Instance = USART1;
   huart1.Init.BaudRate = 115200;
   huart1.Init.WordLength = UART_WORDLENGTH_8B;
@@ -51,9 +51,9 @@ void MX_USART1_UART_Init(void)
   {
     Error_Handler();
   }
-  /* USER CODE BEGIN USART1_Init 2 */
+  /* User CODE BEGIN USART1_Init 2 */
 
-  /* USER CODE END USART1_Init 2 */
+  /* User CODE END USART1_Init 2 */
 
 }
 /* USART6 init function */
@@ -61,13 +61,13 @@ void MX_USART1_UART_Init(void)
 void MX_USART6_UART_Init(void)
 {
 
-  /* USER CODE BEGIN USART6_Init 0 */
+  /* User CODE BEGIN USART6_Init 0 */
 
-  /* USER CODE END USART6_Init 0 */
+  /* User CODE END USART6_Init 0 */
 
-  /* USER CODE BEGIN USART6_Init 1 */
+  /* User CODE BEGIN USART6_Init 1 */
 
-  /* USER CODE END USART6_Init 1 */
+  /* User CODE END USART6_Init 1 */
   huart6.Instance = USART6;
   huart6.Init.BaudRate = 115200;
   huart6.Init.WordLength = UART_WORDLENGTH_8B;
@@ -80,9 +80,9 @@ void MX_USART6_UART_Init(void)
   {
     Error_Handler();
   }
-  /* USER CODE BEGIN USART6_Init 2 */
+  /* User CODE BEGIN USART6_Init 2 */
 
-  /* USER CODE END USART6_Init 2 */
+  /* User CODE END USART6_Init 2 */
 
 }
 
@@ -92,9 +92,9 @@ void HAL_UART_MspInit(UART_HandleTypeDef* uartHandle)
   GPIO_InitTypeDef GPIO_InitStruct = {0};
   if(uartHandle->Instance==USART1)
   {
-  /* USER CODE BEGIN USART1_MspInit 0 */
+  /* User CODE BEGIN USART1_MspInit 0 */
 
-  /* USER CODE END USART1_MspInit 0 */
+  /* User CODE END USART1_MspInit 0 */
     /* USART1 clock enable */
     __HAL_RCC_USART1_CLK_ENABLE();
 
@@ -110,15 +110,15 @@ void HAL_UART_MspInit(UART_HandleTypeDef* uartHandle)
     GPIO_InitStruct.Alternate = GPIO_AF7_USART1;
     HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-  /* USER CODE BEGIN USART1_MspInit 1 */
+  /* User CODE BEGIN USART1_MspInit 1 */
 
-  /* USER CODE END USART1_MspInit 1 */
+  /* User CODE END USART1_MspInit 1 */
   }
   else if(uartHandle->Instance==USART6)
   {
-  /* USER CODE BEGIN USART6_MspInit 0 */
+  /* User CODE BEGIN USART6_MspInit 0 */
 
-  /* USER CODE END USART6_MspInit 0 */
+  /* User CODE END USART6_MspInit 0 */
     /* USART6 clock enable */
     __HAL_RCC_USART6_CLK_ENABLE();
 
@@ -134,9 +134,9 @@ void HAL_UART_MspInit(UART_HandleTypeDef* uartHandle)
     GPIO_InitStruct.Alternate = GPIO_AF8_USART6;
     HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
-  /* USER CODE BEGIN USART6_MspInit 1 */
+  /* User CODE BEGIN USART6_MspInit 1 */
 
-  /* USER CODE END USART6_MspInit 1 */
+  /* User CODE END USART6_MspInit 1 */
   }
 }
 
@@ -145,9 +145,9 @@ void HAL_UART_MspDeInit(UART_HandleTypeDef* uartHandle)
 
   if(uartHandle->Instance==USART1)
   {
-  /* USER CODE BEGIN USART1_MspDeInit 0 */
+  /* User CODE BEGIN USART1_MspDeInit 0 */
 
-  /* USER CODE END USART1_MspDeInit 0 */
+  /* User CODE END USART1_MspDeInit 0 */
     /* Peripheral clock disable */
     __HAL_RCC_USART1_CLK_DISABLE();
 
@@ -157,15 +157,15 @@ void HAL_UART_MspDeInit(UART_HandleTypeDef* uartHandle)
     */
     HAL_GPIO_DeInit(GPIOA, GPIO_PIN_9|GPIO_PIN_10);
 
-  /* USER CODE BEGIN USART1_MspDeInit 1 */
+  /* User CODE BEGIN USART1_MspDeInit 1 */
 
-  /* USER CODE END USART1_MspDeInit 1 */
+  /* User CODE END USART1_MspDeInit 1 */
   }
   else if(uartHandle->Instance==USART6)
   {
-  /* USER CODE BEGIN USART6_MspDeInit 0 */
+  /* User CODE BEGIN USART6_MspDeInit 0 */
 
-  /* USER CODE END USART6_MspDeInit 0 */
+  /* User CODE END USART6_MspDeInit 0 */
     /* Peripheral clock disable */
     __HAL_RCC_USART6_CLK_DISABLE();
 
@@ -175,12 +175,12 @@ void HAL_UART_MspDeInit(UART_HandleTypeDef* uartHandle)
     */
     HAL_GPIO_DeInit(GPIOC, GPIO_PIN_6|GPIO_PIN_7);
 
-  /* USER CODE BEGIN USART6_MspDeInit 1 */
+  /* User CODE BEGIN USART6_MspDeInit 1 */
 
-  /* USER CODE END USART6_MspDeInit 1 */
+  /* User CODE END USART6_MspDeInit 1 */
   }
 }
 
-/* USER CODE BEGIN 1 */
+/* User CODE BEGIN 1 */
 
-/* USER CODE END 1 */
+/* User CODE END 1 */

@@ -1,4 +1,4 @@
-/* USER CODE BEGIN Header */
+/* User CODE BEGIN Header */
 /**
   ******************************************************************************
   * @file    i2c.c
@@ -16,13 +16,13 @@
   *
   ******************************************************************************
   */
-/* USER CODE END Header */
+/* User CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "i2c.h"
 
-/* USER CODE BEGIN 0 */
+/* User CODE BEGIN 0 */
 
-/* USER CODE END 0 */
+/* User CODE END 0 */
 
 I2C_HandleTypeDef hi2c1;
 I2C_HandleTypeDef hi2c2;
@@ -31,13 +31,13 @@ I2C_HandleTypeDef hi2c2;
 void MX_I2C1_Init(void)
 {
 
-  /* USER CODE BEGIN I2C1_Init 0 */
+  /* User CODE BEGIN I2C1_Init 0 */
 
-  /* USER CODE END I2C1_Init 0 */
+  /* User CODE END I2C1_Init 0 */
 
-  /* USER CODE BEGIN I2C1_Init 1 */
+  /* User CODE BEGIN I2C1_Init 1 */
 
-  /* USER CODE END I2C1_Init 1 */
+  /* User CODE END I2C1_Init 1 */
   hi2c1.Instance = I2C1;
   hi2c1.Init.ClockSpeed = 50000;
   hi2c1.Init.DutyCycle = I2C_DUTYCYCLE_2;
@@ -65,22 +65,22 @@ void MX_I2C1_Init(void)
   {
     Error_Handler();
   }
-  /* USER CODE BEGIN I2C1_Init 2 */
+  /* User CODE BEGIN I2C1_Init 2 */
 
-  /* USER CODE END I2C1_Init 2 */
+  /* User CODE END I2C1_Init 2 */
 
 }
 /* I2C2 init function */
 void MX_I2C2_Init(void)
 {
 
-  /* USER CODE BEGIN I2C2_Init 0 */
+  /* User CODE BEGIN I2C2_Init 0 */
 
-  /* USER CODE END I2C2_Init 0 */
+  /* User CODE END I2C2_Init 0 */
 
-  /* USER CODE BEGIN I2C2_Init 1 */
+  /* User CODE BEGIN I2C2_Init 1 */
 
-  /* USER CODE END I2C2_Init 1 */
+  /* User CODE END I2C2_Init 1 */
   hi2c2.Instance = I2C2;
   hi2c2.Init.ClockSpeed = 50000;
   hi2c2.Init.DutyCycle = I2C_DUTYCYCLE_2;
@@ -108,9 +108,9 @@ void MX_I2C2_Init(void)
   {
     Error_Handler();
   }
-  /* USER CODE BEGIN I2C2_Init 2 */
+  /* User CODE BEGIN I2C2_Init 2 */
 
-  /* USER CODE END I2C2_Init 2 */
+  /* User CODE END I2C2_Init 2 */
 
 }
 
@@ -120,9 +120,9 @@ void HAL_I2C_MspInit(I2C_HandleTypeDef* i2cHandle)
   GPIO_InitTypeDef GPIO_InitStruct = {0};
   if(i2cHandle->Instance==I2C1)
   {
-  /* USER CODE BEGIN I2C1_MspInit 0 */
+  /* User CODE BEGIN I2C1_MspInit 0 */
 
-  /* USER CODE END I2C1_MspInit 0 */
+  /* User CODE END I2C1_MspInit 0 */
 
     __HAL_RCC_GPIOB_CLK_ENABLE();
     /**I2C1 GPIO Configuration
@@ -138,15 +138,15 @@ void HAL_I2C_MspInit(I2C_HandleTypeDef* i2cHandle)
 
     /* I2C1 clock enable */
     __HAL_RCC_I2C1_CLK_ENABLE();
-  /* USER CODE BEGIN I2C1_MspInit 1 */
+  /* User CODE BEGIN I2C1_MspInit 1 */
 
-  /* USER CODE END I2C1_MspInit 1 */
+  /* User CODE END I2C1_MspInit 1 */
   }
   else if(i2cHandle->Instance==I2C2)
   {
-  /* USER CODE BEGIN I2C2_MspInit 0 */
+  /* User CODE BEGIN I2C2_MspInit 0 */
 
-  /* USER CODE END I2C2_MspInit 0 */
+  /* User CODE END I2C2_MspInit 0 */
 
     __HAL_RCC_GPIOH_CLK_ENABLE();
     /**I2C2 GPIO Configuration
@@ -162,9 +162,9 @@ void HAL_I2C_MspInit(I2C_HandleTypeDef* i2cHandle)
 
     /* I2C2 clock enable */
     __HAL_RCC_I2C2_CLK_ENABLE();
-  /* USER CODE BEGIN I2C2_MspInit 1 */
+  /* User CODE BEGIN I2C2_MspInit 1 */
 
-  /* USER CODE END I2C2_MspInit 1 */
+  /* User CODE END I2C2_MspInit 1 */
   }
 }
 
@@ -173,9 +173,9 @@ void HAL_I2C_MspDeInit(I2C_HandleTypeDef* i2cHandle)
 
   if(i2cHandle->Instance==I2C1)
   {
-  /* USER CODE BEGIN I2C1_MspDeInit 0 */
+  /* User CODE BEGIN I2C1_MspDeInit 0 */
 
-  /* USER CODE END I2C1_MspDeInit 0 */
+  /* User CODE END I2C1_MspDeInit 0 */
     /* Peripheral clock disable */
     __HAL_RCC_I2C1_CLK_DISABLE();
 
@@ -187,15 +187,15 @@ void HAL_I2C_MspDeInit(I2C_HandleTypeDef* i2cHandle)
 
     HAL_GPIO_DeInit(TOUCH_SDA_GPIO_Port, TOUCH_SDA_Pin);
 
-  /* USER CODE BEGIN I2C1_MspDeInit 1 */
+  /* User CODE BEGIN I2C1_MspDeInit 1 */
 
-  /* USER CODE END I2C1_MspDeInit 1 */
+  /* User CODE END I2C1_MspDeInit 1 */
   }
   else if(i2cHandle->Instance==I2C2)
   {
-  /* USER CODE BEGIN I2C2_MspDeInit 0 */
+  /* User CODE BEGIN I2C2_MspDeInit 0 */
 
-  /* USER CODE END I2C2_MspDeInit 0 */
+  /* User CODE END I2C2_MspDeInit 0 */
     /* Peripheral clock disable */
     __HAL_RCC_I2C2_CLK_DISABLE();
 
@@ -207,12 +207,12 @@ void HAL_I2C_MspDeInit(I2C_HandleTypeDef* i2cHandle)
 
     HAL_GPIO_DeInit(GPIOH, GPIO_PIN_5);
 
-  /* USER CODE BEGIN I2C2_MspDeInit 1 */
+  /* User CODE BEGIN I2C2_MspDeInit 1 */
 
-  /* USER CODE END I2C2_MspDeInit 1 */
+  /* User CODE END I2C2_MspDeInit 1 */
   }
 }
 
-/* USER CODE BEGIN 1 */
+/* User CODE BEGIN 1 */
 
-/* USER CODE END 1 */
+/* User CODE END 1 */

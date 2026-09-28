@@ -1,4 +1,4 @@
-/* USER CODE BEGIN Header */
+/* User CODE BEGIN Header */
 /**
   ******************************************************************************
   * @file    stm32f4xx_it.h
@@ -15,7 +15,7 @@
   *
   ******************************************************************************
   */
-/* USER CODE END Header */
+/* User CODE END Header */
 
 /* Define to prevent recursive inclusion -------------------------------------*/
 #ifndef __STM32F4xx_IT_H
@@ -26,24 +26,24 @@ extern "C" {
 #endif
 
 /* Private includes ----------------------------------------------------------*/
-/* USER CODE BEGIN Includes */
+/* User CODE BEGIN Includes */
 
-/* USER CODE END Includes */
+/* User CODE END Includes */
 
 /* Exported types ------------------------------------------------------------*/
-/* USER CODE BEGIN ET */
+/* User CODE BEGIN ET */
 
-/* USER CODE END ET */
+/* User CODE END ET */
 
 /* Exported constants --------------------------------------------------------*/
-/* USER CODE BEGIN EC */
+/* User CODE BEGIN EC */
 
-/* USER CODE END EC */
+/* User CODE END EC */
 
 /* Exported macro ------------------------------------------------------------*/
-/* USER CODE BEGIN EM */
+/* User CODE BEGIN EM */
 
-/* USER CODE END EM */
+/* User CODE END EM */
 
 /* Exported functions prototypes ---------------------------------------------*/
 void NMI_Handler(void);
@@ -63,9 +63,9 @@ void TIM7_IRQHandler(void);
 void LTDC_IRQHandler(void);
 void LTDC_ER_IRQHandler(void);
 void DMA2D_IRQHandler(void);
-/* USER CODE BEGIN EFP */
+/* User CODE BEGIN EFP */
 
-/* USER CODE END EFP */
+/* User CODE END EFP */
 
 #ifdef __cplusplus
 }

@@ -1,4 +1,4 @@
-/* USER CODE BEGIN Header */
+/* User CODE BEGIN Header */
 /**
   ******************************************************************************
   * @file         stm32f4xx_hal_msp.c
@@ -16,56 +16,56 @@
   *
   ******************************************************************************
   */
-/* USER CODE END Header */
+/* User CODE END Header */
 
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
-/* USER CODE BEGIN Includes */
+/* User CODE BEGIN Includes */
 
-/* USER CODE END Includes */
+/* User CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
-/* USER CODE BEGIN TD */
+/* User CODE BEGIN TD */
 
-/* USER CODE END TD */
+/* User CODE END TD */
 
 /* Private define ------------------------------------------------------------*/
-/* USER CODE BEGIN Define */
+/* User CODE BEGIN Define */
 
-/* USER CODE END Define */
+/* User CODE END Define */
 
 /* Private macro -------------------------------------------------------------*/
-/* USER CODE BEGIN Macro */
+/* User CODE BEGIN Macro */
 
-/* USER CODE END Macro */
+/* User CODE END Macro */
 
 /* Private variables ---------------------------------------------------------*/
-/* USER CODE BEGIN PV */
+/* User CODE BEGIN PV */
 
-/* USER CODE END PV */
+/* User CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
-/* USER CODE BEGIN PFP */
+/* User CODE BEGIN PFP */
 
-/* USER CODE END PFP */
+/* User CODE END PFP */
 
 /* External functions --------------------------------------------------------*/
-/* USER CODE BEGIN ExternalFunctions */
+/* User CODE BEGIN ExternalFunctions */
 
-/* USER CODE END ExternalFunctions */
+/* User CODE END ExternalFunctions */
 
-/* USER CODE BEGIN 0 */
+/* User CODE BEGIN 0 */
 
-/* USER CODE END 0 */
+/* User CODE END 0 */
 /**
   * Initializes the Global MSP.
   */
 void HAL_MspInit(void)
 {
 
-  /* USER CODE BEGIN MspInit 0 */
+  /* User CODE BEGIN MspInit 0 */
 
-  /* USER CODE END MspInit 0 */
+  /* User CODE END MspInit 0 */
 
   __HAL_RCC_SYSCFG_CLK_ENABLE();
   __HAL_RCC_PWR_CLK_ENABLE();
@@ -74,11 +74,11 @@ void HAL_MspInit(void)
   /* PendSV_IRQn interrupt configuration */
   HAL_NVIC_SetPriority(PendSV_IRQn, 15, 0);
 
-  /* USER CODE BEGIN MspInit 1 */
+  /* User CODE BEGIN MspInit 1 */
 
-  /* USER CODE END MspInit 1 */
+  /* User CODE END MspInit 1 */
 }
 
-/* USER CODE BEGIN 1 */
+/* User CODE BEGIN 1 */
 
-/* USER CODE END 1 */
+/* User CODE END 1 */

@@ -1,4 +1,4 @@
-/* USER CODE BEGIN Header */
+/* User CODE BEGIN Header */
 /**
   ******************************************************************************
   * @file    i2c.h
@@ -16,7 +16,7 @@
   *
   ******************************************************************************
   */
-/* USER CODE END Header */
+/* User CODE END Header */
 /* Define to prevent recursive inclusion -------------------------------------*/
 #ifndef __I2C_H__
 #define __I2C_H__
@@ -28,24 +28,24 @@ extern "C" {
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 
-/* USER CODE BEGIN Includes */
+/* User CODE BEGIN Includes */
 
-/* USER CODE END Includes */
+/* User CODE END Includes */
 
 extern I2C_HandleTypeDef hi2c1;
 
 extern I2C_HandleTypeDef hi2c2;
 
-/* USER CODE BEGIN Private defines */
+/* User CODE BEGIN Private defines */
 
-/* USER CODE END Private defines */
+/* User CODE END Private defines */
 
 void MX_I2C1_Init(void);
 void MX_I2C2_Init(void);
 
-/* USER CODE BEGIN Prototypes */
+/* User CODE BEGIN Prototypes */
 
-/* USER CODE END Prototypes */
+/* User CODE END Prototypes */
 
 #ifdef __cplusplus
 }

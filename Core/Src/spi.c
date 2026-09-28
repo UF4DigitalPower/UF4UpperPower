@@ -1,4 +1,4 @@
-/* USER CODE BEGIN Header */
+/* User CODE BEGIN Header */
 /**
   ******************************************************************************
   * @file    spi.c
@@ -16,13 +16,13 @@
   *
   ******************************************************************************
   */
-/* USER CODE END Header */
+/* User CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "spi.h"
 
-/* USER CODE BEGIN 0 */
+/* User CODE BEGIN 0 */
 
-/* USER CODE END 0 */
+/* User CODE END 0 */
 
 SPI_HandleTypeDef hspi1;
 SPI_HandleTypeDef hspi3;
@@ -32,13 +32,13 @@ SPI_HandleTypeDef hspi6;
 void MX_SPI1_Init(void)
 {
 
-  /* USER CODE BEGIN SPI1_Init 0 */
+  /* User CODE BEGIN SPI1_Init 0 */
 
-  /* USER CODE END SPI1_Init 0 */
+  /* User CODE END SPI1_Init 0 */
 
-  /* USER CODE BEGIN SPI1_Init 1 */
+  /* User CODE BEGIN SPI1_Init 1 */
 
-  /* USER CODE END SPI1_Init 1 */
+  /* User CODE END SPI1_Init 1 */
   hspi1.Instance = SPI1;
   hspi1.Init.Mode = SPI_MODE_MASTER;
   hspi1.Init.Direction = SPI_DIRECTION_2LINES;
@@ -55,22 +55,22 @@ void MX_SPI1_Init(void)
   {
     Error_Handler();
   }
-  /* USER CODE BEGIN SPI1_Init 2 */
+  /* User CODE BEGIN SPI1_Init 2 */
 
-  /* USER CODE END SPI1_Init 2 */
+  /* User CODE END SPI1_Init 2 */
 
 }
 /* SPI3 init function */
 void MX_SPI3_Init(void)
 {
 
-  /* USER CODE BEGIN SPI3_Init 0 */
+  /* User CODE BEGIN SPI3_Init 0 */
 
-  /* USER CODE END SPI3_Init 0 */
+  /* User CODE END SPI3_Init 0 */
 
-  /* USER CODE BEGIN SPI3_Init 1 */
+  /* User CODE BEGIN SPI3_Init 1 */
 
-  /* USER CODE END SPI3_Init 1 */
+  /* User CODE END SPI3_Init 1 */
   hspi3.Instance = SPI3;
   hspi3.Init.Mode = SPI_MODE_MASTER;
   hspi3.Init.Direction = SPI_DIRECTION_2LINES;
@@ -87,22 +87,22 @@ void MX_SPI3_Init(void)
   {
     Error_Handler();
   }
-  /* USER CODE BEGIN SPI3_Init 2 */
+  /* User CODE BEGIN SPI3_Init 2 */
 
-  /* USER CODE END SPI3_Init 2 */
+  /* User CODE END SPI3_Init 2 */
 
 }
 /* SPI6 init function */
 void MX_SPI6_Init(void)
 {
 
-  /* USER CODE BEGIN SPI6_Init 0 */
+  /* User CODE BEGIN SPI6_Init 0 */
 
-  /* USER CODE END SPI6_Init 0 */
+  /* User CODE END SPI6_Init 0 */
 
-  /* USER CODE BEGIN SPI6_Init 1 */
+  /* User CODE BEGIN SPI6_Init 1 */
 
-  /* USER CODE END SPI6_Init 1 */
+  /* User CODE END SPI6_Init 1 */
   hspi6.Instance = SPI6;
   hspi6.Init.Mode = SPI_MODE_MASTER;
   hspi6.Init.Direction = SPI_DIRECTION_2LINES;
@@ -119,9 +119,9 @@ void MX_SPI6_Init(void)
   {
     Error_Handler();
   }
-  /* USER CODE BEGIN SPI6_Init 2 */
+  /* User CODE BEGIN SPI6_Init 2 */
 
-  /* USER CODE END SPI6_Init 2 */
+  /* User CODE END SPI6_Init 2 */
 
 }
 
@@ -131,9 +131,9 @@ void HAL_SPI_MspInit(SPI_HandleTypeDef* spiHandle)
   GPIO_InitTypeDef GPIO_InitStruct = {0};
   if(spiHandle->Instance==SPI1)
   {
-  /* USER CODE BEGIN SPI1_MspInit 0 */
+  /* User CODE BEGIN SPI1_MspInit 0 */
 
-  /* USER CODE END SPI1_MspInit 0 */
+  /* User CODE END SPI1_MspInit 0 */
     /* SPI1 clock enable */
     __HAL_RCC_SPI1_CLK_ENABLE();
 
@@ -150,15 +150,15 @@ void HAL_SPI_MspInit(SPI_HandleTypeDef* spiHandle)
     GPIO_InitStruct.Alternate = GPIO_AF5_SPI1;
     HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-  /* USER CODE BEGIN SPI1_MspInit 1 */
+  /* User CODE BEGIN SPI1_MspInit 1 */
 
-  /* USER CODE END SPI1_MspInit 1 */
+  /* User CODE END SPI1_MspInit 1 */
   }
   else if(spiHandle->Instance==SPI3)
   {
-  /* USER CODE BEGIN SPI3_MspInit 0 */
+  /* User CODE BEGIN SPI3_MspInit 0 */
 
-  /* USER CODE END SPI3_MspInit 0 */
+  /* User CODE END SPI3_MspInit 0 */
     /* SPI3 clock enable */
     __HAL_RCC_SPI3_CLK_ENABLE();
 
@@ -183,15 +183,15 @@ void HAL_SPI_MspInit(SPI_HandleTypeDef* spiHandle)
     GPIO_InitStruct.Alternate = GPIO_AF6_SPI3;
     HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
-  /* USER CODE BEGIN SPI3_MspInit 1 */
+  /* User CODE BEGIN SPI3_MspInit 1 */
 
-  /* USER CODE END SPI3_MspInit 1 */
+  /* User CODE END SPI3_MspInit 1 */
   }
   else if(spiHandle->Instance==SPI6)
   {
-  /* USER CODE BEGIN SPI6_MspInit 0 */
+  /* User CODE BEGIN SPI6_MspInit 0 */
 
-  /* USER CODE END SPI6_MspInit 0 */
+  /* User CODE END SPI6_MspInit 0 */
     /* SPI6 clock enable */
     __HAL_RCC_SPI6_CLK_ENABLE();
 
@@ -208,9 +208,9 @@ void HAL_SPI_MspInit(SPI_HandleTypeDef* spiHandle)
     GPIO_InitStruct.Alternate = GPIO_AF5_SPI6;
     HAL_GPIO_Init(GPIOG, &GPIO_InitStruct);
 
-  /* USER CODE BEGIN SPI6_MspInit 1 */
+  /* User CODE BEGIN SPI6_MspInit 1 */
 
-  /* USER CODE END SPI6_MspInit 1 */
+  /* User CODE END SPI6_MspInit 1 */
   }
 }
 
@@ -219,9 +219,9 @@ void HAL_SPI_MspDeInit(SPI_HandleTypeDef* spiHandle)
 
   if(spiHandle->Instance==SPI1)
   {
-  /* USER CODE BEGIN SPI1_MspDeInit 0 */
+  /* User CODE BEGIN SPI1_MspDeInit 0 */
 
-  /* USER CODE END SPI1_MspDeInit 0 */
+  /* User CODE END SPI1_MspDeInit 0 */
     /* Peripheral clock disable */
     __HAL_RCC_SPI1_CLK_DISABLE();
 
@@ -232,15 +232,15 @@ void HAL_SPI_MspDeInit(SPI_HandleTypeDef* spiHandle)
     */
     HAL_GPIO_DeInit(GPIOA, FLSAH_SCK_Pin|FLASH_MISO_Pin|FLASH_MOSI_Pin);
 
-  /* USER CODE BEGIN SPI1_MspDeInit 1 */
+  /* User CODE BEGIN SPI1_MspDeInit 1 */
 
-  /* USER CODE END SPI1_MspDeInit 1 */
+  /* User CODE END SPI1_MspDeInit 1 */
   }
   else if(spiHandle->Instance==SPI3)
   {
-  /* USER CODE BEGIN SPI3_MspDeInit 0 */
+  /* User CODE BEGIN SPI3_MspDeInit 0 */
 
-  /* USER CODE END SPI3_MspDeInit 0 */
+  /* User CODE END SPI3_MspDeInit 0 */
     /* Peripheral clock disable */
     __HAL_RCC_SPI3_CLK_DISABLE();
 
@@ -253,15 +253,15 @@ void HAL_SPI_MspDeInit(SPI_HandleTypeDef* spiHandle)
 
     HAL_GPIO_DeInit(GPIOC, LCD_SCK_Pin|LCD_SDA_Pin);
 
-  /* USER CODE BEGIN SPI3_MspDeInit 1 */
+  /* User CODE BEGIN SPI3_MspDeInit 1 */
 
-  /* USER CODE END SPI3_MspDeInit 1 */
+  /* User CODE END SPI3_MspDeInit 1 */
   }
   else if(spiHandle->Instance==SPI6)
   {
-  /* USER CODE BEGIN SPI6_MspDeInit 0 */
+  /* User CODE BEGIN SPI6_MspDeInit 0 */
 
-  /* USER CODE END SPI6_MspDeInit 0 */
+  /* User CODE END SPI6_MspDeInit 0 */
     /* Peripheral clock disable */
     __HAL_RCC_SPI6_CLK_DISABLE();
 
@@ -272,12 +272,12 @@ void HAL_SPI_MspDeInit(SPI_HandleTypeDef* spiHandle)
     */
     HAL_GPIO_DeInit(GPIOG, WIFI_MISO_Pin|WIFI_SCK_Pin|WIFI_MOSI_Pin);
 
-  /* USER CODE BEGIN SPI6_MspDeInit 1 */
+  /* User CODE BEGIN SPI6_MspDeInit 1 */
 
-  /* USER CODE END SPI6_MspDeInit 1 */
+  /* User CODE END SPI6_MspDeInit 1 */
   }
 }
 
-/* USER CODE BEGIN 1 */
+/* User CODE BEGIN 1 */
 
-/* USER CODE END 1 */
+/* User CODE END 1 */

@@ -1,4 +1,4 @@
-/* USER CODE BEGIN Header */
+/* User CODE BEGIN Header */
 /**
   ******************************************************************************
   * @file    dma2d.c
@@ -16,13 +16,13 @@
   *
   ******************************************************************************
   */
-/* USER CODE END Header */
+/* User CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "dma2d.h"
 
-/* USER CODE BEGIN 0 */
+/* User CODE BEGIN 0 */
 
-/* USER CODE END 0 */
+/* User CODE END 0 */
 
 DMA2D_HandleTypeDef hdma2d;
 
@@ -30,13 +30,13 @@ DMA2D_HandleTypeDef hdma2d;
 void MX_DMA2D_Init(void)
 {
 
-  /* USER CODE BEGIN DMA2D_Init 0 */
+  /* User CODE BEGIN DMA2D_Init 0 */
 
-  /* USER CODE END DMA2D_Init 0 */
+  /* User CODE END DMA2D_Init 0 */
 
-  /* USER CODE BEGIN DMA2D_Init 1 */
+  /* User CODE BEGIN DMA2D_Init 1 */
 
-  /* USER CODE END DMA2D_Init 1 */
+  /* User CODE END DMA2D_Init 1 */
   hdma2d.Instance = DMA2D;
   hdma2d.Init.Mode = DMA2D_M2M;
   hdma2d.Init.ColorMode = DMA2D_OUTPUT_RGB565;
@@ -53,9 +53,9 @@ void MX_DMA2D_Init(void)
   {
     Error_Handler();
   }
-  /* USER CODE BEGIN DMA2D_Init 2 */
+  /* User CODE BEGIN DMA2D_Init 2 */
 
-  /* USER CODE END DMA2D_Init 2 */
+  /* User CODE END DMA2D_Init 2 */
 
 }
 
@@ -64,18 +64,18 @@ void HAL_DMA2D_MspInit(DMA2D_HandleTypeDef* dma2dHandle)
 
   if(dma2dHandle->Instance==DMA2D)
   {
-  /* USER CODE BEGIN DMA2D_MspInit 0 */
+  /* User CODE BEGIN DMA2D_MspInit 0 */
 
-  /* USER CODE END DMA2D_MspInit 0 */
+  /* User CODE END DMA2D_MspInit 0 */
     /* DMA2D clock enable */
     __HAL_RCC_DMA2D_CLK_ENABLE();
 
     /* DMA2D interrupt Init */
     HAL_NVIC_SetPriority(DMA2D_IRQn, 5, 0);
     HAL_NVIC_EnableIRQ(DMA2D_IRQn);
-  /* USER CODE BEGIN DMA2D_MspInit 1 */
+  /* User CODE BEGIN DMA2D_MspInit 1 */
 
-  /* USER CODE END DMA2D_MspInit 1 */
+  /* User CODE END DMA2D_MspInit 1 */
   }
 }
 
@@ -84,20 +84,20 @@ void HAL_DMA2D_MspDeInit(DMA2D_HandleTypeDef* dma2dHandle)
 
   if(dma2dHandle->Instance==DMA2D)
   {
-  /* USER CODE BEGIN DMA2D_MspDeInit 0 */
+  /* User CODE BEGIN DMA2D_MspDeInit 0 */
 
-  /* USER CODE END DMA2D_MspDeInit 0 */
+  /* User CODE END DMA2D_MspDeInit 0 */
     /* Peripheral clock disable */
     __HAL_RCC_DMA2D_CLK_DISABLE();
 
     /* DMA2D interrupt Deinit */
     HAL_NVIC_DisableIRQ(DMA2D_IRQn);
-  /* USER CODE BEGIN DMA2D_MspDeInit 1 */
+  /* User CODE BEGIN DMA2D_MspDeInit 1 */
 
-  /* USER CODE END DMA2D_MspDeInit 1 */
+  /* User CODE END DMA2D_MspDeInit 1 */
   }
 }
 
-/* USER CODE BEGIN 1 */
+/* User CODE BEGIN 1 */
 
-/* USER CODE END 1 */
+/* User CODE END 1 */

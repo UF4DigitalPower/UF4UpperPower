@@ -1,4 +1,4 @@
-/* USER CODE BEGIN Header */
+/* User CODE BEGIN Header */
 /**
   ******************************************************************************
   * @file    dma.c
@@ -16,22 +16,22 @@
   *
   ******************************************************************************
   */
-/* USER CODE END Header */
+/* User CODE END Header */
 
 /* Includes ------------------------------------------------------------------*/
 #include "dma.h"
 
-/* USER CODE BEGIN 0 */
+/* User CODE BEGIN 0 */
 
-/* USER CODE END 0 */
+/* User CODE END 0 */
 
 /*----------------------------------------------------------------------------*/
 /* Configure DMA                                                              */
 /*----------------------------------------------------------------------------*/
 
-/* USER CODE BEGIN 1 */
+/* User CODE BEGIN 1 */
 
-/* USER CODE END 1 */
+/* User CODE END 1 */
 DMA_HandleTypeDef hdma_memtomem_dma2_stream0;
 
 /**
@@ -66,7 +66,7 @@ void MX_DMA_Init(void)
 
 }
 
-/* USER CODE BEGIN 2 */
+/* User CODE BEGIN 2 */
 
-/* USER CODE END 2 */
+/* User CODE END 2 */
 

@@ -310,7 +310,7 @@ HAL_StatusTypeDef HAL_FLASHEx_OBProgram(FLASH_OBProgramInitTypeDef *pOBInit)
     status = FLASH_OB_RDP_LevelConfig(pOBInit->RDPLevel);
   }
 
-  /*USER  configuration*/
+  /*User  configuration*/
   if ((pOBInit->OptionType & OPTIONBYTE_USER) == OPTIONBYTE_USER)
   {
     status = FLASH_OB_UserConfig(pOBInit->USERConfig & OB_IWDG_SW,
@@ -347,7 +347,7 @@ void HAL_FLASHEx_OBGetConfig(FLASH_OBProgramInitTypeDef *pOBInit)
   /*Get RDP Level*/
   pOBInit->RDPLevel = (uint32_t)FLASH_OB_GetRDP();
 
-  /*Get USER*/
+  /*Get User*/
   pOBInit->USERConfig = (uint8_t)FLASH_OB_GetUser();
 
   /*Get BOR Level*/

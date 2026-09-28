@@ -1,4 +1,4 @@
-/* USER CODE BEGIN Header */
+/* User CODE BEGIN Header */
 /**
   ******************************************************************************
   * @file    dma.h
@@ -16,7 +16,7 @@
   *
   ******************************************************************************
   */
-/* USER CODE END Header */
+/* User CODE END Header */
 /* Define to prevent recursive inclusion -------------------------------------*/
 #ifndef __DMA_H__
 #define __DMA_H__
@@ -31,19 +31,19 @@ extern "C" {
 /* DMA memory to memory transfer handles -------------------------------------*/
 extern DMA_HandleTypeDef hdma_memtomem_dma2_stream0;
 
-/* USER CODE BEGIN Includes */
+/* User CODE BEGIN Includes */
 
-/* USER CODE END Includes */
+/* User CODE END Includes */
 
-/* USER CODE BEGIN Private defines */
+/* User CODE BEGIN Private defines */
 
-/* USER CODE END Private defines */
+/* User CODE END Private defines */
 
 void MX_DMA_Init(void);
 
-/* USER CODE BEGIN Prototypes */
+/* User CODE BEGIN Prototypes */
 
-/* USER CODE END Prototypes */
+/* User CODE END Prototypes */
 
 #ifdef __cplusplus
 }

@@ -1,4 +1,4 @@
-/* USER CODE BEGIN Header */
+/* User CODE BEGIN Header */
 /**
   ******************************************************************************
   * @file           : main.h
@@ -16,7 +16,7 @@
   *
   ******************************************************************************
   */
-/* USER CODE END Header */
+/* User CODE END Header */
 
 /* Define to prevent recursive inclusion -------------------------------------*/
 #ifndef __MAIN_H
@@ -30,31 +30,31 @@ extern "C" {
 #include "stm32f4xx_hal.h"
 
 /* Private includes ----------------------------------------------------------*/
-/* USER CODE BEGIN Includes */
+/* User CODE BEGIN Includes */
 
-/* USER CODE END Includes */
+/* User CODE END Includes */
 
 /* Exported types ------------------------------------------------------------*/
-/* USER CODE BEGIN ET */
+/* User CODE BEGIN ET */
 
-/* USER CODE END ET */
+/* User CODE END ET */
 
 /* Exported constants --------------------------------------------------------*/
-/* USER CODE BEGIN EC */
+/* User CODE BEGIN EC */
 
-/* USER CODE END EC */
+/* User CODE END EC */
 
 /* Exported macro ------------------------------------------------------------*/
-/* USER CODE BEGIN EM */
+/* User CODE BEGIN EM */
 
-/* USER CODE END EM */
+/* User CODE END EM */
 
 /* Exported functions prototypes ---------------------------------------------*/
 void Error_Handler(void);
 
-/* USER CODE BEGIN EFP */
+/* User CODE BEGIN EFP */
 
-/* USER CODE END EFP */
+/* User CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
 #define LCD_BLK_Pin GPIO_PIN_3
@@ -99,9 +99,9 @@ void Error_Handler(void);
 #define TOUCH_SDA_Pin GPIO_PIN_7
 #define TOUCH_SDA_GPIO_Port GPIOB
 
-/* USER CODE BEGIN Private defines */
+/* User CODE BEGIN Private defines */
 
-/* USER CODE END Private defines */
+/* User CODE END Private defines */
 
 #ifdef __cplusplus
 }

@@ -172,7 +172,7 @@ typedef struct
   */
 #define OPTIONBYTE_WRP        0x00000001U  /*!< WRP option byte configuration  */
 #define OPTIONBYTE_RDP        0x00000002U  /*!< RDP option byte configuration  */
-#define OPTIONBYTE_USER       0x00000004U  /*!< USER option byte configuration */
+#define OPTIONBYTE_USER       0x00000004U  /*!< User option byte configuration */
 #define OPTIONBYTE_BOR        0x00000008U  /*!< BOR option byte configuration  */
 /**
   * @}

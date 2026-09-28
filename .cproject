@@ -34,6 +34,17 @@
 								</option>
 								<option IS_BUILTIN_EMPTY="false" IS_VALUE_EMPTY="false" id="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.assembler.option.includepaths.2045369228" name="Include paths (-I)" superClass="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.assembler.option.includepaths" valueType="includePath">
 									<listOptionValue builtIn="false" value="../Core/Inc"/>
+									<listOptionValue builtIn="false" value="../USER/ESP32"/>
+									<listOptionValue builtIn="false" value="../USER/FLASH"/>
+									<listOptionValue builtIn="false" value="../USER/G474"/>
+									<listOptionValue builtIn="false" value="../USER/GUI"/>
+									<listOptionValue builtIn="false" value="../USER/LCD"/>
+									<listOptionValue builtIn="false" value="../USER/LOG"/>
+									<listOptionValue builtIn="false" value="../USER/TOUCH"/>
+									<listOptionValue builtIn="false" value="../USER/UF4COM"/>
+                                    <listOptionValue builtIn="false" value="../User/UF4COM/uf4com/protocol/Inc"/>
+                                    <listOptionValue builtIn="false" value="../User/UF4COM/uf4com/register/Inc"/>
+                                    <listOptionValue builtIn="false" value="../User/UF4COM/uf4com/transport/uf4com_uart/Inc"/>
 									<listOptionValue builtIn="false" value="../Drivers/STM32F4xx_HAL_Driver/Inc"/>
 									<listOptionValue builtIn="false" value="../Drivers/STM32F4xx_HAL_Driver/Inc/Legacy"/>
 									<listOptionValue builtIn="false" value="../Middlewares/Third_Party/FreeRTOS/Source/include"/>
@@ -54,6 +65,17 @@
 								</option>
 								<option IS_BUILTIN_EMPTY="false" IS_VALUE_EMPTY="false" id="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.c.compiler.option.includepaths.1341607069" name="Include paths (-I)" superClass="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.c.compiler.option.includepaths" valueType="includePath">
 									<listOptionValue builtIn="false" value="../Core/Inc"/>
+									<listOptionValue builtIn="false" value="../User/ESP32"/>
+									<listOptionValue builtIn="false" value="../User/FLASH"/>
+									<listOptionValue builtIn="false" value="../User/G474"/>
+									<listOptionValue builtIn="false" value="../User/GUI"/>
+									<listOptionValue builtIn="false" value="../User/LCD"/>
+									<listOptionValue builtIn="false" value="../User/LOG"/>
+									<listOptionValue builtIn="false" value="../User/TOUCH"/>
+									<listOptionValue builtIn="false" value="../User/UF4COM"/>
+                                    <listOptionValue builtIn="false" value="../User/UF4COM/uf4com/protocol/Inc"/>
+                                    <listOptionValue builtIn="false" value="../User/UF4COM/uf4com/register/Inc"/>
+                                    <listOptionValue builtIn="false" value="../User/UF4COM/uf4com/transport/uf4com_uart/Inc"/>
 									<listOptionValue builtIn="false" value="../Drivers/STM32F4xx_HAL_Driver/Inc"/>
 									<listOptionValue builtIn="false" value="../Drivers/STM32F4xx_HAL_Driver/Inc/Legacy"/>
 									<listOptionValue builtIn="false" value="../Middlewares/Third_Party/FreeRTOS/Source/include"/>
@@ -88,6 +110,7 @@
 					</folderInfo>
 					<sourceEntries>
 						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="Core"/>
+						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="User"/>
 						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="Middlewares"/>
 						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="Drivers"/>
 					</sourceEntries>
@@ -125,6 +148,17 @@
 								<option id="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.assembler.option.debuglevel.771425927" superClass="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.assembler.option.debuglevel" value="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.assembler.option.debuglevel.value.g0" valueType="enumerated"/>
 								<option IS_BUILTIN_EMPTY="false" IS_VALUE_EMPTY="false" id="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.assembler.option.includepaths.89024595" superClass="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.assembler.option.includepaths" valueType="includePath">
 									<listOptionValue builtIn="false" value="../Core/Inc"/>
+                                    <listOptionValue builtIn="false" value="../User/ESP32"/>
+                                    <listOptionValue builtIn="false" value="../User/FLASH"/>
+                                    <listOptionValue builtIn="false" value="../User/G474"/>
+                                    <listOptionValue builtIn="false" value="../User/GUI"/>
+                                    <listOptionValue builtIn="false" value="../User/LCD"/>
+                                    <listOptionValue builtIn="false" value="../User/LOG"/>
+                                    <listOptionValue builtIn="false" value="../User/TOUCH"/>
+                                    <listOptionValue builtIn="false" value="../User/UF4COM"/>
+                                    <listOptionValue builtIn="false" value="../User/UF4COM/uf4com/protocol/Inc"/>
+                                    <listOptionValue builtIn="false" value="../User/UF4COM/uf4com/register/Inc"/>
+                                    <listOptionValue builtIn="false" value="../User/UF4COM/uf4com/transport/uf4com_uart/Inc"/>
 									<listOptionValue builtIn="false" value="../Drivers/STM32F4xx_HAL_Driver/Inc"/>
 									<listOptionValue builtIn="false" value="../Drivers/STM32F4xx_HAL_Driver/Inc/Legacy"/>
 									<listOptionValue builtIn="false" value="../Middlewares/Third_Party/FreeRTOS/Source/include"/>
@@ -144,6 +178,17 @@
 								</option>
 								<option IS_BUILTIN_EMPTY="false" IS_VALUE_EMPTY="false" id="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.c.compiler.option.includepaths.1140572369" superClass="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.c.compiler.option.includepaths" valueType="includePath">
 									<listOptionValue builtIn="false" value="../Core/Inc"/>
+                                    <listOptionValue builtIn="false" value="../User/ESP32"/>
+                                    <listOptionValue builtIn="false" value="../User/FLASH"/>
+                                    <listOptionValue builtIn="false" value="../User/G474"/>
+                                    <listOptionValue builtIn="false" value="../User/GUI"/>
+                                    <listOptionValue builtIn="false" value="../User/LCD"/>
+                                    <listOptionValue builtIn="false" value="../User/LOG"/>
+                                    <listOptionValue builtIn="false" value="../User/TOUCH"/>
+                                    <listOptionValue builtIn="false" value="../User/UF4COM"/>
+                                    <listOptionValue builtIn="false" value="../User/UF4COM/uf4com/protocol/Inc"/>
+                                    <listOptionValue builtIn="false" value="../User/UF4COM/uf4com/register/Inc"/>
+                                    <listOptionValue builtIn="false" value="../User/UF4COM/uf4com/transport/uf4com_uart/Inc"/>
 									<listOptionValue builtIn="false" value="../Drivers/STM32F4xx_HAL_Driver/Inc"/>
 									<listOptionValue builtIn="false" value="../Drivers/STM32F4xx_HAL_Driver/Inc/Legacy"/>
 									<listOptionValue builtIn="false" value="../Middlewares/Third_Party/FreeRTOS/Source/include"/>
@@ -178,6 +223,7 @@
 					</folderInfo>
 					<sourceEntries>
 						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="Core"/>
+						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="User"/>
 						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="Middlewares"/>
 						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="Drivers"/>
 					</sourceEntries>

@@ -1,4 +1,4 @@
-/* USER CODE BEGIN Header */
+/* User CODE BEGIN Header */
 /**
   ******************************************************************************
   * @file    ltdc.c
@@ -16,13 +16,13 @@
   *
   ******************************************************************************
   */
-/* USER CODE END Header */
+/* User CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "ltdc.h"
 
-/* USER CODE BEGIN 0 */
+/* User CODE BEGIN 0 */
 
-/* USER CODE END 0 */
+/* User CODE END 0 */
 
 LTDC_HandleTypeDef hltdc;
 
@@ -30,15 +30,15 @@ LTDC_HandleTypeDef hltdc;
 void MX_LTDC_Init(void)
 {
 
-  /* USER CODE BEGIN LTDC_Init 0 */
+  /* User CODE BEGIN LTDC_Init 0 */
 
-  /* USER CODE END LTDC_Init 0 */
+  /* User CODE END LTDC_Init 0 */
 
   LTDC_LayerCfgTypeDef pLayerCfg = {0};
 
-  /* USER CODE BEGIN LTDC_Init 1 */
+  /* User CODE BEGIN LTDC_Init 1 */
 
-  /* USER CODE END LTDC_Init 1 */
+  /* User CODE END LTDC_Init 1 */
   hltdc.Instance = LTDC;
   hltdc.Init.HSPolarity = LTDC_HSPOLARITY_AL;
   hltdc.Init.VSPolarity = LTDC_VSPOLARITY_AL;
@@ -78,9 +78,9 @@ void MX_LTDC_Init(void)
   {
     Error_Handler();
   }
-  /* USER CODE BEGIN LTDC_Init 2 */
+  /* User CODE BEGIN LTDC_Init 2 */
 
-  /* USER CODE END LTDC_Init 2 */
+  /* User CODE END LTDC_Init 2 */
 
 }
 
@@ -91,9 +91,9 @@ void HAL_LTDC_MspInit(LTDC_HandleTypeDef* ltdcHandle)
   RCC_PeriphCLKInitTypeDef PeriphClkInitStruct = {0};
   if(ltdcHandle->Instance==LTDC)
   {
-  /* USER CODE BEGIN LTDC_MspInit 0 */
+  /* User CODE BEGIN LTDC_MspInit 0 */
 
-  /* USER CODE END LTDC_MspInit 0 */
+  /* User CODE END LTDC_MspInit 0 */
 
   /** Initializes the peripherals clock
   */
@@ -171,9 +171,9 @@ void HAL_LTDC_MspInit(LTDC_HandleTypeDef* ltdcHandle)
     HAL_NVIC_EnableIRQ(LTDC_IRQn);
     HAL_NVIC_SetPriority(LTDC_ER_IRQn, 5, 0);
     HAL_NVIC_EnableIRQ(LTDC_ER_IRQn);
-  /* USER CODE BEGIN LTDC_MspInit 1 */
+  /* User CODE BEGIN LTDC_MspInit 1 */
 
-  /* USER CODE END LTDC_MspInit 1 */
+  /* User CODE END LTDC_MspInit 1 */
   }
 }
 
@@ -182,9 +182,9 @@ void HAL_LTDC_MspDeInit(LTDC_HandleTypeDef* ltdcHandle)
 
   if(ltdcHandle->Instance==LTDC)
   {
-  /* USER CODE BEGIN LTDC_MspDeInit 0 */
+  /* User CODE BEGIN LTDC_MspDeInit 0 */
 
-  /* USER CODE END LTDC_MspDeInit 0 */
+  /* User CODE END LTDC_MspDeInit 0 */
     /* Peripheral clock disable */
     __HAL_RCC_LTDC_CLK_DISABLE();
 
@@ -224,12 +224,12 @@ void HAL_LTDC_MspDeInit(LTDC_HandleTypeDef* ltdcHandle)
     /* LTDC interrupt Deinit */
     HAL_NVIC_DisableIRQ(LTDC_IRQn);
     HAL_NVIC_DisableIRQ(LTDC_ER_IRQn);
-  /* USER CODE BEGIN LTDC_MspDeInit 1 */
+  /* User CODE BEGIN LTDC_MspDeInit 1 */
 
-  /* USER CODE END LTDC_MspDeInit 1 */
+  /* User CODE END LTDC_MspDeInit 1 */
   }
 }
 
-/* USER CODE BEGIN 1 */
+/* User CODE BEGIN 1 */
 
-/* USER CODE END 1 */
+/* User CODE END 1 */

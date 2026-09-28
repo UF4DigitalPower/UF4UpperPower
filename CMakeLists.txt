@@ -19,9 +19,9 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_C_STANDARD 11)
 
 #Uncomment for hardware floating point
-#add_compile_definitions(ARM_MATH_CM4;ARM_MATH_MATRIX_CHECK;ARM_MATH_ROUNDING)
-#add_compile_options(-mfloat-abi=hard -mfpu=fpv4-sp-d16)
-#add_link_options(-mfloat-abi=hard -mfpu=fpv4-sp-d16)
+add_compile_definitions(ARM_MATH_CM4;ARM_MATH_MATRIX_CHECK;ARM_MATH_ROUNDING)
+add_compile_options(-mfloat-abi=hard -mfpu=fpv4-sp-d16)
+add_link_options(-mfloat-abi=hard -mfpu=fpv4-sp-d16)
 
 #Uncomment for software floating point
 #add_compile_options(-mfloat-abi=soft)
@@ -49,11 +49,11 @@ else ()
     add_compile_options(-Og -g)
 endif ()
 
-include_directories(Core/Inc Drivers/STM32F4xx_HAL_Driver/Inc Drivers/STM32F4xx_HAL_Driver/Inc/Legacy Middlewares/Third_Party/FreeRTOS/Source/include Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2 Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM4F Drivers/CMSIS/Device/ST/STM32F4xx/Include Drivers/CMSIS/Include)
+include_directories(Core/Inc User/ESP32 User/FLASH User/G474 User/GUI User/LCD User/LOG User/TOUCH User/UF4COM User/UF4COM/uf4com/protocol/Inc User/UF4COM/uf4com/register/Inc User/UF4COM/uf4com/transport/uf4com_uart/Inc Drivers/STM32F4xx_HAL_Driver/Inc Drivers/STM32F4xx_HAL_Driver/Inc/Legacy Middlewares/Third_Party/FreeRTOS/Source/include Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2 Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM4F Drivers/CMSIS/Device/ST/STM32F4xx/Include Drivers/CMSIS/Include)
 
 add_definitions(-DDEBUG -DUSE_HAL_DRIVER -DSTM32F429xx)
 
-file(GLOB_RECURSE SOURCES "Core/*.*" "Middlewares/*.*" "Drivers/*.*")
+file(GLOB_RECURSE SOURCES "Core/*.*" "User/*.*" "Middlewares/*.*" "Drivers/*.*")
 
 set(LINKER_SCRIPT ${CMAKE_SOURCE_DIR}/STM32F429IGTX_FLASH.ld)
 
@@ -66,8 +66,48 @@ add_executable(${PROJECT_NAME}.elf ${SOURCES} ${LINKER_SCRIPT})
 set(HEX_FILE ${PROJECT_BINARY_DIR}/${PROJECT_NAME}.hex)
 set(BIN_FILE ${PROJECT_BINARY_DIR}/${PROJECT_NAME}.bin)
 
+set(UF4_BANNER_TXT "${CMAKE_BINARY_DIR}/uf4_banner.txt")
+set(UF4_BANNER_SCRIPT "${CMAKE_BINARY_DIR}/uf4_generate_banner.cmake")
+file(WRITE "${UF4_BANNER_SCRIPT}" [=[
+string(TIMESTAMP UF4_BUILD_TIME "%Y-%m-%d %H:%M:%S")
+
+file(WRITE "${UF4_BANNER_TXT}" "
+╔════════════════════════════════════════════════════════════════════════════════════════════════════════╗
+║    ██╗   ██╗███████╗██╗  ██╗██████╗ ██╗ ██████╗ ██╗████████╗ █████╗ ██╗                                ║
+║    ██║   ██║██╔════╝██║  ██║██╔══██╗██║██╔════╝ ██║╚══██╔══╝██╔══██╗██║                                ║
+║    ██║   ██║█████╗  ███████║██║  ██║██║██║  ███╗██║   ██║   ███████║██║                                ║
+║    ██║   ██║██╔══╝  ╚════██║██║  ██║██║██║   ██║██║   ██║   ██╔══██║██║                                ║
+║    ╚██████╔╝██║          ██║██████╔╝██║╚██████╔╝██║   ██║   ██║  ██║███████╗                           ║
+║     ╚═════╝ ╚═╝          ╚═╝╚═════╝ ╚═╝ ╚═════╝ ╚═╝   ╚═╝   ╚═╝  ╚═╝╚══════╝                           ║
+║                                                                                                        ║
+║    ██╗   ██╗██████╗ ██████╗ ███████╗██████╗     ██╗   ██╗██████╗                                       ║
+║    ██║   ██║██╔══██╗██╔══██╗██╔════╝██╔══██╗    ██║   ██║╚════██╗                                      ║
+║    ██║   ██║██████╔╝██████╔╝█████╗  ██████╔╝    ██║   ██║ █████╔╝                                      ║
+║    ██║   ██║██╔═══╝ ██╔═══╝ ██╔══╝  ██╔══██╗    ╚██╗ ██╔╝██╔═══╝                                       ║
+║    ╚██████╔╝██║     ██║     ███████╗██║  ██║     ╚████╔╝ ███████╗                                      ║
+║     ╚═════╝ ╚═╝     ╚═╝     ╚══════╝╚═╝  ╚═╝      ╚═══╝  ╚══════╝                                      ║
+║                                                                                                        ║
+║    ██████╗ ██╗   ██╗██╗██╗     ██████╗     ███████╗██╗   ██╗ ██████╗ ██████╗███████╗███████╗███████╗   ║
+║    ██╔══██╗██║   ██║██║██║     ██╔══██╗    ██╔════╝██║   ██║██╔════╝██╔════╝██╔════╝██╔════╝██╔════╝   ║
+║    ██████╔╝██║   ██║██║██║     ██║  ██║    ███████╗██║   ██║██║     ██║     █████╗  ███████╗███████╗   ║
+║    ██╔══██╗██║   ██║██║██║     ██║  ██║    ╚════██║██║   ██║██║     ██║     ██╔══╝  ╚════██║╚════██║   ║
+║    ██████╔╝╚██████╔╝██║███████╗██████╔╝    ███████║╚██████╔╝╚██████╗╚██████╗███████╗███████║███████║   ║
+║    ╚═════╝  ╚═════╝ ╚═╝╚══════╝╚═════╝     ╚══════╝ ╚═════╝  ╚═════╝ ╚═════╝╚══════╝╚══════╝╚══════╝   ║
+╚════════════════════════════════════════════════════════════════════════════════════════════════════════╝
+  UF4DigitalPower firmware generated successfully.
+  Build time: ${UF4_BUILD_TIME}
+")
+]=])
+
 add_custom_command(TARGET ${PROJECT_NAME}.elf POST_BUILD
         COMMAND ${CMAKE_OBJCOPY} -Oihex $<TARGET_FILE:${PROJECT_NAME}.elf> ${HEX_FILE}
         COMMAND ${CMAKE_OBJCOPY} -Obinary $<TARGET_FILE:${PROJECT_NAME}.elf> ${BIN_FILE}
-        COMMENT "Building ${HEX_FILE}
-Building ${BIN_FILE}")
+        COMMAND ${CMAKE_COMMAND}
+        -DUF4_BANNER_TXT=${UF4_BANNER_TXT}
+        -DUF4_OUTPUT_ELF=$<TARGET_FILE:${PROJECT_NAME}.elf>
+        -P "${UF4_BANNER_SCRIPT}"
+        COMMAND ${CMAKE_COMMAND} -E cat "${UF4_BANNER_TXT}"
+        COMMENT "This version of the firmware is all manually maintained by UF4OVER"
+        VERBATIM
+)
+
