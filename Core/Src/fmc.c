@@ -70,6 +70,24 @@ void MX_FMC_Init(void)
 
   /* User CODE BEGIN FMC_Init 2 */
 
+  /* 90 MHz SDRAM clock: 7.8 us refresh interval minus 20 cycles. */
+  FMC_SDRAM_CommandTypeDef command = {0};
+  command.CommandMode = FMC_SDRAM_CMD_CLK_ENABLE;
+  command.CommandTarget = FMC_SDRAM_CMD_TARGET_BANK2;
+  command.AutoRefreshNumber = 1U;
+  if (HAL_SDRAM_SendCommand(&hsdram1, &command, HAL_MAX_DELAY) != HAL_OK) Error_Handler();
+  HAL_Delay(1U);
+  command.CommandMode = FMC_SDRAM_CMD_PALL;
+  if (HAL_SDRAM_SendCommand(&hsdram1, &command, HAL_MAX_DELAY) != HAL_OK) Error_Handler();
+  command.CommandMode = FMC_SDRAM_CMD_AUTOREFRESH_MODE;
+  command.AutoRefreshNumber = 8U;
+  if (HAL_SDRAM_SendCommand(&hsdram1, &command, HAL_MAX_DELAY) != HAL_OK) Error_Handler();
+  command.CommandMode = FMC_SDRAM_CMD_LOAD_MODE;
+  command.AutoRefreshNumber = 1U;
+  command.ModeRegisterDefinition = 0x0230U;
+  if (HAL_SDRAM_SendCommand(&hsdram1, &command, HAL_MAX_DELAY) != HAL_OK) Error_Handler();
+  if (HAL_SDRAM_ProgramRefreshRate(&hsdram1, 683U) != HAL_OK) Error_Handler();
+
   /* User CODE END FMC_Init 2 */
 }
 

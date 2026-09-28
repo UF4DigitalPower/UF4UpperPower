@@ -13,8 +13,6 @@
 #define GUI_TOUCH_IRQ_WINDOW_MS 150U
 #define GUI_HEARTBEAT_PERIOD_MS 500U
 
-static uint32_t g_boot_ready_tick;
-static uint8_t g_boot_popup_done;
 static volatile uint32_t g_gui_tick_ms;
 static volatile uint8_t g_gui_handler_pending;
 static volatile uint8_t g_gui_handler_elapsed_ms;
@@ -180,8 +178,6 @@ void GUI_Init(void)
   g_touch_irq_pending = 0U;
   g_touch_irq_seen = 0U;
   g_touch_irq_tick = 0U;
-  g_boot_ready_tick = 0U;
-  g_boot_popup_done = 0U;
   GUI_LogInit();
   GUI_LogWrite("SYSTEM READY");
   g_heartbeat_tick = 0U;
@@ -364,12 +360,6 @@ popup_tick:
     return;
   }
 
-  if (g_boot_popup_done == 0U && (uint32_t)(now - g_boot_ready_tick) >= 2000U &&
-      ui_popup_is_active() == 0U)
-  {
-    g_boot_popup_done = 1U;
-    GUI_PopupShow("BOOT OK", "SYSTEM READY", 3000U);
-  }
   ui_popup_tick(now);
 
   if (g_ui.page == UI_PAGE_LOG && GUI_LogGeneration() != g_log_generation_seen)

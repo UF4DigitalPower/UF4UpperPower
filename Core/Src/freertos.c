@@ -26,6 +26,16 @@
 /* Private includes ----------------------------------------------------------*/
 /* User CODE BEGIN Includes */
 
+#include "bsp_lcd.h"
+#include "boot_animation.h"
+#include "gui.h"
+#include "g474_remote.h"
+#include "parameter_manager.h"
+#include "uf4com.h"
+#include "uf4com_usrt.h"
+#include "usart.h"
+#include "w25qxx_port.h"
+
 /* User CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -51,7 +61,7 @@
 osThreadId_t defaultTaskHandle;
 const osThreadAttr_t defaultTask_attributes = {
   .name = "defaultTask",
-  .stack_size = 128 * 4,
+  .stack_size = 2048,
   .priority = (osPriority_t) osPriorityNormal,
 };
 
@@ -114,9 +124,30 @@ void MX_FREERTOS_Init(void) {
 void StartDefaultTask(void *argument)
 {
   /* User CODE BEGIN StartDefaultTask */
-  /* Infinite loop */
+  uint32_t last_gui_tick;
+
+  LCD_Init();
+  BootAnimation_Play();
+  (void)W25Qxx_Init();
+  UF4_ParameterManager_Init();
+  UF4_Init(UF4_UART_Tx, &huart6);
+  G474_Remote_Init();
+  UF4_UART_Init();
+  GUI_Init();
+  last_gui_tick = HAL_GetTick();
   for(;;)
   {
+    uint32_t now = HAL_GetTick();
+    while ((uint32_t)(now - last_gui_tick) >= 10U)
+    {
+      GUI_Tick();
+      last_gui_tick += 10U;
+    }
+    UF4_UART_Process();
+    UF4_ProcessMs(now);
+    G474_Remote_Process();
+    UF4_ParameterManager_Process();
+    GUI_Handler();
     osDelay(1);
   }
   /* User CODE END StartDefaultTask */

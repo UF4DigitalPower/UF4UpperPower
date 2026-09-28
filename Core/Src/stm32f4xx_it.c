@@ -64,6 +64,7 @@ extern TIM_HandleTypeDef htim11;
 extern TIM_HandleTypeDef htim13;
 extern TIM_HandleTypeDef htim14;
 extern TIM_HandleTypeDef htim1;
+extern UART_HandleTypeDef huart6;
 
 /* User CODE BEGIN EV */
 
@@ -324,5 +325,10 @@ void DMA2D_IRQHandler(void)
 }
 
 /* User CODE BEGIN 1 */
+
+void USART6_IRQHandler(void)
+{
+  HAL_UART_IRQHandler(&huart6);
+}
 
 /* User CODE END 1 */
