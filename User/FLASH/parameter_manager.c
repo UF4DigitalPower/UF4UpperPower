@@ -5,7 +5,7 @@
 #include <string.h>
 
 #include "bsp_lcd.h"
-#include "gui_internal.h"
+#include "board_model.h"
 #include "w25q64.h"
 #include "w25qxx_port.h"
 
@@ -158,15 +158,7 @@ static uint32_t UF4_ParameterManager_SectorAddress(uint8_t sector)
 
 static ui_setting_t *UF4_ParameterManager_FindSetting(uint16_t id)
 {
-  for (uint16_t i = 0U; i < UI_SETTING_COUNT; i++)
-  {
-    if (g_settings[i].id == id)
-    {
-      return &g_settings[i];
-    }
-  }
-
-  return NULL;
+  return Board_Model_FindSetting(id);
 }
 
 static uint8_t UF4_ParameterManager_SettingValue(uint16_t id, uint8_t default_value)
@@ -191,7 +183,7 @@ static void UF4_ParameterManager_CaptureDefaults(void)
 {
   for (uint16_t i = 0U; i < UI_SETTING_COUNT; i++)
   {
-    s_default_settings[i] = g_settings[i].current;
+    s_default_settings[i] = settings[i].current;
   }
   ui_home_export_state(&s_default_home_step_index,
                        s_default_home_presets,
@@ -202,7 +194,7 @@ static void UF4_ParameterManager_ApplyDefaults(void)
 {
   for (uint16_t i = 0U; i < UI_SETTING_COUNT; i++)
   {
-    g_settings[i].current = s_default_settings[i];
+    settings[i].current = s_default_settings[i];
   }
   ui_home_import_state(s_default_home_step_index,
                        s_default_home_presets,

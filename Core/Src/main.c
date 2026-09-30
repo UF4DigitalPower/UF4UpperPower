@@ -31,9 +31,9 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "boot_animation.h"
 #include "bsp_lcd.h"
-#include "gui.h"
+#include "board_lvgl.h"
+#include "board_model.h"
 #include "g474_remote.h"
 #include "parameter_manager.h"
 #include "uf4com.h"
@@ -73,19 +73,16 @@ static void Application_Process(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-static uint32_t s_last_gui_tick_ms;
-
 static void Application_Init(void)
 {
   LCD_Init();
-  BootAnimation_Play();
+  Board_Model_InitDefaults();
   (void)W25Qxx_Init();
   UF4_ParameterManager_Init();
   UF4_Init(UF4_UART_Tx, &huart6);
   G474_Remote_Init();
   UF4_UART_Init();
-  GUI_Init();
-  s_last_gui_tick_ms = HAL_GetTick();
+  Board_LVGL_Init();
 }
 
 static void Application_Process(void)
@@ -97,12 +94,7 @@ static void Application_Process(void)
   G474_Remote_Process();
   UF4_ParameterManager_Process();
 
-  while ((uint32_t)(now_ms - s_last_gui_tick_ms) >= 10U)
-  {
-    s_last_gui_tick_ms += 10U;
-    GUI_Tick();
-  }
-  GUI_Handler();
+  Board_LVGL_Process();
 }
 
 /* USER CODE END 0 */

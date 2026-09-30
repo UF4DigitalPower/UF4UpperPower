@@ -1,5 +1,5 @@
 #include "esp32c6_host.h"
-#include "gui.h"
+#include "board_lvgl.h"
 
 #include <string.h>
 
@@ -197,7 +197,7 @@ HAL_StatusTypeDef ESP32C6_HostTransfer(const uint8_t *tx, uint8_t *rx,
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
   if (GPIO_Pin == TOUCH_INT_Pin) {
-    GUI_TouchIrqNotify();
+    Board_LVGL_TouchIrqNotify();
   }
   if (GPIO_Pin == WIFI_HS_Pin) {
     hesp32c6.host_sig_irq = 1U;

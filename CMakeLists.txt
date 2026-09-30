@@ -18,6 +18,14 @@ project(STM32F429IGT6 C CXX ASM)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_C_STANDARD 11)
 
+find_program(CCACHE_PROGRAM ccache)
+if(CCACHE_PROGRAM)
+    set(CMAKE_C_COMPILER_LAUNCHER "${CCACHE_PROGRAM}")
+    set(CMAKE_CXX_COMPILER_LAUNCHER "${CCACHE_PROGRAM}")
+    set(CMAKE_ASM_COMPILER_LAUNCHER "${CCACHE_PROGRAM}")
+    message(STATUS "Compiler cache: ${CCACHE_PROGRAM}")
+endif()
+
 #Uncomment for hardware floating point
 add_compile_definitions(ARM_MATH_CM4;ARM_MATH_MATRIX_CHECK;ARM_MATH_ROUNDING)
 add_compile_options(-mfloat-abi=hard -mfpu=fpv4-sp-d16)
@@ -49,11 +57,29 @@ else ()
     add_compile_options(-Og -g)
 endif ()
 
-include_directories(Core/Inc User/ESP32 User/FLASH User/G474 User/GUI User/LCD User/LOG User/TOUCH User/UF4COM User/UF4COM/uf4com/protocol/Inc User/UF4COM/uf4com/register/Inc User/UF4COM/uf4com/transport/uf4com_uart/Inc Drivers/STM32F4xx_HAL_Driver/Inc Drivers/STM32F4xx_HAL_Driver/Inc/Legacy Drivers/CMSIS/Device/ST/STM32F4xx/Include Drivers/CMSIS/Include)
+include_directories(Core/Inc User/ESP32 User/FLASH User/G474 User/LCD User/LOG User/TOUCH User/UF4COM User/UF4COM/uf4com/protocol/Inc User/UF4COM/uf4com/register/Inc User/UF4COM/uf4com/transport/uf4com_uart/Inc User/LVGL User/LVGL/app/custom User/LVGL/app/generated Drivers/STM32F4xx_HAL_Driver/Inc Drivers/STM32F4xx_HAL_Driver/Inc/Legacy Drivers/CMSIS/Device/ST/STM32F4xx/Include Drivers/CMSIS/Include)
 
 add_definitions(-DDEBUG -DUSE_HAL_DRIVER -DSTM32F429xx)
 
-file(GLOB_RECURSE SOURCES "User/*.*" "Core/*.*" "Drivers/*.*" "D:/LVGL/LVGL9/lvgl/*.*")
+set(LV_BUILD_CONF_DIR "${CMAKE_SOURCE_DIR}/User/LVGL" CACHE PATH "LVGL board configuration" FORCE)
+set(CONFIG_LV_BUILD_DEMOS OFF CACHE BOOL "" FORCE)
+set(CONFIG_LV_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+set(CONFIG_LV_USE_THORVG_INTERNAL OFF CACHE BOOL "" FORCE)
+add_subdirectory(User/LVGL/lvgl)
+
+file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS
+        "User/ESP32/*.c"
+        "User/FLASH/*.c"
+        "User/G474/*.c"
+        "User/LCD/*.c"
+        "User/LOG/*.c"
+        "User/TOUCH/*.c"
+        "User/UF4COM/uf4com/*.c"
+        "User/LVGL/app/*.c"
+        "User/LVGL/board_*.c"
+        "Core/Src/*.c"
+        "Core/Startup/*.s"
+        "Drivers/STM32F4xx_HAL_Driver/Src/*.c")
 
 set(LINKER_SCRIPT ${CMAKE_SOURCE_DIR}/STM32F429IGTX_FLASH.ld)
 
@@ -62,6 +88,7 @@ add_link_options(-mcpu=cortex-m4 -mthumb -mthumb-interwork)
 add_link_options(-T ${LINKER_SCRIPT})
 
 add_executable(${PROJECT_NAME}.elf ${SOURCES} ${LINKER_SCRIPT})
+target_link_libraries(${PROJECT_NAME}.elf PRIVATE lvgl)
 
 set(HEX_FILE ${PROJECT_BINARY_DIR}/${PROJECT_NAME}.hex)
 set(BIN_FILE ${PROJECT_BINARY_DIR}/${PROJECT_NAME}.bin)
@@ -110,4 +137,3 @@ add_custom_command(TARGET ${PROJECT_NAME}.elf POST_BUILD
         COMMENT "This version of the firmware is all manually maintained by UF4OVER"
         VERBATIM
 )
-

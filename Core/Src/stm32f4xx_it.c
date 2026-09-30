@@ -22,6 +22,8 @@
 #include "stm32f4xx_it.h"
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "usart.h"
+#include "bsp_lcd.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -329,7 +331,7 @@ void LTDC_IRQHandler(void)
   /* USER CODE BEGIN LTDC_IRQn 0 */
 
   /* USER CODE END LTDC_IRQn 0 */
-  HAL_LTDC_IRQHandler(&hltdc);
+  LCD_LTDC_IRQHandler();
   /* USER CODE BEGIN LTDC_IRQn 1 */
 
   /* USER CODE END LTDC_IRQn 1 */
@@ -343,7 +345,7 @@ void LTDC_ER_IRQHandler(void)
   /* USER CODE BEGIN LTDC_ER_IRQn 0 */
 
   /* USER CODE END LTDC_ER_IRQn 0 */
-  HAL_LTDC_IRQHandler(&hltdc);
+  LCD_LTDC_ER_IRQHandler();
   /* USER CODE BEGIN LTDC_ER_IRQn 1 */
 
   /* USER CODE END LTDC_ER_IRQn 1 */
@@ -357,7 +359,7 @@ void DMA2D_IRQHandler(void)
   /* USER CODE BEGIN DMA2D_IRQn 0 */
 
   /* USER CODE END DMA2D_IRQn 0 */
-  HAL_DMA2D_IRQHandler(&hdma2d);
+  LCD_DMA2D_IRQHandler();
   /* USER CODE BEGIN DMA2D_IRQn 1 */
 
   /* USER CODE END DMA2D_IRQn 1 */

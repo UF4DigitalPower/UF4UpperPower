@@ -1,6 +1,6 @@
 #include "g474_remote.h"
 
-#include "gui_internal.h"
+#include "board_model.h"
 #include "main.h"
 #include "uf4com.h"
 #include "uf4com_usrt.h"
@@ -165,14 +165,14 @@ static void G474_Remote_ClearUiData(void)
 
     for(uint16_t i = 0U; i < UI_PARAM_COUNT; ++i)
     {
-        g_params[i].value = 0.0f;
+        params[i].value = 0.0f;
     }
 
-    g_ui.voltage_set = 0.0f;
-    g_ui.current_limit = 0.0f;
-    g_ui.output_voltage = 0.0f;
-    g_ui.output_current = 0.0f;
-    g_ui.output_on = 0U;
+    state.voltage_set = 0.0f;
+    state.current_limit = 0.0f;
+    state.output_voltage = 0.0f;
+    state.output_current = 0.0f;
+    state.output_on = 0U;
     UI_Params_ClearDirty();
     s_ui_has_data = 0U;
 }
@@ -440,30 +440,30 @@ static void G474_Remote_ApplyUi(uint8_t id, uint16_t value)
 
     for(uint16_t i = 0U; i < UI_PARAM_COUNT; ++i)
     {
-        if(g_params[i].id == id && dirty == 0U)
+        if(params[i].id == id && dirty == 0U)
         {
             const float scaled = G474_Remote_Scale(id, value);
-            if(g_params[i].value != scaled)
+            if(params[i].value != scaled)
             {
-                g_params[i].value = scaled;
+                params[i].value = scaled;
                 UI_Params_NotifyRemoteUpdate(id);
             }
             if(id == UF4_ID_CFG_VIN_OFFSET)
             {
                 printf("[F429][CFG] VIN_CAL_OFF raw=%04X value=%.2f\r\n",
-                       (unsigned)value, (double)g_params[i].value);
+                       (unsigned)value, (double)params[i].value);
             }
         }
     }
 
-    if(id == UF4_ID_SET_VOLTAGE_LIMIT && dirty == 0U) g_ui.voltage_set = G474_Remote_Scale(id, value);
-    if(id == UF4_ID_SET_CURRENT_LIMIT && dirty == 0U) g_ui.current_limit = G474_Remote_Scale(id, value);
-    if(id == UF4_ID_OUTPUT_VOLTAGE) g_ui.output_voltage = G474_Remote_Scale(id, value);
-    if(id == UF4_ID_OUTPUT_CURRENT) g_ui.output_current = G474_Remote_Scale(id, value);
+    if(id == UF4_ID_SET_VOLTAGE_LIMIT && dirty == 0U) state.voltage_set = G474_Remote_Scale(id, value);
+    if(id == UF4_ID_SET_CURRENT_LIMIT && dirty == 0U) state.current_limit = G474_Remote_Scale(id, value);
+    if(id == UF4_ID_OUTPUT_VOLTAGE) state.output_voltage = G474_Remote_Scale(id, value);
+    if(id == UF4_ID_OUTPUT_CURRENT) state.output_current = G474_Remote_Scale(id, value);
     if(id == UF4_ID_OUTPUT_ENABLE && dirty == 0U)
     {
-        g_ui.output_on = (value == 1U) ? 1U : 0U;
-        printf("[F429][OUTPUT] G474 enable=%u\r\n", (unsigned)g_ui.output_on);
+        state.output_on = (value == 1U) ? 1U : 0U;
+        printf("[F429][OUTPUT] G474 enable=%u\r\n", (unsigned)state.output_on);
     }
 }
 

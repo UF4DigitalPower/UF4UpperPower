@@ -23,6 +23,68 @@
 
 /* USER CODE BEGIN 0 */
 
+#define SDRAM_TIMEOUT     ((uint32_t)0x1000)
+
+#define SDRAM_MODEREG_BURST_LENGTH_1             ((uint16_t)0x0000)
+#define SDRAM_MODEREG_BURST_TYPE_SEQUENTIAL      ((uint16_t)0x0000)
+#define SDRAM_MODEREG_CAS_LATENCY_3              ((uint16_t)0x0030)
+#define SDRAM_MODEREG_OPERATING_MODE_STANDARD    ((uint16_t)0x0000)
+#define SDRAM_MODEREG_WRITEBURST_MODE_SINGLE     ((uint16_t)0x0200)
+
+static FMC_SDRAM_CommandTypeDef sdram_command;
+
+static void SDRAM_Initialization_Sequence(SDRAM_HandleTypeDef *hsdram,
+                                          FMC_SDRAM_CommandTypeDef *command)
+{
+  uint32_t mode_register;
+  uint32_t sdclk_mhz;
+  uint32_t refresh_count;
+
+  command->CommandMode = FMC_SDRAM_CMD_CLK_ENABLE;
+  command->CommandTarget = FMC_SDRAM_CMD_TARGET_BANK2;
+  command->AutoRefreshNumber = 1U;
+  command->ModeRegisterDefinition = 0U;
+  if (HAL_SDRAM_SendCommand(hsdram, command, SDRAM_TIMEOUT) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  HAL_Delay(1U);
+
+  command->CommandMode = FMC_SDRAM_CMD_PALL;
+  if (HAL_SDRAM_SendCommand(hsdram, command, SDRAM_TIMEOUT) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  command->CommandMode = FMC_SDRAM_CMD_AUTOREFRESH_MODE;
+  /* Keep the eight startup refresh cycles from board revision 78d012b. */
+  command->AutoRefreshNumber = 8U;
+  if (HAL_SDRAM_SendCommand(hsdram, command, SDRAM_TIMEOUT) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  mode_register = SDRAM_MODEREG_BURST_LENGTH_1 |
+                  SDRAM_MODEREG_BURST_TYPE_SEQUENTIAL |
+                  SDRAM_MODEREG_CAS_LATENCY_3 |
+                  SDRAM_MODEREG_OPERATING_MODE_STANDARD |
+                  SDRAM_MODEREG_WRITEBURST_MODE_SINGLE;
+  command->CommandMode = FMC_SDRAM_CMD_LOAD_MODE;
+  command->AutoRefreshNumber = 1U;
+  command->ModeRegisterDefinition = mode_register;
+  if (HAL_SDRAM_SendCommand(hsdram, command, SDRAM_TIMEOUT) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  sdclk_mhz = HAL_RCC_GetHCLKFreq() / 2000000U;
+  refresh_count = (uint32_t)(((64000U * sdclk_mhz) / 8192U) - 20U);
+  if (HAL_SDRAM_ProgramRefreshRate(hsdram, refresh_count) != HAL_OK)
+  {
+    Error_Handler();
+  }
+}
+
 /* USER CODE END 0 */
 
 SDRAM_HandleTypeDef hsdram1;
@@ -69,6 +131,7 @@ void MX_FMC_Init(void)
   }
 
   /* USER CODE BEGIN FMC_Init 2 */
+  SDRAM_Initialization_Sequence(&hsdram1, &sdram_command);
 
   /* USER CODE END FMC_Init 2 */
 }
