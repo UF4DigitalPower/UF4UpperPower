@@ -7,8 +7,7 @@
 
 #include <stdio.h>
 
-#define G474_DEVICE_ID 0x01U
-#define G474_REG_COUNT  51U
+#define G474_REG_COUNT  62U
 #define G474_STREAM_ID_COUNT 18U
 #define G474_SYNC_IDS_PER_REQUEST 19U
 #define G474_POLL_PERIOD_MS 40U
@@ -37,12 +36,36 @@ typedef struct
 
 /* All IDs currently exported by the G474 parameter and telemetry tables. */
 static const uint8_t s_poll_ids[G474_REG_COUNT] = {
-    0x0AU,0x0BU,0x0CU,0x0DU,0x0EU,0x0FU,0x10U,0x11U,0x12U,0x14U,
-    0x15U,0x16U,0x23U,0x26U,0x45U,0x4BU,0x4CU,0x4DU,0x4EU,0x50U,0x22U,0x1EU,0x30U,
-    0x31U,
-    0x32U,0x4FU,0x33U,0x34U,0x35U,0x36U,0x37U,0x38U,0x39U,0x3AU,
-    0x3BU,0x3CU,0x3DU,0x3EU,0x3FU,0x40U,0x41U,0x42U,0x43U,0x44U,
-    0x48U,0x49U,0x4AU,0x51U,0x52U,0x53U,0x27U
+    UF4_ID_SET_VOLTAGE_LIMIT, UF4_ID_SET_CURRENT_LIMIT,
+    UF4_ID_OCP_SET_VALUE, UF4_ID_OTP_SET_VALUE,
+    UF4_ID_CFG_VIN_OVP, UF4_ID_CFG_VIN_UVP, UF4_ID_CFG_VOUT_OVP,
+    UF4_ID_CFG_POWER_DIRECTION_MODE, UF4_ID_CFG_ADC_VREF,
+    UF4_ID_CFG_VIN_R_UPPER, UF4_ID_CFG_VIN_R_LOWER,
+    UF4_ID_CFG_VOUT_R_UPPER, UF4_ID_CFG_VOUT_R_LOWER,
+    UF4_ID_CFG_SHUNT_IN, UF4_ID_CFG_SHUNT_OUT,
+    UF4_ID_CFG_GAIN_IN, UF4_ID_CFG_GAIN_OUT,
+    UF4_ID_CFG_CURRENT_OFFSET, UF4_ID_CFG_VIN_GAIN, UF4_ID_CFG_VIN_OFFSET,
+    UF4_ID_CFG_VOUT_GAIN, UF4_ID_CFG_VOUT_OFFSET,
+    UF4_ID_CFG_IIN_GAIN, UF4_ID_CFG_IIN_OFFSET,
+    UF4_ID_CFG_IOUT_GAIN, UF4_ID_CFG_IOUT_OFFSET,
+    UF4_ID_FAN_SET_VALUE, UF4_ID_POWER_DIRECTION, UF4_ID_OUTPUT_ENABLE,
+    UF4_ID_INPUT_VOLTAGE, UF4_ID_INPUT_VOLTAGE_RAW,
+    UF4_ID_INPUT_CURRENT, UF4_ID_INPUT_CURRENT_RAW,
+    UF4_ID_OUTPUT_VOLTAGE, UF4_ID_OUTPUT_VOLTAGE_RAW,
+    UF4_ID_OUTPUT_CURRENT, UF4_ID_OUTPUT_CURRENT_RAW,
+    UF4_ID_DUTY_CMD, UF4_ID_FMAC_SELFTEST_FIRST_RAW,
+    UF4_ID_LOOP_CURRENT_FEEDBACK, UF4_ID_LOOP_CURRENT_REFERENCE,
+    UF4_ID_VOLTAGE_LOOP_CURRENT_REFERENCE, UF4_ID_FMAC_SELFTEST_SECOND_RAW,
+    UF4_ID_FMAC_DIAGNOSTIC_STAGE, UF4_ID_FMAC_DIAGNOSTIC_STATUS,
+    UF4_ID_DAC3_CH1_OUTPUT_CODE, UF4_ID_DAC4_CH1_OUTPUT_CODE,
+    UF4_ID_SELF_CHECK_STATUS, UF4_ID_LATCHED_FAULT_REASON,
+    UF4_ID_POWER_STATE, UF4_ID_FAULT_STATE,
+    UF4_ID_STATE_MACHINE_FLAG_BITS, UF4_ID_CC_CV_MODE,
+    UF4_ID_POWER_DIRECTION_STATUS, UF4_ID_POWER_CONVERTER_MODE,
+    UF4_ID_CONTROL_ISR_LAST_CYCLES, UF4_ID_CONTROL_ISR_MAX_CYCLES,
+    UF4_ID_CONTROL_ISR_OVERRUN_COUNT, UF4_ID_FAN_SPEED,
+    UF4_ID_CORE_TEMPERATURE, UF4_ID_TEMP1_TEMPERATURE,
+    UF4_ID_TEMP2_TEMPERATURE
 };
 static const uint8_t s_stream_ids[G474_STREAM_ID_COUNT] = {
     UF4_ID_INPUT_VOLTAGE, UF4_ID_INPUT_CURRENT,
@@ -90,13 +113,11 @@ static uint8_t s_save_result;
 #define G474_SAVE_RESULT_SUCCESS  1U
 #define G474_SAVE_RESULT_FAILED   2U
 
-static void G474_Remote_AckEvent(uint8_t dst,
-                                 uint8_t seq,
+static void G474_Remote_AckEvent(uint8_t seq,
                                  uint8_t cmd,
                                  uf4_ack_status_t status,
                                  void *user)
 {
-    (void)dst;
     (void)seq;
     (void)cmd;
     (void)user;
@@ -176,7 +197,7 @@ static uint8_t G474_Remote_StartNextFullSyncRead(void)
         ++count;
     }
 
-    if(UF4_SendFrameTo(G474_DEVICE_ID, s_sequence++, UF4_FLAG_ACK_REQ,
+    if(UF4_SendFrame(s_sequence++, UF4_FLAG_ACK_REQ,
                        UF4_CMD_READ_REQ, request, (uint8_t)(count * 3U)) == 0U)
     {
         s_tx_submit_failures++;
@@ -201,7 +222,7 @@ static uint8_t G474_Remote_StartFastPoll(void)
         request[i * 3U + 2U] = 0U;
     }
 
-    if(UF4_SendFrameTo(G474_DEVICE_ID, s_sequence++, UF4_FLAG_ACK_REQ,
+    if(UF4_SendFrame(s_sequence++, UF4_FLAG_ACK_REQ,
                        UF4_CMD_READ_REQ, request, sizeof(request)) == 0U)
     {
         s_tx_submit_failures++;
@@ -219,7 +240,7 @@ static uint8_t G474_Remote_SendKeepalive(void)
 {
     const uint8_t request[3] = { UF4_ID_INPUT_VOLTAGE, 0U, 0U };
 
-    if(UF4_SendFrameTo(G474_DEVICE_ID, s_sequence++, UF4_FLAG_ACK_REQ,
+    if(UF4_SendFrame(s_sequence++, UF4_FLAG_ACK_REQ,
                        UF4_CMD_READ_REQ, request, sizeof(request)) == 0U)
     {
         s_tx_submit_failures++;
@@ -236,7 +257,7 @@ static uint8_t G474_Remote_SendOutputHeartbeat(void)
 {
     const uint8_t data[3] = { UF4_ID_OUTPUT_ENABLE, 0U, s_output_commanded };
 
-    if(UF4_SendFrameTo(G474_DEVICE_ID, s_sequence++, UF4_FLAG_ACK_REQ,
+    if(UF4_SendFrame(s_sequence++, UF4_FLAG_ACK_REQ,
                        UF4_CMD_WRITE_REQ, data, sizeof(data)) == 0U)
     {
         s_tx_submit_failures++;
@@ -260,7 +281,7 @@ static uint8_t G474_Remote_StartStream(void)
         request[i * 3U + 2U] = 0U;
     }
 
-    if(UF4_SendFrameTo(G474_DEVICE_ID, s_sequence++, UF4_FLAG_ACK_REQ,
+    if(UF4_SendFrame(s_sequence++, UF4_FLAG_ACK_REQ,
                        UF4_CMD_STREAM_START_REQ, request, sizeof(request)) == 0U)
     {
         s_tx_submit_failures++;
@@ -279,7 +300,7 @@ static uint8_t G474_Remote_SendSave(void)
 
     s_transaction_state = G474_TRANSACTION_SAVE_WAIT;
     printf("[F429][SAVE] SAVE_REQ seq=%u\r\n", (unsigned)seq);
-    if(UF4_SendFrameTo(G474_DEVICE_ID, s_sequence++, UF4_FLAG_ACK_REQ,
+    if(UF4_SendFrame(s_sequence++, UF4_FLAG_ACK_REQ,
                        UF4_CMD_SAVE_REQ, NULL, 0U) == 0U)
     {
         s_tx_submit_failures++;
@@ -305,7 +326,7 @@ static uint8_t G474_Remote_SendWrite(void)
                (unsigned)value);
     }
     printf("\r\n");
-    if(UF4_SendFrameTo(G474_DEVICE_ID, s_sequence++, UF4_FLAG_ACK_REQ,
+    if(UF4_SendFrame(s_sequence++, UF4_FLAG_ACK_REQ,
                        UF4_CMD_WRITE_REQ, s_transaction_data,
                        s_transaction_len) == 0U)
     {
@@ -319,36 +340,26 @@ static uint8_t G474_Remote_SendWrite(void)
 
 static void G474_Remote_LogStatus(uint32_t now_ms)
 {
-    uf4_uart_diagnostics_t uart;
-
     if((uint32_t)(now_ms - s_last_debug_ms) < 1000U)
     {
         return;
     }
 
     s_last_debug_ms = now_ms;
-    UF4_UART_GetDiagnostics(&uart);
     printf("[F429][UART6] g474_on=%u stream_req=%u stream=%u age_rsp=%lums age_stream=%lums "
-           "tx=%lu done=%lu submit_fail=%lu rxB=%lu rxF=%lu rxV=%lu rej=%lu ack=%lu to=%lu drop=%lu qdrop=%lu/%lu err=%lu/%lu\r\n",
+           "rxF=%lu rxV=%lu rej=%lu ack=%lu to=%lu drop=%lu submit_fail=%lu\r\n",
            (unsigned)G474_Remote_IsOnline(),
            (unsigned)s_stream_requested,
            (unsigned)G474_Remote_IsStreaming(),
            (unsigned long)(now_ms - s_last_response_ms),
            (unsigned long)(now_ms - s_last_stream_data_ms),
-           (unsigned long)uart.tx_frames,
-           (unsigned long)uart.tx_completed_frames,
-           (unsigned long)s_tx_submit_failures,
-           (unsigned long)uart.rx_bytes,
            (unsigned long)s_rx_frames,
            (unsigned long)s_rx_values,
            (unsigned long)s_rx_rejected,
            (unsigned long)s_ack_done,
            (unsigned long)s_ack_timeout,
            (unsigned long)s_ack_dropped,
-           (unsigned long)uart.tx_queue_drops,
-           (unsigned long)uart.rx_queue_drops,
-           (unsigned long)uart.tx_hal_errors,
-           (unsigned long)uart.rx_uart_errors);
+           (unsigned long)s_tx_submit_failures);
 }
 
 static int16_t G474_Remote_Find(uint8_t id)
@@ -384,11 +395,7 @@ static float G474_Remote_Scale(uint8_t id, uint16_t value)
         case UF4_ID_FAN_SET_VALUE:
             return (float)value / 10.0f;
         case UF4_ID_DUTY_CMD:
-        case UF4_ID_ADP_ACTION: case UF4_ID_ADP_APPLIED_ACTION:
             return (float)value / 1000.0f;
-        case UF4_ID_ADP_CRITIC_Q: case UF4_ID_ADP_TD_ERROR:
-            return (float)(int16_t)value / 1000.0f;
-        case UF4_ID_ADP_VOLTAGE_ERROR:
         case UF4_ID_CFG_CURRENT_OFFSET: case UF4_ID_CFG_VIN_OFFSET:
         case UF4_ID_CFG_VOUT_OFFSET: case UF4_ID_CFG_IIN_OFFSET:
         case UF4_ID_CFG_IOUT_OFFSET:
@@ -463,7 +470,7 @@ static void G474_Remote_ApplyUi(uint8_t id, uint16_t value)
 static void G474_Remote_FrameRx(const uf4_frame_t *frame, void *user)
 {
     (void)user;
-    if(frame != NULL && frame->src == G474_DEVICE_ID &&
+    if(frame != NULL &&
        (frame->cmd == UF4_CMD_WRITE_RSP || frame->cmd == UF4_CMD_SAVE_RSP ||
         (frame->flags & UF4_FLAG_ERROR) != 0U))
     {
@@ -476,7 +483,7 @@ static void G474_Remote_FrameRx(const uf4_frame_t *frame, void *user)
         }
         printf(" state=%u\r\n", (unsigned)s_transaction_state);
     }
-    if(frame == NULL || frame->src != G474_DEVICE_ID ||
+    if(frame == NULL ||
        (frame->cmd != UF4_CMD_READ_RSP && frame->cmd != UF4_CMD_WRITE_RSP &&
         frame->cmd != UF4_CMD_STREAM_DATA && frame->cmd != UF4_CMD_STREAM_START_RSP &&
         frame->cmd != UF4_CMD_STREAM_STOP_RSP && frame->cmd != UF4_CMD_SAVE_RSP) ||
@@ -724,7 +731,7 @@ uint8_t G474_Remote_Write(uint8_t id, uint16_t value)
         printf("[F429][OUTPUT] WRITE_REQ seq=%u enable=%u\r\n",
                (unsigned)s_sequence, (unsigned)s_output_commanded);
     }
-    if(UF4_SendFrameTo(G474_DEVICE_ID, s_sequence++, UF4_FLAG_ACK_REQ,
+    if(UF4_SendFrame(s_sequence++, UF4_FLAG_ACK_REQ,
                        UF4_CMD_WRITE_REQ, data, sizeof(data)) == 0U) return 0U;
     return 1U;
 }
