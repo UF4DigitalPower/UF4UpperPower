@@ -37,9 +37,10 @@ void board_ui_refresh(void)
     };
     float value;
     uint16_t raw;
+    if(ui_transition_active()) return;
     board_ui_refresh_status();
     board_params_refresh();
-    if(state.page != PAGE_HOME || ui_transition_active()) return;
+    if(state.page != PAGE_HOME) return;
     set_float_label(s_output_voltage, state.output_voltage, "");
     set_float_label(s_output_current, state.output_current, "");
     for(unsigned i = 0; i < 4; ++i) {

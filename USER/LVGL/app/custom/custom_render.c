@@ -11,6 +11,7 @@
 #include "bsp_lcd.h"
 
 #define PAGE_SNAPSHOT_ADDR 0xD0800000UL
+#define PAGE_SLIDE_MS 360U
 
 _Static_assert(PAGE_SNAPSHOT_ADDR >= LCD_PAGE_CACHE3_ADDR + LCD_PAGE_CACHE_BYTES,
                "page snapshots overlap reserved LCD SDRAM");
@@ -26,12 +27,14 @@ static lv_obj_t *top_layer;
 static lv_obj_t *nav_layer;
 static lv_obj_t *departing_image;
 static lv_obj_t *arriving_image;
+static lv_obj_t *transition_screen;
 static lv_draw_buf_t departing_snapshot;
 static lv_draw_buf_t arriving_snapshot;
 lv_obj_t *nav_indicator;
 lv_obj_t *nav_labels[4];
 static bool transition_active;
 static bool render_pending;
+static uint8_t nav_highlight_mask;
 static void render_async(void *unused);
 
 static void content_background(lv_obj_t *layer)
@@ -58,16 +61,24 @@ static bool prepare_page_snapshots(lv_obj_t *old_layer, lv_obj_t *new_layer)
        lv_snapshot_take_to_draw_buf(new_layer, LV_COLOR_FORMAT_RGB565,
                                     &arriving_snapshot) != LV_RESULT_OK) return false;
 
-    departing_image = lv_image_create(root);
-    arriving_image = lv_image_create(root);
+    transition_screen = lv_obj_create(NULL);
+    if(transition_screen == NULL) return false;
+    lv_obj_remove_style_all(transition_screen);
+    lv_obj_set_style_bg_opa(transition_screen, LV_OPA_COVER, 0);
+    lv_obj_set_style_bg_color(transition_screen, rgb(palette->bg), 0);
+    lv_obj_remove_flag(transition_screen, LV_OBJ_FLAG_SCROLLABLE);
+
+    departing_image = lv_image_create(transition_screen);
+    arriving_image = lv_image_create(transition_screen);
     lv_image_set_src(departing_image, &departing_snapshot);
     lv_image_set_src(arriving_image, &arriving_snapshot);
     lv_obj_set_pos(departing_image, 0, 0);
     lv_obj_set_pos(arriving_image, UI_W, 0);
-    lv_obj_move_to_index(departing_image, 2);
-    lv_obj_move_to_index(arriving_image, 3);
     lv_obj_add_flag(old_layer, LV_OBJ_FLAG_HIDDEN);
     lv_obj_add_flag(new_layer, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_set_parent(nav_layer, transition_screen);
+    lv_obj_set_parent(top_layer, transition_screen);
+    lv_screen_load(transition_screen);
     return true;
 }
 
@@ -95,6 +106,7 @@ static void render(void)
     lv_obj_remove_flag(nav_layer, LV_OBJ_FLAG_SCROLLABLE | LV_OBJ_FLAG_CLICKABLE);
     screen = nav_layer;
     draw_nav();
+    nav_highlight_mask = (uint8_t)(1U << state.page);
     top_layer = lv_obj_create(root);
     lv_obj_remove_style_all(top_layer);
     lv_obj_set_size(top_layer, UI_W, UI_H);
@@ -113,23 +125,35 @@ static void slide_content(void *object, int32_t x)
 
 static void slide_nav(void *object, int32_t x)
 {
+    uint8_t next_mask = 0U;
     lv_obj_set_x((lv_obj_t *)object, x);
     for(int i = 0; i < 4; i++) {
         int center = i * 120 + 60;
-        lv_obj_set_style_text_color(nav_labels[i],
-                                    rgb(center >= x && center < x + 120 ? palette->bg : palette->muted), 0);
+        if(center >= x && center < x + 120) next_mask |= (uint8_t)(1U << i);
     }
+    uint8_t changed = nav_highlight_mask ^ next_mask;
+    for(int i = 0; i < 4; i++) {
+        if((changed & (1U << i)) != 0U) {
+            lv_obj_set_style_text_color(nav_labels[i],
+                                        rgb((next_mask & (1U << i)) != 0U ? palette->bg : palette->muted), 0);
+        }
+    }
+    nav_highlight_mask = next_mask;
 }
 
 static void slide_complete(lv_anim_t *animation)
 {
     (void)animation;
     if(departing_image != NULL) {
-        lv_obj_delete(departing_image);
-        lv_obj_delete(arriving_image);
+        lv_obj_t *finished_screen = transition_screen;
+        lv_obj_set_parent(nav_layer, root);
+        lv_obj_set_parent(top_layer, root);
+        lv_obj_remove_flag(content_layer, LV_OBJ_FLAG_HIDDEN);
+        lv_screen_load(root);
+        lv_obj_delete_async(finished_screen);
         departing_image = NULL;
         arriving_image = NULL;
-        lv_obj_remove_flag(content_layer, LV_OBJ_FLAG_HIDDEN);
+        transition_screen = NULL;
     }
     lv_obj_delete(departing_layer);
     departing_layer = NULL;
@@ -145,7 +169,7 @@ static void animate_x(lv_obj_t *object, int32_t from, int32_t to,
     lv_anim_init(&animation);
     lv_anim_set_var(&animation, object);
     lv_anim_set_values(&animation, from, to);
-    lv_anim_set_duration(&animation, 160);
+    lv_anim_set_duration(&animation, PAGE_SLIDE_MS);
     lv_anim_set_path_cb(&animation, lv_anim_path_ease_in_out);
     lv_anim_set_exec_cb(&animation, callback);
     if(completed) lv_anim_set_completed_cb(&animation, completed);
@@ -220,5 +244,8 @@ void ui_render_init(lv_obj_t *canvas)
     render_pending = false;
     transition_active = false;
     departing_layer = NULL;
+    departing_image = NULL;
+    arriving_image = NULL;
+    transition_screen = NULL;
     render();
 }
