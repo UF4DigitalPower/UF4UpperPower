@@ -8,6 +8,14 @@
  */
 
 #include "custom_internal.h"
+#include "bsp_lcd.h"
+
+#define PAGE_SNAPSHOT_ADDR 0xD0800000UL
+
+_Static_assert(PAGE_SNAPSHOT_ADDR >= LCD_PAGE_CACHE3_ADDR + LCD_PAGE_CACHE_BYTES,
+               "page snapshots overlap reserved LCD SDRAM");
+_Static_assert(PAGE_SNAPSHOT_ADDR + 2U * LCD_FRAMEBUFFER_BYTES <= 0xD2000000UL,
+               "page snapshots exceed configured SDRAM geometry");
 
 const palette_t *palette;
 static lv_obj_t *root;
@@ -16,10 +24,53 @@ static lv_obj_t *content_layer;
 static lv_obj_t *departing_layer;
 static lv_obj_t *top_layer;
 static lv_obj_t *nav_layer;
+static lv_obj_t *departing_image;
+static lv_obj_t *arriving_image;
+static lv_draw_buf_t departing_snapshot;
+static lv_draw_buf_t arriving_snapshot;
 lv_obj_t *nav_indicator;
 lv_obj_t *nav_labels[4];
 static bool transition_active;
 static bool render_pending;
+static void render_async(void *unused);
+
+static void content_background(lv_obj_t *layer)
+{
+    lv_obj_remove_style_all(layer);
+    lv_obj_set_size(layer, UI_W, UI_H);
+    lv_obj_set_style_bg_opa(layer, LV_OPA_COVER, 0);
+    lv_obj_set_style_bg_color(layer, rgb(palette->bg), 0);
+    lv_obj_remove_flag(layer, LV_OBJ_FLAG_SCROLLABLE | LV_OBJ_FLAG_CLICKABLE);
+}
+
+static bool prepare_page_snapshots(lv_obj_t *old_layer, lv_obj_t *new_layer)
+{
+    if(lv_draw_buf_init(&departing_snapshot, UI_W, UI_H, LV_COLOR_FORMAT_RGB565,
+                        0, (void *)PAGE_SNAPSHOT_ADDR, LCD_FRAMEBUFFER_BYTES) != LV_RESULT_OK ||
+       lv_draw_buf_init(&arriving_snapshot, UI_W, UI_H, LV_COLOR_FORMAT_RGB565,
+                        0, (void *)(PAGE_SNAPSHOT_ADDR + LCD_FRAMEBUFFER_BYTES),
+                        LCD_FRAMEBUFFER_BYTES) != LV_RESULT_OK) return false;
+
+    lv_draw_buf_set_flag(&departing_snapshot, LV_IMAGE_FLAGS_MODIFIABLE);
+    lv_draw_buf_set_flag(&arriving_snapshot, LV_IMAGE_FLAGS_MODIFIABLE);
+    if(lv_snapshot_take_to_draw_buf(old_layer, LV_COLOR_FORMAT_RGB565,
+                                    &departing_snapshot) != LV_RESULT_OK ||
+       lv_snapshot_take_to_draw_buf(new_layer, LV_COLOR_FORMAT_RGB565,
+                                    &arriving_snapshot) != LV_RESULT_OK) return false;
+
+    departing_image = lv_image_create(root);
+    arriving_image = lv_image_create(root);
+    lv_image_set_src(departing_image, &departing_snapshot);
+    lv_image_set_src(arriving_image, &arriving_snapshot);
+    lv_obj_set_pos(departing_image, 0, 0);
+    lv_obj_set_pos(arriving_image, UI_W, 0);
+    lv_obj_move_to_index(departing_image, 2);
+    lv_obj_move_to_index(arriving_image, 3);
+    lv_obj_add_flag(old_layer, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_add_flag(new_layer, LV_OBJ_FLAG_HIDDEN);
+    return true;
+}
+
 static void render(void)
 {
     palette = &palettes[settings[4].current];
@@ -30,9 +81,7 @@ static void render(void)
     lv_obj_set_style_text_font(root, &lv_font_Teko_SemiBold_16, 0);
     lv_obj_remove_flag(root, LV_OBJ_FLAG_SCROLLABLE);
     content_layer = lv_obj_create(root);
-    lv_obj_remove_style_all(content_layer);
-    lv_obj_set_size(content_layer, UI_W, UI_H);
-    lv_obj_remove_flag(content_layer, LV_OBJ_FLAG_SCROLLABLE | LV_OBJ_FLAG_CLICKABLE);
+    content_background(content_layer);
     screen = content_layer;
     switch(state.page) {
     case PAGE_HOME: draw_home(); break;
@@ -75,9 +124,18 @@ static void slide_nav(void *object, int32_t x)
 static void slide_complete(lv_anim_t *animation)
 {
     (void)animation;
+    if(departing_image != NULL) {
+        lv_obj_delete(departing_image);
+        lv_obj_delete(arriving_image);
+        departing_image = NULL;
+        arriving_image = NULL;
+        lv_obj_remove_flag(content_layer, LV_OBJ_FLAG_HIDDEN);
+    }
     lv_obj_delete(departing_layer);
     departing_layer = NULL;
     transition_active = false;
+    board_ui_refresh();
+    if(render_pending) lv_async_call(render_async, NULL);
 }
 
 static void animate_x(lv_obj_t *object, int32_t from, int32_t to,
@@ -99,14 +157,13 @@ void ui_transition_to(page_t page)
     page_t previous = state.page;
     int direction = page > previous ? 1 : -1;
     lv_obj_t *old_layer = content_layer;
+    bool cached;
     departing_layer = old_layer;
     state.page = page;
     palette = &palettes[settings[4].current];
     content_layer = lv_obj_create(root);
-    lv_obj_remove_style_all(content_layer);
-    lv_obj_set_size(content_layer, UI_W, UI_H);
-    lv_obj_set_x(content_layer, direction * UI_W);
-    lv_obj_remove_flag(content_layer, LV_OBJ_FLAG_SCROLLABLE | LV_OBJ_FLAG_CLICKABLE);
+    content_background(content_layer);
+    lv_obj_move_to_index(content_layer, 1);
     screen = content_layer;
     switch(page) {
     case PAGE_HOME: draw_home(); break;
@@ -124,15 +181,21 @@ void ui_transition_to(page_t page)
     draw_status();
     screen = root;
     board_ui_refresh();
+    cached = prepare_page_snapshots(old_layer, content_layer);
+    if(!cached) lv_obj_set_x(content_layer, direction * UI_W);
+    else lv_obj_set_x(arriving_image, direction * UI_W);
     transition_active = true;
-    animate_x(old_layer, 0, -direction * UI_W, slide_content, NULL);
-    animate_x(content_layer, direction * UI_W, 0, slide_content, slide_complete);
+    animate_x(cached ? departing_image : old_layer,
+              0, -direction * UI_W, slide_content, NULL);
+    animate_x(cached ? arriving_image : content_layer,
+              direction * UI_W, 0, slide_content, slide_complete);
     animate_x(nav_indicator, previous * 120, page * 120, slide_nav, NULL);
 }
 
 static void render_async(void *unused)
 {
     (void)unused;
+    if(transition_active) return;
     render_pending = false;
     render();
 }
@@ -141,7 +204,7 @@ void ui_request_render(void)
 {
     if(!render_pending) {
         render_pending = true;
-        lv_async_call(render_async, NULL);
+        if(!transition_active) lv_async_call(render_async, NULL);
     }
 }
 

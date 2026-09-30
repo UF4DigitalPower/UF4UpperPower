@@ -14,6 +14,7 @@
 #include "bsp_lcd.h"
 #include "uf4com.h"
 #include "board_model.h"
+#include "board_benchmark.h"
 
 void clicked(lv_event_t *event)
 {
@@ -124,6 +125,9 @@ void clicked(lv_event_t *event)
         }
         break;
     }
+    case ACT_BENCHMARK:
+        Board_Benchmark_Start();
+        return;
     }
     ui_request_render();
 }

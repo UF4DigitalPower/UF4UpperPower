@@ -937,6 +937,7 @@ void LCD_DMA2D_IRQHandler(void)
     ++g_lcd_counters.dma2d_transfer_errors;
     g_lcd_dma_owner = LCD_DMA_OWNER_NONE;
     g_lcd_present_state = 0U;
+    DMA2D->AMTCR = 0U;
     return;
   }
 
@@ -952,6 +953,8 @@ void LCD_DMA2D_IRQHandler(void)
   }
 
   g_lcd_dma_owner = LCD_DMA_OWNER_NONE;
+  /* LVGL shares DMA2D and expects unthrottled drawing transfers. */
+  DMA2D->AMTCR = 0U;
 }
 
 void LCD_LTDC_IRQHandler(void)

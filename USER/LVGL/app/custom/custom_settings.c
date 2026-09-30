@@ -46,12 +46,10 @@ void draw_settings(void)
          palette->text, LV_TEXT_ALIGN_LEFT);
     button(378, 624, 102, 88, state.setting_selected == 1 ? "TEST" : "NEXT",
            palette->bg, palette->muted, &lv_font_Teko_SemiBold_20, ACT_SETTING_NEXT, 0);
-    static_cell(0, 712, 480, 36, palette->bg);
-    text(screen, 14, 719, 150, "RW: EDITABLE", &lv_font_Teko_SemiBold_12,
-         palette->muted, LV_TEXT_ALIGN_LEFT);
-    text(screen, 150, 719, 160, "EO: DISPLAY ONLY", &lv_font_Teko_SemiBold_12,
-         palette->muted, LV_TEXT_ALIGN_CENTER);
+    button(0, 712, 120, 36, "BENCH", palette->ink, palette->bg,
+           &lv_font_Teko_SemiBold_20, ACT_BENCHMARK, 0);
+    static_cell(120, 712, 360, 36, palette->bg);
     snprintf(buffer, sizeof(buffer), "%s: %s", selected->name, selected->options[selected->current]);
-    text(screen, 310, 719, 156, buffer, &lv_font_Teko_SemiBold_12,
+    text(screen, 130, 719, 336, buffer, &lv_font_Teko_SemiBold_12,
          palette->muted, LV_TEXT_ALIGN_RIGHT);
 }
