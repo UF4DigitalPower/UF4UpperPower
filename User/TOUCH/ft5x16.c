@@ -156,7 +156,7 @@ HAL_StatusTypeDef FT5X16_Init(void)
 HAL_StatusTypeDef FT5X16_ReadPoints(FT5X16_Point_t *points, uint8_t *count)
 {
     uint8_t status = 0U;
-    uint8_t raw[6U];
+    uint8_t raw[FT5X16_MAX_POINTS * 6U];
     uint8_t point_count;
     uint8_t i;
 
@@ -187,19 +187,22 @@ HAL_StatusTypeDef FT5X16_ReadPoints(FT5X16_Point_t *points, uint8_t *count)
         point_count = FT5X16_MAX_POINTS;
     }
 
+    /* The point records are contiguous.  Reading the whole block in one
+     * transaction removes one I2C start/stop pair from the common one-point
+     * path and reduces the time before a button press reaches LVGL. */
+    if (ft5x16_read(FT5X16_REG_TOUCH1_XH, raw, (uint16_t)(point_count * 6U)) != HAL_OK)
+    {
+        return HAL_ERROR;
+    }
+
     for (i = 0U; i < point_count; ++i)
     {
-        uint8_t reg = (uint8_t)(FT5X16_REG_TOUCH1_XH + (i * 6U));
+        const uint8_t *record = &raw[i * 6U];
 
-        if (ft5x16_read(reg, raw, sizeof(raw)) != HAL_OK)
-        {
-            return HAL_ERROR;
-        }
-
-        points[i].event = (uint8_t)((raw[0] >> 6) & 0x03U);
-        points[i].x = (uint16_t)(((uint16_t)(raw[0] & 0x0FU) << 8) | raw[1]);
-        points[i].y = (uint16_t)(((uint16_t)(raw[2] & 0x0FU) << 8) | raw[3]);
-        points[i].id = (uint8_t)((raw[2] >> 4) & 0x0FU);
+        points[i].event = (uint8_t)((record[0] >> 6) & 0x03U);
+        points[i].x = (uint16_t)(((uint16_t)(record[0] & 0x0FU) << 8) | record[1]);
+        points[i].y = (uint16_t)(((uint16_t)(record[2] & 0x0FU) << 8) | record[3]);
+        points[i].id = (uint8_t)((record[2] >> 4) & 0x0FU);
     }
 
     *count = point_count;
