@@ -12,6 +12,8 @@
 
 #define PAGE_SNAPSHOT_ADDR 0xD0800000UL
 #define PAGE_SLIDE_MS 360U
+#define PAGE_VIEW_Y 118
+#define PAGE_VIEW_H 630
 
 _Static_assert(PAGE_SNAPSHOT_ADDR >= LCD_PAGE_CACHE3_ADDR + LCD_PAGE_CACHE_BYTES,
                "page snapshots overlap reserved LCD SDRAM");
@@ -28,12 +30,14 @@ static lv_obj_t *nav_layer;
 static lv_obj_t *departing_image;
 static lv_obj_t *arriving_image;
 static lv_obj_t *transition_screen;
+static lv_obj_t *transition_view;
 static lv_draw_buf_t departing_snapshot;
 static lv_draw_buf_t arriving_snapshot;
 lv_obj_t *nav_indicator;
 lv_obj_t *nav_labels[4];
 static bool transition_active;
 static bool render_pending;
+static int transition_direction;
 static uint8_t nav_highlight_mask;
 static void render_async(void *unused);
 
@@ -64,16 +68,20 @@ static bool prepare_page_snapshots(lv_obj_t *old_layer, lv_obj_t *new_layer)
     transition_screen = lv_obj_create(NULL);
     if(transition_screen == NULL) return false;
     lv_obj_remove_style_all(transition_screen);
-    lv_obj_set_style_bg_opa(transition_screen, LV_OPA_COVER, 0);
-    lv_obj_set_style_bg_color(transition_screen, rgb(palette->bg), 0);
     lv_obj_remove_flag(transition_screen, LV_OBJ_FLAG_SCROLLABLE);
 
-    departing_image = lv_image_create(transition_screen);
-    arriving_image = lv_image_create(transition_screen);
+    transition_view = lv_obj_create(transition_screen);
+    lv_obj_remove_style_all(transition_view);
+    lv_obj_set_pos(transition_view, 0, PAGE_VIEW_Y);
+    lv_obj_set_size(transition_view, UI_W, PAGE_VIEW_H);
+    lv_obj_remove_flag(transition_view, LV_OBJ_FLAG_SCROLLABLE | LV_OBJ_FLAG_CLICKABLE);
+
+    departing_image = lv_image_create(transition_view);
+    arriving_image = lv_image_create(transition_view);
     lv_image_set_src(departing_image, &departing_snapshot);
     lv_image_set_src(arriving_image, &arriving_snapshot);
-    lv_obj_set_pos(departing_image, 0, 0);
-    lv_obj_set_pos(arriving_image, UI_W, 0);
+    lv_obj_set_pos(departing_image, 0, -PAGE_VIEW_Y);
+    lv_obj_set_pos(arriving_image, UI_W, -PAGE_VIEW_Y);
     lv_obj_add_flag(old_layer, LV_OBJ_FLAG_HIDDEN);
     lv_obj_add_flag(new_layer, LV_OBJ_FLAG_HIDDEN);
     lv_obj_set_parent(nav_layer, transition_screen);
@@ -121,6 +129,8 @@ static void render(void)
 static void slide_content(void *object, int32_t x)
 {
     lv_obj_set_x((lv_obj_t *)object, x);
+    lv_obj_set_x(departing_image != NULL ? arriving_image : content_layer,
+                 x + transition_direction * UI_W);
 }
 
 static void slide_nav(void *object, int32_t x)
@@ -154,6 +164,7 @@ static void slide_complete(lv_anim_t *animation)
         departing_image = NULL;
         arriving_image = NULL;
         transition_screen = NULL;
+        transition_view = NULL;
     }
     lv_obj_delete(departing_layer);
     departing_layer = NULL;
@@ -206,13 +217,12 @@ void ui_transition_to(page_t page)
     screen = root;
     board_ui_refresh();
     cached = prepare_page_snapshots(old_layer, content_layer);
+    transition_direction = direction;
     if(!cached) lv_obj_set_x(content_layer, direction * UI_W);
     else lv_obj_set_x(arriving_image, direction * UI_W);
     transition_active = true;
     animate_x(cached ? departing_image : old_layer,
-              0, -direction * UI_W, slide_content, NULL);
-    animate_x(cached ? arriving_image : content_layer,
-              direction * UI_W, 0, slide_content, slide_complete);
+              0, -direction * UI_W, slide_content, slide_complete);
     animate_x(nav_indicator, previous * 120, page * 120, slide_nav, NULL);
 }
 
@@ -247,5 +257,6 @@ void ui_render_init(lv_obj_t *canvas)
     departing_image = NULL;
     arriving_image = NULL;
     transition_screen = NULL;
+    transition_view = NULL;
     render();
 }

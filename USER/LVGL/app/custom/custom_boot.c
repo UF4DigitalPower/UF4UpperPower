@@ -1,6 +1,8 @@
 #include "custom_internal.h"
 
 static lv_obj_t *boot_overlay;
+static lv_obj_t *boot_screen;
+static lv_obj_t *main_screen;
 static lv_obj_t *boot_brand;
 static lv_obj_t *boot_rule;
 static lv_obj_t *boot_progress;
@@ -60,12 +62,17 @@ static void boot_frame(void *unused, int32_t time)
     int load = smooth(time, 240, 790);
     int exit = smooth(time, 820, 1000);
     int percent = load / 10;
+    int brand_y = 211 + (1000 - intro) * 32 / 1000 - exit * 28 / 1000;
+    int rule_width = (1000 - exit) * reveal * 448 / 1000000;
+    int progress_width = load * 448 / 1000;
+    lv_opa_t brand_opa = (lv_opa_t)(intro * 255 / 1000);
 
-    lv_obj_set_y(boot_brand, 211 + (1000 - intro) * 32 / 1000);
-    lv_obj_set_style_opa(boot_brand, (lv_opa_t)(intro * 255 / 1000), 0);
-    lv_obj_set_width(boot_rule, reveal * 448 / 1000);
-    lv_obj_set_width(boot_progress, load * 448 / 1000);
-    lv_obj_set_style_opa(boot_overlay, (lv_opa_t)(255 - exit * 255 / 1000), 0);
+    if(lv_obj_get_y(boot_brand) != brand_y) lv_obj_set_y(boot_brand, brand_y);
+    if(lv_obj_get_style_opa(boot_brand, 0) != brand_opa)
+        lv_obj_set_style_opa(boot_brand, brand_opa, 0);
+    if(lv_obj_get_width(boot_rule) != rule_width) lv_obj_set_width(boot_rule, rule_width);
+    if(lv_obj_get_width(boot_progress) != progress_width)
+        lv_obj_set_width(boot_progress, progress_width);
 
     if(percent != last_percent) {
         char value[8];
@@ -81,7 +88,11 @@ static void boot_frame(void *unused, int32_t time)
 static void boot_complete(lv_anim_t *animation)
 {
     (void)animation;
-    lv_obj_delete(boot_overlay);
+    lv_obj_t *finished_screen = boot_screen;
+    lv_screen_load(main_screen);
+    lv_obj_delete_async(finished_screen);
+    boot_screen = NULL;
+    main_screen = NULL;
     boot_overlay = NULL;
     boot_brand = NULL;
     boot_rule = NULL;
@@ -92,7 +103,10 @@ static void boot_complete(lv_anim_t *animation)
 
 void ui_boot_start(lv_obj_t *canvas)
 {
-    boot_overlay = boot_box(canvas, 0, 0, UI_W, UI_H, palette->bg);
+    main_screen = canvas;
+    boot_screen = lv_obj_create(NULL);
+    if(boot_screen == NULL) return;
+    boot_overlay = boot_box(boot_screen, 0, 0, UI_W, UI_H, palette->bg);
     lv_obj_add_flag(boot_overlay, LV_OBJ_FLAG_CLICKABLE);
     boot_label(boot_overlay, 16, 10, 330, "UF4 DIGITAL POWER",
                &lv_font_Teko_SemiBold_20, palette->muted, LV_TEXT_ALIGN_LEFT);
@@ -172,4 +186,5 @@ void ui_boot_start(lv_obj_t *canvas)
     lv_anim_set_exec_cb(&animation, boot_frame);
     lv_anim_set_completed_cb(&animation, boot_complete);
     lv_anim_start(&animation);
+    lv_screen_load(boot_screen);
 }
