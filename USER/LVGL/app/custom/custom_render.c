@@ -11,7 +11,7 @@
 #include "bsp_lcd.h"
 
 #define PAGE_SNAPSHOT_ADDR 0xD0800000UL
-#define PAGE_SLIDE_MS 360U
+#define PAGE_SLIDE_MS 180U
 #define PAGE_VIEW_Y 118
 #define PAGE_VIEW_H 630
 

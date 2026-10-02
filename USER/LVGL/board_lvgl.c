@@ -23,6 +23,10 @@ static uint32_t s_draw_start_ms;
 static uint8_t s_drawing;
 static uint8_t s_ref_rendered;
 
+/* Keep input latency below one display refresh period.  The touch IRQ also
+ * makes this timer ready immediately from the foreground loop. */
+#define BOARD_TOUCH_READ_PERIOD_MS 5U
+
 gg_ui_t guider_ui;
 
 static void board_draw_buf_copy(lv_draw_buf_t *dest, const lv_area_t *dest_area,
@@ -158,6 +162,7 @@ void Board_LVGL_Init(void)
     lv_indev_set_type(s_touch, LV_INDEV_TYPE_POINTER);
     lv_indev_set_read_cb(s_touch, board_touch_read);
     lv_indev_set_display(s_touch, display);
+    lv_timer_set_period(lv_indev_get_read_timer(s_touch), BOARD_TOUCH_READ_PERIOD_MS);
 
     setup_ui(&guider_ui);
     custom_init(&guider_ui);
@@ -176,6 +181,11 @@ void Board_LVGL_Process(void)
     if((uint32_t)(now_ms - s_last_ui_refresh_ms) >= 200U) {
         s_last_ui_refresh_ms = now_ms;
         board_ui_refresh();
+    }
+    if(s_touch_irq != 0U) {
+        /* The EXTI handler only records the edge.  Make the next foreground
+         * pass sample it without waiting for the normal input timer phase. */
+        lv_timer_ready(lv_indev_get_read_timer(s_touch));
     }
     lv_timer_handler();
 }

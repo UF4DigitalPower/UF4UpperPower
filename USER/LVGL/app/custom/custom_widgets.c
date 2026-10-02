@@ -13,6 +13,32 @@
 static lv_obj_t *s_output_label;
 static lv_obj_t *s_link_label;
 
+#define BUTTON_ACTION_DELAY_MS 16U
+
+static void button_action_timer_cb(lv_timer_t *timer)
+{
+    uintptr_t data = (uintptr_t)lv_timer_get_user_data(timer);
+    lv_timer_delete(timer);
+    clicked_action(data);
+}
+
+static void button_pressed(lv_event_t *event)
+{
+    uintptr_t data = (uintptr_t)lv_event_get_user_data(event);
+    lv_timer_t *timer = lv_timer_create(button_action_timer_cb,
+                                        BUTTON_ACTION_DELAY_MS,
+                                        (void *)data);
+
+    if(timer != NULL) {
+        lv_timer_set_repeat_count(timer, 1);
+    }
+    else {
+        /* Keep the command functional if the small deferred timer allocation
+         * cannot be satisfied. */
+        clicked_action(data);
+    }
+}
+
 void board_ui_refresh_status(void)
 {
     const char *output = state.output_on ? "ON" : "OFF";
@@ -76,7 +102,9 @@ lv_obj_t *button(int x, int y, int w, int h, const char *value,
     lv_obj_add_flag(obj, LV_OBJ_FLAG_CLICKABLE);
     lv_obj_set_style_bg_color(obj, rgb(palette->ink), LV_STATE_PRESSED);
     centered(obj, w, h, value, font, fg);
-    lv_obj_add_event_cb(obj, clicked, LV_EVENT_CLICKED,
+    /* Let LVGL present the pressed style for one frame before the action can
+     * rebuild or replace the pressed object. */
+    lv_obj_add_event_cb(obj, button_pressed, LV_EVENT_PRESSED,
                         (void *)(uintptr_t)(((uint16_t)action << 8) | argument));
     return obj;
 }

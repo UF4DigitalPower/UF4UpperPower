@@ -109,6 +109,7 @@ void ui_boot_start(lv_obj_t *canvas);
 void ui_request_render(void);
 void ui_transition_to(page_t page);
 bool ui_transition_active(void);
+void clicked_action(uintptr_t data);
 void clicked(lv_event_t *event);
 void board_ui_refresh(void);
 void board_ui_refresh_status(void);

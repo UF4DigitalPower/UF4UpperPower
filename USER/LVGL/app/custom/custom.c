@@ -16,10 +16,9 @@
 #include "board_model.h"
 #include "board_benchmark.h"
 
-void clicked(lv_event_t *event)
+void clicked_action(uintptr_t data)
 {
     if(ui_transition_active()) return;
-    uintptr_t data = (uintptr_t)lv_event_get_user_data(event);
     action_t action = (action_t)(data >> 8);
     uint8_t arg = (uint8_t)data;
     char message[48];
@@ -130,6 +129,11 @@ void clicked(lv_event_t *event)
         return;
     }
     ui_request_render();
+}
+
+void clicked(lv_event_t *event)
+{
+    clicked_action((uintptr_t)lv_event_get_user_data(event));
 }
 
 void custom_init(gg_ui_t *ui)
