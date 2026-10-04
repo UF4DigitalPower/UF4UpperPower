@@ -79,3 +79,77 @@ C:\OpenOCD\bin\openocd.exe -f interface/cmsis-dap.cfg -f target/stm32g4x.cfg -c 
 ```powershell
 .\tools\uf4-target\uf4-target.exe esp32-reset
 ```
+
+## F429 首页实时读数
+
+F429 通过 USART6 的 UF4COM 数据流接收 G474 遥测，首页电气读数均取自远程寄存器缓存，不使用设定值或演示数据。
+
+| 首页字段 | 遥测来源 | 换算与显示 |
+|---------|---------|-----------|
+| INPUT VOLTAGE | `UF4_ID_INPUT_VOLTAGE` (`0x0A`) | 原始值 / 100，显示 V，保留两位小数 |
+| INPUT CURRENT | `UF4_ID_INPUT_CURRENT` (`0x0B`) | 原始值 / 100，显示 A，保留两位小数 |
+| OUTPUT VOLTAGE | `UF4_ID_OUTPUT_VOLTAGE` (`0x0C`) | 原始值 / 100，显示 V，保留两位小数 |
+| OUTPUT CURRENT | `UF4_ID_OUTPUT_CURRENT` (`0x0D`) | 原始值 / 100，显示 A，保留两位小数 |
+| INPUT POWER | 输入电压 × 输入电流 | 两个原始值先以 32 位无符号整数相乘，再 / 10000，显示 W，保留两位小数 |
+| OUTPUT POWER | 输出电压 × 输出电流 | 两个原始值先以 32 位无符号整数相乘，再 / 10000，显示 W，保留两位小数 |
+
+输入电压与输入功率显示在电压区域底部；输入电流与输出功率显示在电流区域底部。原有 480 × 800 布局保持不变，标题和值使用分开的固定宽度标签。
+
+四个电压/电流字段已经包含在首页的 18 项数据流中，不需要新增功率寄存器。断链或任一来源字段尚未有效时，对应数值和依赖它的功率显示 `--`。当前 G474 电流遥测使用非负的 centi-A 值，因此计算结果是非负功率，不表示带符号的能量流向。`ENERGY` 和 `EFF` 仍显示 `--`，尚未提供累计能量或效率计算。
+
+### 2026-10-04 首页缺显示修复记录
+
+原首页只绘制了 `INPUT VOLTAGE`、`INPUT CURRENT`、`INPUT POWER` 和 `OUTPUT POWER` 的标题，没有对应数值标签。本次在原有底部行加入四个固定宽度数值标签，并在 `board_ui_refresh()` 中按在线状态和遥测字段有效性更新。首页的大号输出电压、电流也直接读取同一组真实遥测。
+
+已完成的软件验证：
+
+- `Tests/F429Home/run.ps1` 通过，覆盖真实寄存器来源、功率换算和四舍五入、有效零值、字段缺失、断链，以及全部 `uint16_t` 最大值。
+- 使用实际生成的 Teko 字体及 Montserrat 回退字体检查标签文字宽度；底部新读数在 480 × 800 布局中未超出固定区域。
+- ARM 构建通过；`2026-10-04 19:01:46` 生成 `cmake-build-codex/STM32F429IGT6.elf`、`.hex` 和 `.bin`。RAM 使用 153208 B / 192 KB，Flash 使用 528540 B / 1 MB。
+- `git diff --check` 通过。
+
+随后已由负责 OpenOCD 和串口的父代理完成固件刷写 `verify`、GDB 标签文本检查及首页截图 `cmake-build-codex/f429-home.png`。标签和截图显示输入电压 17.02 V、输入电流 0.05 A、输入功率 0.85 W、输出功率 0.00 W。
+
+### 首页设定值同步与性能层修复
+
+实机截图还发现 `VOLTAGE SET` 和 `CURRENT LIMIT` 仍显示 00.00，而 GDB 中 `state.voltage_set` 为 5、`state.current_limit` 为 1。原因是首页先于通信同步创建，原 `draw_set_row()` 只在页面创建时生成静态设定值文本。
+
+本次保存两项设定值标签句柄，并在 `board_ui_refresh()` 中使用已同步的 `state.voltage_set` 和 `state.current_limit` 更新文本；后续远程同步、首页调节和预设应用也会使用该刷新路径。格式保持 `%05.2f V` / `%05.2f A`，例如同步到 5 V、1 A 后显示 `05.00 V`、`01.00 A`。
+
+`User/LVGL/lv_conf.h` 的 `LV_USE_PERF_MONITOR` 已设为 0，避免右下角 FPS / CPU 层遮挡底部导航。首页测试已覆盖创建时为零、同步到 5 V / 1 A、后续设定值改变以及 70 V / 10 A 上限，并沿用实际字体宽度检查。本轮软件测试已通过；设定值刷新和性能层关闭的硬件验证尚待父代理刷写后执行。
+
+本轮 ARM 构建通过，最终固件为 `cmake-build-codex/STM32F429IGT6.elf` / `.hex` / `.bin`，生成时间 `2026-10-04 19:21:54`。RAM 使用 153216 B / 192 KB，Flash 使用 527260 B / 1 MB。ELF 已不包含 `perf_monitor_init` 和 `perf_monitor_cb`；`git diff --check` 通过。
+
+### GDB 读取首页标签实际文本
+
+使用与已刷写固件一致的 `STM32F429IGT6.elf`，连接已选中 F429 的 OpenOCD GDB 服务。在首页已绘制并完成至少一次刷新后暂停 F429，再读取标签。`custom_home.c` 中的静态变量是 `lv_obj_t *`，对应实例实际为 `lv_label_t`；结构成员路径为 `((lv_label_t *)标签指针)->text`，与 `lv_label_get_text()` 返回的成员一致。
+
+```gdb
+set pagination off
+monitor halt
+p 'custom_home.c'::s_input_voltage
+x/s ((lv_label_t *)'custom_home.c'::s_input_voltage)->text
+x/s ((lv_label_t *)'custom_home.c'::s_input_current)->text
+x/s ((lv_label_t *)'custom_home.c'::s_input_power)->text
+x/s ((lv_label_t *)'custom_home.c'::s_output_power)->text
+x/s ((lv_label_t *)'custom_home.c'::s_output_voltage)->text
+x/s ((lv_label_t *)'custom_home.c'::s_output_current)->text
+x/s ((lv_label_t *)'custom_home.c'::s_voltage_set)->text
+x/s ((lv_label_t *)'custom_home.c'::s_current_limit)->text
+monitor resume
+```
+
+先确认标签指针非空。页面尚未创建时指针可能为 0，切换到其他页面后旧标签指针也不能用于读取有效对象，应在首页读取。`x/s` 只检查内存中的实际标签文本，不证明 LCD 刷新或实体屏幕已显示；还需结合硬件观察完成核验。
+
+`2026-10-04 19:21:54` 构建中 `text` 成员相对 `lv_label_t` 起始位置偏移为 48 字节，标签指针符号地址如下。重新构建后应以新 ELF 的类型和符号为准，优先使用上述结构成员表达式。
+
+| 标签指针符号 | 当前符号地址 | 对应显示 |
+|-------------|-------------|---------|
+| `s_input_voltage` | `0x20003800` | INPUT VOLTAGE |
+| `s_input_current` | `0x200037FC` | INPUT CURRENT |
+| `s_input_power` | `0x200037F8` | INPUT POWER |
+| `s_output_power` | `0x200037F4` | OUTPUT POWER |
+| `s_output_voltage` | `0x20003808` | OUTPUT VOLTAGE |
+| `s_output_current` | `0x20003804` | OUTPUT CURRENT |
+| `s_voltage_set` | `0x200037F0` | VOLTAGE SET |
+| `s_current_limit` | `0x200037EC` | CURRENT LIMIT |

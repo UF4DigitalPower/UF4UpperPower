@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <sys/stat.h>
 #include <sys/times.h>
+#include "usart.h"
 
 extern int __io_putchar(int ch) __attribute__((weak));
 
@@ -13,6 +14,16 @@ int _write(int file, char *ptr, int len)
 {
   int i;
   (void)file;
+  if (__io_putchar == NULL)
+  {
+    if (len <= 0) return 0;
+    if (HAL_UART_Transmit(&huart1, (uint8_t *)ptr, (uint16_t)len, 100U) != HAL_OK)
+    {
+      errno = EIO;
+      return -1;
+    }
+    return len;
+  }
   for (i = 0; i < len; ++i)
   {
     if (__io_putchar != NULL) (void)__io_putchar((unsigned char)ptr[i]);
