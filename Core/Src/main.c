@@ -162,6 +162,7 @@ int main(void)
     /* USER CODE BEGIN 3 */
     Application_Process();
     HAL_Delay(1U);
+
   }
   /* USER CODE END 3 */
 }
