@@ -11,6 +11,8 @@
 #include "g474_remote.h"
 
 static lv_obj_t *s_output_label;
+static lv_obj_t *s_runtime_label;
+static lv_obj_t *s_runtime_cell;
 static lv_obj_t *s_link_label;
 
 #define BUTTON_ACTION_DELAY_MS 16U
@@ -41,10 +43,20 @@ static void button_pressed(lv_event_t *event)
 
 void board_ui_refresh_status(void)
 {
-    const char *output = state.output_on ? "ON" : "OFF";
-    const char *link = G474_Remote_IsOnline() ? "G474" : "NO LINK";
+    const uint8_t online = G474_Remote_IsOnline();
+    const uint8_t running = online && state.output_on;
+    const char *output = G474_Remote_GetOutputCommanded() ? "ON" : "OFF";
+    const char *runtime = online ? (running ? "RUN" : "IDLE") : "OFFLINE";
+    const char *link = online ? "G474" : "NO LINK";
     if(s_output_label && strcmp(lv_label_get_text(s_output_label), output) != 0)
         lv_label_set_text(s_output_label, output);
+    if(s_runtime_label && strcmp(lv_label_get_text(s_runtime_label), runtime) != 0) {
+        lv_label_set_text(s_runtime_label, runtime);
+        lv_obj_set_style_text_color(s_runtime_label,
+                                    rgb(running ? palette->ink : palette->muted), 0);
+        lv_obj_set_style_bg_color(s_runtime_cell,
+                                  rgb(running ? palette->accent : palette->panel), 0);
+    }
     if(s_link_label && strcmp(lv_label_get_text(s_link_label), link) != 0)
         lv_label_set_text(s_link_label, link);
 }
@@ -132,16 +144,17 @@ void format_value(char *buffer, size_t size, float value, uint8_t digits)
 
 void draw_header(void)
 {
-    static const char *small[] = {"UF4 DIGITAL POWER", "LOOP PARAMETERS", "SYSTEM SETTINGS", "RUNTIME MONITOR"};
-    static const char *large[] = {"DC POWER SUPPLY", "PID / TRANSFER", "DEVICE CONFIG", "EVENT LOG"};
+    static const char *small[] = {"UF4 DIGITAL POWER", "POWER PARAMETERS", "SYSTEM SETTINGS", "RUNTIME MONITOR"};
+    static const char *large[] = {"DC POWER SUPPLY", "POWER PARAMETERS", "DEVICE CONFIG", "EVENT LOG"};
+    const uint8_t output_commanded = G474_Remote_GetOutputCommanded();
     static_cell(0, 0, UI_W, 76, palette->bg);
     text(screen, 16, 10, 330, small[state.page], &lv_font_Teko_SemiBold_20,
          palette->muted, LV_TEXT_ALIGN_LEFT);
     text(screen, 16, 35, 330, large[state.page], &lv_font_Teko_SemiBold_28,
          palette->text, LV_TEXT_ALIGN_LEFT);
-    lv_obj_t *output_button = button(362, 0, 118, 76, state.output_on ? "ON" : "OFF",
-           state.output_on ? palette->ink : palette->disabled,
-           state.output_on ? palette->bg : palette->muted,
+    lv_obj_t *output_button = button(362, 0, 118, 76, output_commanded ? "ON" : "OFF",
+           output_commanded ? palette->ink : palette->disabled,
+           output_commanded ? palette->bg : palette->muted,
            &lv_font_Teko_SemiBold_24, ACT_OUTPUT, 0);
     s_output_label = lv_obj_get_child(output_button, 0);
 }
@@ -150,10 +163,15 @@ void draw_status(void)
 {
     const char *items[5] = {state.output_on ? "RUN" : "IDLE", "CV", "BUCK", "FORWARD", "NO LINK"};
     for(int i = 0; i < 5; i++) {
-        bool highlighted = i == 0 && state.output_on;
-        static_cell(i * 96, 76, 96, 42, highlighted ? palette->accent : palette->panel);
+        bool highlighted = i == 0 && state.output_on && G474_Remote_IsOnline();
+        lv_obj_t *status_cell = cell(screen, i * 96, 76, 96, 42,
+                                     highlighted ? palette->accent : palette->panel);
         lv_obj_t *label = text(screen, i * 96 + 2, 85, 92, items[i], &lv_font_Teko_SemiBold_16,
                                highlighted ? palette->ink : palette->muted, LV_TEXT_ALIGN_CENTER);
+        if(i == 0) {
+            s_runtime_cell = status_cell;
+            s_runtime_label = label;
+        }
         if(i == 4) s_link_label = label;
     }
     board_ui_refresh_status();

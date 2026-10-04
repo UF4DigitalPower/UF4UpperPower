@@ -81,6 +81,8 @@ static g474_register_t s_registers[G474_REG_COUNT];
 static uint8_t s_sequence;
 static uint8_t s_poll_index;
 static uint8_t s_request_pending;
+static uint8_t s_request_sequence;
+static uint8_t s_request_response_cmd;
 static uint8_t s_full_sync_active;
 static uint8_t s_full_sync_index;
 static uint8_t s_full_sync_batch_count;
@@ -107,6 +109,7 @@ static g474_transaction_state_t s_transaction_state;
 static uint8_t s_transaction_data[UF4_MAX_DATA_LEN];
 static uint8_t s_transaction_len;
 static uint32_t s_transaction_started_ms;
+static uint8_t s_transaction_sequence;
 static uint8_t s_save_result;
 
 #define G474_SAVE_RESULT_NONE     0U
@@ -118,8 +121,6 @@ static void G474_Remote_AckEvent(uint8_t seq,
                                  uf4_ack_status_t status,
                                  void *user)
 {
-    (void)seq;
-    (void)cmd;
     (void)user;
 
     if(status == UF4_ACK_DONE)
@@ -131,21 +132,21 @@ static void G474_Remote_AckEvent(uint8_t seq,
         const uint32_t now_ms = HAL_GetTick();
 
         s_ack_timeout++;
-        s_request_pending = 0U;
-        s_last_request_ms = now_ms;
-
-        if(cmd == UF4_CMD_READ_RSP)
+        if(s_request_pending != 0U && seq == s_request_sequence &&
+           cmd == s_request_response_cmd)
         {
-            s_fast_poll_pending = 0U;
-        }
-        else if(cmd == UF4_CMD_STREAM_START_RSP)
-        {
-            /* The initial stream request is the first link handshake.  Do not
-             * leave the remote state machine permanently pending when G474 is
-             * booting, resetting, or the UART was briefly unavailable. */
-            s_stream_requested = 0U;
-            s_stream_active = 0U;
-            s_last_stream_request_ms = now_ms;
+            s_request_pending = 0U;
+            s_last_request_ms = now_ms;
+            if(cmd == UF4_CMD_READ_RSP)
+            {
+                s_fast_poll_pending = 0U;
+            }
+            else if(cmd == UF4_CMD_STREAM_START_RSP)
+            {
+                s_stream_requested = 0U;
+                s_stream_active = 0U;
+                s_last_stream_request_ms = now_ms;
+            }
         }
     }
     else if(status == UF4_ACK_DROPPED)
@@ -207,6 +208,8 @@ static uint8_t G474_Remote_StartNextFullSyncRead(void)
 
     s_full_sync_batch_count = count;
     s_request_pending = 1U;
+    s_request_sequence = (uint8_t)(s_sequence - 1U);
+    s_request_response_cmd = UF4_CMD_READ_RSP;
     s_last_request_ms = HAL_GetTick();
     return 1U;
 }
@@ -231,6 +234,8 @@ static uint8_t G474_Remote_StartFastPoll(void)
 
     s_fast_poll_pending = 1U;
     s_request_pending = 1U;
+    s_request_sequence = (uint8_t)(s_sequence - 1U);
+    s_request_response_cmd = UF4_CMD_READ_RSP;
     s_last_request_ms = HAL_GetTick();
     s_last_poll_ms = s_last_request_ms;
     return 1U;
@@ -248,6 +253,8 @@ static uint8_t G474_Remote_SendKeepalive(void)
     }
 
     s_request_pending = 1U;
+    s_request_sequence = (uint8_t)(s_sequence - 1U);
+    s_request_response_cmd = UF4_CMD_READ_RSP;
     s_last_request_ms = HAL_GetTick();
     s_last_poll_ms = s_last_request_ms;
     return 1U;
@@ -265,6 +272,8 @@ static uint8_t G474_Remote_SendOutputHeartbeat(void)
     }
 
     s_request_pending = 1U;
+    s_request_sequence = (uint8_t)(s_sequence - 1U);
+    s_request_response_cmd = UF4_CMD_WRITE_RSP;
     s_last_request_ms = HAL_GetTick();
     s_last_output_command_ms = s_last_request_ms;
     return 1U;
@@ -290,7 +299,10 @@ static uint8_t G474_Remote_StartStream(void)
 
     s_stream_requested = 1U;
     s_request_pending = 1U;
+    s_request_sequence = (uint8_t)(s_sequence - 1U);
+    s_request_response_cmd = UF4_CMD_STREAM_START_RSP;
     s_last_stream_request_ms = HAL_GetTick();
+    s_last_request_ms = s_last_stream_request_ms;
     return 1U;
 }
 
@@ -299,12 +311,14 @@ static uint8_t G474_Remote_SendSave(void)
     const uint8_t seq = s_sequence;
 
     s_transaction_state = G474_TRANSACTION_SAVE_WAIT;
+    s_transaction_sequence = seq;
     printf("[F429][SAVE] SAVE_REQ seq=%u\r\n", (unsigned)seq);
     if(UF4_SendFrame(s_sequence++, UF4_FLAG_ACK_REQ,
                        UF4_CMD_SAVE_REQ, NULL, 0U) == 0U)
     {
         s_tx_submit_failures++;
         s_transaction_state = G474_TRANSACTION_IDLE;
+        s_save_result = G474_SAVE_RESULT_FAILED;
         printf("[F429][SAVE] SAVE_REQ submit failed seq=%u\r\n", (unsigned)seq);
         return 0U;
     }
@@ -316,6 +330,7 @@ static uint8_t G474_Remote_SendWrite(void)
     const uint8_t seq = s_sequence;
 
     s_transaction_state = G474_TRANSACTION_WRITE_WAIT;
+    s_transaction_sequence = seq;
     printf("[F429][SAVE] WRITE_REQ seq=%u count=%u", (unsigned)seq,
            (unsigned)(s_transaction_len / 3U));
     for(uint8_t i = 0U; i < s_transaction_len; i += 3U)
@@ -340,7 +355,9 @@ static uint8_t G474_Remote_SendWrite(void)
 
 static void G474_Remote_LogStatus(uint32_t now_ms)
 {
-    if((uint32_t)(now_ms - s_last_debug_ms) < 1000U)
+    const uint32_t period = settings[0].current == 1U ? 5000U : 1000U;
+    if(settings[0].current == 2U ||
+       (uint32_t)(now_ms - s_last_debug_ms) < period)
     {
         return;
     }
@@ -412,26 +429,31 @@ static float G474_Remote_Scale(uint8_t id, uint16_t value)
     }
 }
 
+static uint16_t G474_Remote_Round(float value)
+{
+    return (uint16_t)(int32_t)(value < 0.0f ? value - 0.5f : value + 0.5f);
+}
+
 static uint16_t G474_Remote_Encode(uint8_t id, float value)
 {
-    if(id == UF4_ID_FAN_SET_VALUE) return (uint16_t)(value * 10.0f);
+    if(id == UF4_ID_FAN_SET_VALUE) return G474_Remote_Round(value * 10.0f);
     if(id == UF4_ID_CFG_CURRENT_KP || id == UF4_ID_CFG_CURRENT_KI || id == UF4_ID_CFG_CURRENT_KD ||
        id == UF4_ID_CFG_VOLTAGE_KP || id == UF4_ID_CFG_VOLTAGE_KI || id == UF4_ID_CFG_VOLTAGE_KD)
-        return (uint16_t)(value * 10000.0f);
+        return G474_Remote_Round(value * 10000.0f);
     if(id == UF4_ID_SET_VOLTAGE_LIMIT || id == UF4_ID_SET_CURRENT_LIMIT ||
        id == UF4_ID_OCP_SET_VALUE || id == UF4_ID_OTP_SET_VALUE ||
        id == UF4_ID_CFG_VIN_OVP || id == UF4_ID_CFG_VIN_UVP ||
        id == UF4_ID_CFG_VOUT_OVP || id == UF4_ID_CFG_ADC_VREF)
-        return (uint16_t)(value * 100.0f);
+        return G474_Remote_Round(value * 100.0f);
     if(id == UF4_ID_CFG_CURRENT_OFFSET || id == UF4_ID_CFG_VIN_OFFSET ||
        id == UF4_ID_CFG_VOUT_OFFSET || id == UF4_ID_CFG_IIN_OFFSET ||
        id == UF4_ID_CFG_IOUT_OFFSET)
-        return (uint16_t)(int16_t)(value * 100.0f);
+        return G474_Remote_Round(value * 100.0f);
     if(id == UF4_ID_CFG_GAIN_IN || id == UF4_ID_CFG_GAIN_OUT ||
        id == UF4_ID_CFG_VIN_GAIN || id == UF4_ID_CFG_VOUT_GAIN ||
        id == UF4_ID_CFG_IIN_GAIN || id == UF4_ID_CFG_IOUT_GAIN)
-        return (uint16_t)(value * 100.0f);
-    return (uint16_t)value;
+        return G474_Remote_Round(value * 100.0f);
+    return G474_Remote_Round(value);
 }
 
 static void G474_Remote_ApplyUi(uint8_t id, uint16_t value)
@@ -462,8 +484,10 @@ static void G474_Remote_ApplyUi(uint8_t id, uint16_t value)
     if(id == UF4_ID_OUTPUT_CURRENT) state.output_current = G474_Remote_Scale(id, value);
     if(id == UF4_ID_OUTPUT_ENABLE && dirty == 0U)
     {
-        state.output_on = (value == 1U) ? 1U : 0U;
-        printf("[F429][OUTPUT] G474 enable=%u\r\n", (unsigned)state.output_on);
+        const uint8_t output_on = (value == 1U) ? 1U : 0U;
+        if(state.output_on != output_on)
+            printf("[F429][OUTPUT] G474 enable=%u\r\n", (unsigned)output_on);
+        state.output_on = output_on;
     }
 }
 
@@ -471,7 +495,8 @@ static void G474_Remote_FrameRx(const uf4_frame_t *frame, void *user)
 {
     (void)user;
     if(frame != NULL &&
-       (frame->cmd == UF4_CMD_WRITE_RSP || frame->cmd == UF4_CMD_SAVE_RSP ||
+       ((s_transaction_state != G474_TRANSACTION_IDLE &&
+         (frame->cmd == UF4_CMD_WRITE_RSP || frame->cmd == UF4_CMD_SAVE_RSP)) ||
         (frame->flags & UF4_FLAG_ERROR) != 0U))
     {
         printf("[F429][SAVE] RSP cmd=%02X seq=%u flags=%02X len=%u",
@@ -495,19 +520,35 @@ static void G474_Remote_FrameRx(const uf4_frame_t *frame, void *user)
     }
 
     s_rx_frames++;
+    const uint8_t request_matched = s_request_pending != 0U &&
+        frame->seq == s_request_sequence && frame->cmd == s_request_response_cmd;
+    const uint8_t transaction_matched = frame->seq == s_transaction_sequence &&
+        ((s_transaction_state == G474_TRANSACTION_WRITE_WAIT && frame->cmd == UF4_CMD_WRITE_RSP) ||
+         (s_transaction_state == G474_TRANSACTION_SAVE_WAIT && frame->cmd == UF4_CMD_SAVE_RSP));
+    s_last_response_ms = HAL_GetTick();
+    if(request_matched != 0U) s_request_pending = 0U;
 
-    if((frame->flags & UF4_FLAG_ERROR) != 0U &&
-       s_transaction_state != G474_TRANSACTION_IDLE &&
-       s_transaction_state != G474_TRANSACTION_RESUME)
+    if((frame->flags & UF4_FLAG_ERROR) != 0U)
     {
-        printf("[F429][SAVE] failed by G474 error cmd=%02X seq=%u\r\n",
-               (unsigned)frame->cmd, (unsigned)frame->seq);
-        s_save_result = G474_SAVE_RESULT_FAILED;
-        s_transaction_state = G474_TRANSACTION_IDLE;
+        if(transaction_matched != 0U)
+        {
+            printf("[F429][SAVE] failed by G474 error cmd=%02X seq=%u\r\n",
+                   (unsigned)frame->cmd, (unsigned)frame->seq);
+            s_save_result = G474_SAVE_RESULT_FAILED;
+            s_transaction_state = G474_TRANSACTION_IDLE;
+        }
+        if(request_matched != 0U && frame->cmd == UF4_CMD_STREAM_START_RSP)
+        {
+            s_stream_requested = 0U;
+            s_stream_active = 0U;
+            s_last_stream_request_ms = s_last_response_ms;
+        }
         return;
     }
 
-    for(uint8_t i = 0U; i < frame->len; i += 3U)
+    const uint8_t value_len = frame->cmd == UF4_CMD_READ_RSP ||
+        frame->cmd == UF4_CMD_WRITE_RSP || frame->cmd == UF4_CMD_STREAM_DATA ? frame->len : 0U;
+    for(uint8_t i = 0U; i < value_len; i += 3U)
     {
         const uint8_t id = frame->data[i];
         const uint16_t value = ((uint16_t)frame->data[i + 1U] << 8U) | frame->data[i + 2U];
@@ -520,35 +561,30 @@ static void G474_Remote_FrameRx(const uf4_frame_t *frame, void *user)
         G474_Remote_ApplyUi(id, value);
         s_rx_values++;
     }
-    if(frame->len != 0U)
+    if(value_len != 0U)
     {
         s_ui_has_data = 1U;
     }
-    if(frame->cmd == UF4_CMD_READ_RSP || frame->cmd == UF4_CMD_WRITE_RSP)
-    {
-        s_request_pending = 0U;
-    }
-    s_last_response_ms = HAL_GetTick();
-    if(frame->cmd == UF4_CMD_READ_RSP && s_fast_poll_pending != 0U)
+    if(request_matched != 0U && frame->cmd == UF4_CMD_READ_RSP && s_fast_poll_pending != 0U)
     {
         s_fast_poll_pending = 0U;
         s_stream_active = 1U;
         s_last_stream_data_ms = s_last_response_ms;
     }
-    if(frame->cmd == UF4_CMD_WRITE_RSP &&
+    if(transaction_matched != 0U && frame->cmd == UF4_CMD_WRITE_RSP &&
        s_transaction_state == G474_TRANSACTION_WRITE_WAIT)
     {
         (void)G474_Remote_SendSave();
         return;
     }
-    if(frame->cmd == UF4_CMD_SAVE_RSP &&
+    if(transaction_matched != 0U && frame->cmd == UF4_CMD_SAVE_RSP &&
        s_transaction_state == G474_TRANSACTION_SAVE_WAIT)
     {
         s_save_result = G474_SAVE_RESULT_SUCCESS;
         s_transaction_state = G474_TRANSACTION_IDLE;
         return;
     }
-    if(frame->cmd == UF4_CMD_STREAM_START_RSP)
+    if(request_matched != 0U && frame->cmd == UF4_CMD_STREAM_START_RSP)
     {
         s_request_pending = 0U;
         s_stream_active = 1U;
@@ -557,7 +593,7 @@ static void G474_Remote_FrameRx(const uf4_frame_t *frame, void *user)
         s_full_sync_batch_count = 0U;
         (void)G474_Remote_StartNextFullSyncRead();
     }
-    else if(frame->cmd == UF4_CMD_READ_RSP && s_full_sync_active != 0U)
+    else if(request_matched != 0U && frame->cmd == UF4_CMD_READ_RSP && s_full_sync_active != 0U)
     {
         s_full_sync_index = (uint8_t)(s_full_sync_index + s_full_sync_batch_count);
         if(s_full_sync_index < G474_REG_COUNT)
@@ -632,8 +668,9 @@ void G474_Remote_Process(void)
         s_transaction_state = G474_TRANSACTION_IDLE;
     }
 
-    if(s_stream_active != 0U && s_last_stream_data_ms != 0U &&
-       (uint32_t)(now_ms - s_last_stream_data_ms) >= 500U)
+    if(s_stream_requested != 0U && s_request_pending == 0U &&
+       (uint32_t)(now_ms - (s_last_stream_data_ms != 0U ?
+                           s_last_stream_data_ms : s_last_stream_request_ms)) >= 500U)
     {
         s_stream_active = 0U;
         s_stream_requested = 0U;
@@ -724,15 +761,16 @@ uint8_t G474_Remote_ReadFloat(uint8_t id, float *value)
 uint8_t G474_Remote_Write(uint8_t id, uint16_t value)
 {
     const uint8_t data[3] = { id, (uint8_t)(value >> 8U), (uint8_t)value };
+    const uint8_t sequence = s_sequence++;
+    if(UF4_SendFrame(sequence, UF4_FLAG_ACK_REQ,
+                     UF4_CMD_WRITE_REQ, data, sizeof(data)) == 0U) return 0U;
     if(id == UF4_ID_OUTPUT_ENABLE)
     {
         s_output_commanded = value == 1U ? 1U : 0U;
         s_last_output_command_ms = HAL_GetTick();
         printf("[F429][OUTPUT] WRITE_REQ seq=%u enable=%u\r\n",
-               (unsigned)s_sequence, (unsigned)s_output_commanded);
+               (unsigned)sequence, (unsigned)s_output_commanded);
     }
-    if(UF4_SendFrame(s_sequence++, UF4_FLAG_ACK_REQ,
-                       UF4_CMD_WRITE_REQ, data, sizeof(data)) == 0U) return 0U;
     return 1U;
 }
 

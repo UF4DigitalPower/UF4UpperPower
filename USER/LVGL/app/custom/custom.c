@@ -23,13 +23,14 @@ void clicked_action(uintptr_t data)
     uint8_t arg = (uint8_t)data;
     char message[48];
     switch(action) {
-    case ACT_OUTPUT:
+    case ACT_OUTPUT: {
+        const uint8_t requested_output = !G474_Remote_GetOutputCommanded();
         if(settings[5].current != 0U) { log_event("OUTPUT LOCKED"); break; }
-        if(G474_Remote_Write(UF4_ID_OUTPUT_ENABLE, !state.output_on) != 0U) {
-            state.output_on = !state.output_on;
-            log_event(state.output_on ? "OUTPUT ON" : "OUTPUT OFF");
+        if(G474_Remote_Write(UF4_ID_OUTPUT_ENABLE, requested_output) != 0U) {
+            log_event(requested_output ? "OUTPUT ON" : "OUTPUT OFF");
         } else log_event("OUTPUT WRITE FAILED");
         break;
+    }
     case ACT_NAV:
         if(state.page != (page_t)arg) {
             snprintf(message, sizeof(message), "PAGE %s",
@@ -43,7 +44,7 @@ void clicked_action(uintptr_t data)
     case ACT_HOME_ADJUST: {
         float steps[] = {0.02f, 0.2f, 2.0f};
         float *value = arg < 2 ? &state.voltage_set : &state.current_limit;
-        float max = arg < 2 ? 75.0f : 10.0f;
+        float max = arg < 2 ? 70.0f : 10.0f;
         if(settings[5].current != 0U) { log_event("SETPOINT LOCKED"); break; }
         float previous = *value;
         *value += (arg % 2 == 0 ? -1.0f : 1.0f) * steps[state.home_step];
@@ -87,6 +88,7 @@ void clicked_action(uintptr_t data)
         float step = param_step(param, state.param_step != 0);
         if(settings[5].current != 0U) { log_event("PARAM LOCKED"); break; }
         if(G474_Remote_IsSaveInProgress()) { log_event("PARAM SAVE BUSY"); break; }
+        if(param->min == param->max) { log_event("PARAM FIXED"); break; }
         param->value += arg == 0 ? -step : step;
         if(param->value < param->min) param->value = param->min;
         if(param->value > param->max) param->value = param->max;

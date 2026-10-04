@@ -116,9 +116,24 @@ F429 通过 USART6 的 UF4COM 数据流接收 G474 遥测，首页电气读数�
 
 本次保存两项设定值标签句柄，并在 `board_ui_refresh()` 中使用已同步的 `state.voltage_set` 和 `state.current_limit` 更新文本；后续远程同步、首页调节和预设应用也会使用该刷新路径。格式保持 `%05.2f V` / `%05.2f A`，例如同步到 5 V、1 A 后显示 `05.00 V`、`01.00 A`。
 
-`User/LVGL/lv_conf.h` 的 `LV_USE_PERF_MONITOR` 已设为 0，避免右下角 FPS / CPU 层遮挡底部导航。首页测试已覆盖创建时为零、同步到 5 V / 1 A、后续设定值改变以及 70 V / 10 A 上限，并沿用实际字体宽度检查。本轮软件测试已通过；设定值刷新和性能层关闭的硬件验证尚待父代理刷写后执行。
+`User/LVGL/lv_conf.h` 的 `LV_USE_PERF_MONITOR` 已设为 0，避免右下角 FPS / CPU 层遮挡底部导航。首页测试已覆盖创建时为零、同步到 5 V / 1 A、后续设定值改变以及 70 V / 10 A 上限，并沿用实际字体宽度检查。本轮软件测试已通过。
 
 本轮 ARM 构建通过，最终固件为 `cmake-build-codex/STM32F429IGT6.elf` / `.hex` / `.bin`，生成时间 `2026-10-04 19:21:54`。RAM 使用 153216 B / 192 KB，Flash 使用 527260 B / 1 MB。ELF 已不包含 `perf_monitor_init` 和 `perf_monitor_cb`；`git diff --check` 通过。
+
+### 最终固件停机验证结果
+
+`2026-10-04 19:21:54` 固件已通过 OpenOCD `verify` 并复位运行。硬件联调已使用 GDB 读取实际标签文本，并检查完整 RGB565 帧缓冲及导出的 `cmake-build-codex/f429-home-final.png`。首页设定值与同步状态一致，输入读数和功率完整显示，底部导航没有性能监视层遮挡。
+
+| 实际标签 | 验证文本 |
+|---------|---------|
+| VOLTAGE SET | `05.00 V` |
+| CURRENT LIMIT | `00.50 A` |
+| INPUT VOLTAGE | `17.08 V` |
+| INPUT CURRENT | `0.02 A` |
+| INPUT POWER | `0.34 W` |
+| OUTPUT POWER | `0.00 W` |
+
+本次硬件验证范围仅为输出关闭状态下的 UI 显示、设定值同步和板间通信。使能输出后的通信失联排查及稳压运行验证仍未完成，以上结果不代表整机联调已经完成。
 
 ### GDB 读取首页标签实际文本
 
@@ -153,3 +168,9 @@ monitor resume
 | `s_output_current` | `0x20003804` | OUTPUT CURRENT |
 | `s_voltage_set` | `0x200037F0` | VOLTAGE SET |
 | `s_current_limit` | `0x200037EC` | CURRENT LIMIT |
+
+### F429-G474 板间通信停机实测
+
+`2026-10-04` 使用当前已刷写的 F429/G474 固件和 OpenOCD 非停机读取完成安全链路测试。F429 USART6 与 G474 USART2 之间持续收到有效 UF4COM 帧，STREAM 状态为活动，缓存包含 62 项参数和遥测；实测窗口内 `rx_rejected=0`、`ack_dropped=0`、`tx_submit_fail=0`。测试读取到输入约 `17.06 V`、输出约 `0.08 V`，F429 缓存状态为 `IDLE`、故障为 `0`。
+
+测试脚本 `Tests/hil_f429_owner.py` 发送 F429 的安全停机命令（`OUTPUT_ENABLE=0`），连续读取 2 s 共 24 组缓存，结束时仍为 `state=IDLE`、`fault=0`、`OUTPUT_ENABLE=0`。本次未通过通信链路使能功率输出，因此不代表 5 V 带载稳压验收。

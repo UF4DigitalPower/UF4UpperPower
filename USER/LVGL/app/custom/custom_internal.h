@@ -19,7 +19,7 @@ LV_FONT_DECLARE(lv_font_Teko_SemiBold_40);
 LV_FONT_DECLARE(lv_font_Teko_SemiBold_46);
 #define UI_W 480
 #define UI_H 800
-#define PARAM_COUNT 31
+#define PARAM_COUNT 25
 #define PARAMS_PER_PAGE 6
 #define SETTING_COUNT 6
 #define LOG_CAPACITY 22
