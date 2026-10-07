@@ -79,6 +79,15 @@ static void Application_Init(void)
   Board_Model_InitDefaults();
   (void)W25Qxx_Init();
   UF4_ParameterManager_Init();
+  /* ESP32 service is intentionally out of the current bring-up scope.  A
+   * previously persisted WIFI/BLE selection must not lock the local F429
+   * touch controls or prevent the F429↔G474 power link from being tested. */
+  {
+    ui_setting_t *esp32_mode =
+        Board_Model_FindSetting(UI_SETTING_ID_ESP32_START_MODE);
+    if (esp32_mode != NULL)
+      esp32_mode->current = UI_ESP32_START_NONE;
+  }
   UF4_Init(UF4_UART_Tx, &huart6);
   G474_Remote_Init();
   UF4_UART_Init();
