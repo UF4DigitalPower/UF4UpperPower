@@ -13,7 +13,13 @@
 static lv_obj_t *s_output_label;
 static lv_obj_t *s_runtime_label;
 static lv_obj_t *s_runtime_cell;
-static lv_obj_t *s_link_label;
+static lv_obj_t *s_status_labels[5];
+
+static void status_text(lv_obj_t *label, const char *value)
+{
+    if(label && strcmp(lv_label_get_text(label), value) != 0)
+        lv_label_set_text(label, value);
+}
 
 #define BUTTON_ACTION_DELAY_MS 16U
 
@@ -43,11 +49,50 @@ static void button_pressed(lv_event_t *event)
 
 void board_ui_refresh_status(void)
 {
+    uint16_t raw;
     const uint8_t online = G474_Remote_IsOnline();
-    const uint8_t running = online && state.output_on;
+    uint8_t running = 0U;
     const char *output = G474_Remote_GetOutputCommanded() ? "ON" : "OFF";
-    const char *runtime = online ? (running ? "RUN" : "IDLE") : "OFFLINE";
-    const char *link = online ? "G474" : "NO LINK";
+    const char *runtime = "OFFLINE";
+    const char *cc_cv = "--";
+    const char *converter = "--";
+    const char *direction = "--";
+    const char *fault = "NORMAL";
+    if(online && G474_Remote_Read(UF4_ID_POWER_STATE, &raw)) {
+        switch(raw) {
+        case 0U: runtime = "CHECK"; break;
+        case 1U: runtime = "IDLE"; break;
+        case 2U: runtime = "START"; break;
+        case 3U: runtime = "RUN"; running = 1U; break;
+        case 4U: runtime = "STOP"; break;
+        case 5U: runtime = "SWITCH"; break;
+        case 6U: runtime = "FAULT"; break;
+        default: runtime = "UNKNOWN"; break;
+        }
+    }
+    if(online && G474_Remote_Read(UF4_ID_CC_CV_MODE, &raw)) cc_cv = raw ? "CC" : "CV";
+    if(online && G474_Remote_Read(UF4_ID_POWER_CONVERTER_MODE, &raw)) {
+        converter = raw == 0U ? "BUCK" : (raw == 1U ? "MIX" : "BOOST");
+    }
+    if(online && G474_Remote_Read(UF4_ID_POWER_DIRECTION_STATUS, &raw))
+        direction = raw ? "REVERSE" : "FORWARD";
+    if(online && G474_Remote_Read(UF4_ID_FAULT_STATE, &raw) && raw != 0U) {
+        switch(raw) {
+        case 1U: fault = "SELF CHK"; break;
+        case 2U: fault = "VOUT OVP"; break;
+        case 3U: fault = "OCP"; break;
+        case 4U: fault = "ADC"; break;
+        case 5U: fault = "PWM"; break;
+        case 6U: fault = "COMM"; break;
+        case 7U: fault = "EXT"; break;
+        case 8U: fault = "OTP"; break;
+        default: fault = "FAULT"; break;
+        }
+    }
+    status_text(s_status_labels[1], online ? cc_cv : "--");
+    status_text(s_status_labels[2], online ? converter : "--");
+    status_text(s_status_labels[3], online ? direction : "--");
+    status_text(s_status_labels[4], online ? fault : "NO LINK");
     if(s_output_label && strcmp(lv_label_get_text(s_output_label), output) != 0)
         lv_label_set_text(s_output_label, output);
     if(s_runtime_label && strcmp(lv_label_get_text(s_runtime_label), runtime) != 0) {
@@ -57,8 +102,6 @@ void board_ui_refresh_status(void)
         lv_obj_set_style_bg_color(s_runtime_cell,
                                   rgb(running ? palette->accent : palette->panel), 0);
     }
-    if(s_link_label && strcmp(lv_label_get_text(s_link_label), link) != 0)
-        lv_label_set_text(s_link_label, link);
 }
 
 lv_color_t rgb(uint16_t value)
@@ -172,7 +215,7 @@ void draw_status(void)
             s_runtime_cell = status_cell;
             s_runtime_label = label;
         }
-        if(i == 4) s_link_label = label;
+        s_status_labels[i] = label;
     }
     board_ui_refresh_status();
 }
